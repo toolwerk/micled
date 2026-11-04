@@ -58,6 +58,10 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
         DEAD_CODE_STRIPPING: YES
+        # Explizite Module merken nicht, dass RustCore den UniFFI-Header neu schreibt
+        # („has been modified since the module file was built“). Implizite Module
+        # prüfen den Header bei jedem Build.
+        SWIFT_ENABLE_EXPLICIT_MODULES: NO
       configs:
         Release:
           CODE_SIGN_IDENTITY: "Developer ID Application"
