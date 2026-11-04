@@ -151,6 +151,12 @@ impl MicLedController {
 }
 
 /// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)
+/// Programme, die ab Werk ignoriert werden (Vorgabe für die Einstellungen)
+#[uniffi::export]
+pub fn default_ignored() -> Vec<String> {
+    core::DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect()
+}
+
 #[uniffi::export]
 pub fn current_mic_users() -> Vec<MicUser> {
     core::mic::users().unwrap_or_default().into_iter().map(Into::into).collect()

@@ -9,7 +9,7 @@ pub mod monitor;
 pub mod shared;
 
 pub use color::Rgb;
-pub use engine::{AfterMic, Config};
+pub use engine::{AfterMic, Config, DEFAULT_IGNORED};
 pub use lamp::Transport;
 pub use mic::MicUser;
 pub use monitor::{Monitor, Status, StatusListener};

@@ -16,6 +16,13 @@ pub enum AfterMic {
     Fixed,
 }
 
+/// Hintergrunddienste, die das Mikrofon dauerhaft offen halten, ohne dass
+/// jemand spricht. Ab Werk ignoriert, in den Einstellungen entfernbar.
+pub const DEFAULT_IGNORED: &[&str] = &[
+    // Rogue Amoeba (SoundSource, Loopback, Audio Hijack)
+    "com.rogueamoeba.arkaudiod",
+];
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     /// Automatik an/aus
@@ -40,7 +47,7 @@ impl Default for Config {
             mic_off_color: Rgb::GREEN,
             after_mic: AfterMic::Restore,
             release_delay: Duration::from_secs(3),
-            ignored: Vec::new(),
+            ignored: DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect(),
         }
     }
 }
@@ -203,6 +210,24 @@ mod tests {
         e.on_mic(vec![user("zoom")], t);
         e.on_shared_color(Rgb::parse("ffff00").unwrap());
         assert_eq!(e.on_mic(vec![], t + Duration::from_secs(5)), Rgb::parse("ffff00"));
+    }
+
+    fn daemon() -> MicUser {
+        MicUser { pid: 1, bundle_id: "com.rogueamoeba.arkaudiod".into(), name: "arkaudiod".into() }
+    }
+
+    #[test]
+    fn default_config_ignores_audio_daemons() {
+        let mut e = Engine::new(Config::default(), None);
+        assert_eq!(e.on_mic(vec![daemon()], Instant::now()), None);
+        assert!(e.users().is_empty());
+    }
+
+    #[test]
+    fn audio_daemon_counts_when_removed_from_ignored() {
+        let cfg = Config { ignored: vec![], ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        assert_eq!(e.on_mic(vec![daemon()], Instant::now()), Some(Rgb::RED));
     }
 
     #[test]

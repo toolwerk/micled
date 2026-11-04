@@ -39,7 +39,8 @@ enum Cmd {
         /// Sekunden Mikro-Pause, bevor zurückgeschaltet wird
         #[arg(long, default_value_t = 3)]
         delay: u64,
-        /// Programme ignorieren (Bundle-ID oder Prozessname), mehrfach möglich
+        /// Weitere Programme ignorieren (Bundle-ID oder Prozessname), mehrfach möglich.
+        /// Bekannte Audio-Dienste werden immer ignoriert.
         #[arg(long)]
         ignore: Vec<String>,
     },
@@ -101,7 +102,7 @@ fn main() {
                 mic_off_color: color(off),
                 after_mic: if *fixed { AfterMic::Fixed } else { AfterMic::Restore },
                 release_delay: Duration::from_secs(*delay),
-                ignored: ignore.clone(),
+                ignored: Config::default().ignored.into_iter().chain(ignore.iter().cloned()).collect(),
             };
             println!("Automatik läuft, Strg-C beendet.");
             let _monitor = Monitor::start(cfg, None, Arc::new(Printer));

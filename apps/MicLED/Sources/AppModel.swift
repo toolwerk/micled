@@ -46,7 +46,7 @@ final class AppModel {
             Key.micOff: "00ff00",
             Key.restorePrevious: true,
             Key.releaseDelay: 3.0,
-            Key.ignored: [String](),
+            Key.ignored: defaultIgnored(),
             Key.favorites: AppModel.defaultFavorites,
         ])
         enabled = d.bool(forKey: Key.enabled)
@@ -56,7 +56,7 @@ final class AppModel {
         micOffHex = d.string(forKey: Key.micOff) ?? "00ff00"
         restorePrevious = d.bool(forKey: Key.restorePrevious)
         releaseDelaySeconds = d.double(forKey: Key.releaseDelay)
-        ignored = d.stringArray(forKey: Key.ignored) ?? []
+        ignored = d.stringArray(forKey: Key.ignored) ?? defaultIgnored()
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
 
         let observer = Observer { [weak self] status in
