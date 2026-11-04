@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Baut den Rust-Kern als universelle statische Bibliothek, erzeugt die
-# Swift-Bindings (UniFFI) und packt alles in build/MicLEDCore.xcframework.
+# Swift-Bindings (UniFFI): build/universal/libmicled_ffi.a, build/include/
+# (Header und module.modulemap) und apps/MicLED/Generated/micled_ffi.swift.
 # Läuft im Xcode-Target MicLEDCore (vor der App) und einmal aus setup.sh.
 set -euo pipefail
 
@@ -40,9 +41,4 @@ install_if_changed "$OUT/bindings/micled_ffi.swift" "$GEN/micled_ffi.swift"
 install_if_changed "$OUT/bindings/micled_ffiFFI.h" "$OUT/include/micled_ffiFFI.h"
 install_if_changed "$OUT/bindings/micled_ffiFFI.modulemap" "$OUT/include/module.modulemap"
 
-rm -rf "$OUT/MicLEDCore.xcframework"
-xcodebuild -create-xcframework \
-  -library "$OUT/universal/libmicled_ffi.a" -headers "$OUT/include" \
-  -output "$OUT/MicLEDCore.xcframework" >/dev/null
-
-echo "Rust-Kern fertig: $OUT/MicLEDCore.xcframework"
+echo "Rust-Kern fertig: $OUT/universal/libmicled_ffi.a"

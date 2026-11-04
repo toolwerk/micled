@@ -14,9 +14,10 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: "7N2W4T6UPV"
 
-# Eigenes Target statt Pre-Build-Skript: Xcode liest das XCFramework ein, bevor
-# Skript-Phasen eines Targets laufen. Als Abhängigkeit ist der Rust-Build fertig,
-# bevor die App das XCFramework und die Bindings verarbeitet.
+# Eigenes Target statt Pre-Build-Skript: Als Abhängigkeit ist der Rust-Build
+# fertig, bevor die App kompiliert. Bibliothek und Header werden direkt
+# eingebunden, nicht als XCFramework: Xcode kopiert ein XCFramework nach einem
+# Stand, den es vor dem Rust-Build ermittelt, und baut dann gegen alte Header.
 aggregateTargets:
   RustCore:
     buildScripts:
@@ -38,7 +39,7 @@ targets:
       - path: Resources/Assets.xcassets
     dependencies:
       - target: RustCore
-      - framework: ../../build/MicLEDCore.xcframework
+      - framework: ../../build/universal/libmicled_ffi.a   # als Eingabe des Linkers verfolgt
         embed: false
       - sdk: CoreAudio.framework
       - sdk: CoreFoundation.framework
@@ -62,6 +63,8 @@ targets:
         # („has been modified since the module file was built“). Implizite Module
         # prüfen den Header bei jedem Build.
         SWIFT_ENABLE_EXPLICIT_MODULES: NO
+        SWIFT_INCLUDE_PATHS: $(SRCROOT)/../../build/include   # module.modulemap + micled_ffiFFI.h
+        LIBRARY_SEARCH_PATHS: $(SRCROOT)/../../build/universal
       configs:
         Release:
           CODE_SIGN_IDENTITY: "Developer ID Application"
