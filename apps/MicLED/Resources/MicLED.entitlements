@@ -4,5 +4,8 @@
 <dict>
 	<!-- Keine Sandbox: USB-HID-Zugriff und Webhook brauchen sonst Sonderrechte.
 	     Hardened Runtime ist über ENABLE_HARDENED_RUNTIME in project.yml aktiv. -->
+	<!-- Kalender für die Termin-Vorwarnung (unter Hardened Runtime Pflicht) -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
 </dict>
 </plist>

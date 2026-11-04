@@ -33,6 +33,25 @@ pub enum AwayReason {
     Locked,
 }
 
+/// Wo die Mikro- bzw. Kamerafarbe leuchtet (nur per USB)
+#[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LampSide {
+    Both,
+    /// LEDs 1–3
+    A,
+    /// LEDs 4–6
+    B,
+}
+
+/// Befehl aus einer `micled://`-Adresse
+#[derive(uniffi::Enum, Clone, Debug, PartialEq, Eq)]
+pub enum UrlCommand {
+    SetColor { hex: String },
+    Off,
+    /// `on = None` schaltet um
+    Automatic { on: Option<bool> },
+}
+
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct MicLedConfig {
     pub enabled: bool,
@@ -45,6 +64,14 @@ pub struct MicLedConfig {
     pub ignored: Vec<String>,
     /// Lampe aus bei Ruhezustand, Bildschirm aus und Sperre
     pub off_when_away: bool,
+    /// Kamera an zählt als aktiv und hat eine eigene Farbe
+    pub camera_enabled: bool,
+    pub camera_color: String,
+    pub side: LampSide,
+    /// POST bei „Auf Sendung“ an/aus, leer = aus
+    pub on_air_url: String,
+    pub reminder_color: String,
+    pub reminder_lead_s: u32,
 }
 
 #[derive(uniffi::Record, Clone, Debug)]
@@ -58,8 +85,12 @@ pub struct MicUser {
 pub struct MicLedStatus {
     pub enabled: bool,
     pub mic_users: Vec<MicUser>,
-    /// Mikrofarbe ist gerade aktiv
+    /// Kamera in Benutzung
+    pub camera: bool,
+    /// Mikro- bzw. Kamerafarbe ist gerade aktiv
     pub overriding: bool,
+    /// Auf Sendung (Mikro oder Kamera, kurze Pausen eingeschlossen)
+    pub live: bool,
     /// Farbe nach dem Mikrofon, `None` = noch unbekannt
     pub base_color: Option<String>,
     /// Zuletzt gesetzte Farbe, `None` = unbekannt
@@ -93,6 +124,16 @@ impl From<MicLedConfig> for core::Config {
             release_delay: Duration::from_millis(c.release_delay_ms as u64),
             ignored: c.ignored,
             off_when_away: c.off_when_away,
+            camera: c.camera_enabled,
+            camera_color: color(&c.camera_color, Rgb::MAGENTA),
+            side: match c.side {
+                LampSide::Both => core::Side::Both,
+                LampSide::A => core::Side::A,
+                LampSide::B => core::Side::B,
+            },
+            on_air_url: c.on_air_url,
+            reminder_color: color(&c.reminder_color, Rgb::YELLOW),
+            reminder_lead: Duration::from_secs(c.reminder_lead_s as u64),
         }
     }
 }
@@ -108,7 +149,9 @@ impl From<core::Status> for MicLedStatus {
         MicLedStatus {
             enabled: s.enabled,
             mic_users: s.mic_users.into_iter().map(Into::into).collect(),
+            camera: s.camera,
             overriding: s.overriding,
+            live: s.live,
             base_color: s.base.map(|c| c.hex()),
             shown_color: s.shown.map(|c| c.hex()),
             error: s.error,
@@ -160,6 +203,16 @@ impl MicLedController {
         self.monitor.set_away(r, away);
     }
 
+    /// Startzeiten der nächsten Termine (Unix-Sekunden) für die Vorwarnung
+    pub fn set_upcoming(&self, starts: Vec<u64>) {
+        self.monitor.set_upcoming(starts);
+    }
+
+    /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen
+    pub fn live_seconds_since(&self, since: u64) -> u64 {
+        self.monitor.live_seconds_since(since)
+    }
+
     pub fn turn_off(&self) {
         self.monitor.set_color(Rgb::OFF);
     }
@@ -173,13 +226,29 @@ impl MicLedController {
     }
 }
 
-/// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)
 /// Programme, die ab Werk ignoriert werden (Vorgabe für die Einstellungen)
 #[uniffi::export]
 pub fn default_ignored() -> Vec<String> {
     core::DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect()
 }
 
+/// `micled://`-Adresse auswerten, `None` bei unbekanntem Befehl
+#[uniffi::export]
+pub fn parse_url_command(url: String) -> Option<UrlCommand> {
+    core::command::parse(&url).map(|c| match c {
+        core::command::Command::SetColor(c) => UrlCommand::SetColor { hex: c.hex() },
+        core::command::Command::Off => UrlCommand::Off,
+        core::command::Command::Automatic(on) => UrlCommand::Automatic { on },
+    })
+}
+
+/// Farbe aus Text (`ff8800`, `#f80`, `rot`) als `rrggbb`, `None` wenn unlesbar
+#[uniffi::export]
+pub fn parse_color(text: String) -> Option<String> {
+    Rgb::parse(&text).map(|c| c.hex())
+}
+
+/// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)
 #[uniffi::export]
 pub fn current_mic_users() -> Vec<MicUser> {
     core::mic::users().unwrap_or_default().into_iter().map(Into::into).collect()

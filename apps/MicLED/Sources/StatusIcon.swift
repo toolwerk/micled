@@ -1,9 +1,9 @@
 import AppKit
 
 /// Symbol für die Menüleiste: Kreis in der aktuellen Lampenfarbe,
-/// bei aktivem Mikrofon mit Mikrofon-Zeichen.
+/// bei aktivem Mikrofon mit Mikrofon-, bei Kamera mit Kamera-Zeichen.
 enum StatusIcon {
-    static func image(hex: String?, micActive: Bool) -> NSImage {
+    static func image(hex: String?, micActive: Bool, cameraOn: Bool = false) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
             let circle = NSBezierPath(ovalIn: rect.insetBy(dx: 2, dy: 2))
@@ -18,8 +18,9 @@ enum StatusIcon {
             circle.lineWidth = 1.2
             circle.stroke()
 
-            if micActive,
-               let mic = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Mikrofon aktiv")?
+            if micActive || cameraOn,
+               let mic = NSImage(systemSymbolName: cameraOn ? "video.fill" : "mic.fill",
+                                 accessibilityDescription: cameraOn ? "Kamera aktiv" : "Mikrofon aktiv")?
                 .withSymbolConfiguration(.init(pointSize: 9, weight: .bold)
                     .applying(.init(paletteColors: [.white])))
             {
@@ -30,7 +31,7 @@ enum StatusIcon {
             return true
         }
         image.isTemplate = false
-        image.accessibilityDescription = micActive ? "MicLED, Mikrofon aktiv" : "MicLED"
+        image.accessibilityDescription = cameraOn ? "MicLED, Kamera aktiv" : micActive ? "MicLED, Mikrofon aktiv" : "MicLED"
         return image
     }
 }

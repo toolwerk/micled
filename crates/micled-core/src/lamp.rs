@@ -2,6 +2,7 @@
 //!
 //! USB-Protokoll (9-Byte-Report, erstes Byte Report-ID 0):
 //! - `01 FF r g b` feste Farbe auf allen LEDs
+//! - `01 41 r g b` bzw. `01 42 r g b` nur Seite A (LEDs 1–3) bzw. B (LEDs 4–6)
 //! - `00 4F` Simple-Modus „O“, bricht laufende Muster/Blinken ab
 //!
 //! Die Lampe kennt keinen Lesebefehl für die aktuelle Farbe. Wer die Farbe
@@ -32,8 +33,28 @@ pub enum Transport {
     Webhook { luxafor_id: String },
 }
 
+/// Was beide Seiten der Flag zeigen
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Frame {
+    /// LEDs 1–3
+    pub a: Rgb,
+    /// LEDs 4–6
+    pub b: Rgb,
+}
+
+impl Frame {
+    pub fn solid(c: Rgb) -> Frame {
+        Frame { a: c, b: c }
+    }
+}
+
 pub trait Lamp: Send {
     fn set(&mut self, color: Rgb) -> Result<(), LampError>;
+
+    /// Beide Seiten getrennt setzen. Ohne Unterstützung zählt Seite A.
+    fn set_frame(&mut self, f: Frame) -> Result<(), LampError> {
+        self.set(f.a)
+    }
 }
 
 /// Erzeugt die passende Lampe für den Transport.
@@ -74,6 +95,15 @@ impl Lamp for UsbLamp {
         // während einer Animation ignoriert die Firmware einzelne Befehle.
         let solid = [0x01, 0xff, c.r, c.g, c.b];
         Self::write(&[&[0x00, 0x4f], &solid, &solid])
+    }
+
+    fn set_frame(&mut self, f: Frame) -> Result<(), LampError> {
+        if f.a == f.b {
+            return self.set(f.a);
+        }
+        let a = [0x01, 0x41, f.a.r, f.a.g, f.a.b];
+        let b = [0x01, 0x42, f.b.r, f.b.g, f.b.b];
+        Self::write(&[&[0x00, 0x4f], &a, &b, &a, &b])
     }
 }
 

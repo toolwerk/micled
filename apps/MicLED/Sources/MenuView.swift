@@ -52,6 +52,12 @@ struct MenuView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
+            TimelineView(.periodic(from: .now, by: 30)) { _ in
+                Label("Heute \(Self.duration(model.liveSecondsToday())) auf Sendung", systemImage: "clock")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Divider()
 
             HStack {
@@ -70,11 +76,11 @@ struct MenuView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(nsImage: StatusIcon.image(hex: model.shownHex, micActive: model.micActive))
+            Image(nsImage: StatusIcon.image(hex: model.shownHex, micActive: model.micActive, cameraOn: model.cameraOn))
                 .resizable()
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.micActive ? "Mikrofon aktiv" : "Mikrofon aus")
+                Text(model.cameraOn ? "Kamera aktiv" : model.micActive ? "Mikrofon aktiv" : "Mikrofon aus")
                     .font(.headline)
                 Text(subtitle)
                     .font(.caption)
@@ -84,10 +90,17 @@ struct MenuView: View {
         }
     }
 
+    /// „2 h 40 min“, „12 min“, „0 min“
+    static func duration(_ seconds: UInt64) -> String {
+        let minutes = seconds / 60
+        return minutes >= 60 ? "\(minutes / 60) h \(minutes % 60) min" : "\(minutes) min"
+    }
+
     private var subtitle: String {
         if model.micActive {
             return model.micUsers.map(model.displayName).joined(separator: ", ")
         }
+        if model.cameraOn { return "Kamera in Benutzung" }
         guard let hex = model.shownHex else { return "Lampenfarbe noch unbekannt" }
         return isOff(hex) ? "Lampe aus" : "Lampe #\(hex)"
     }

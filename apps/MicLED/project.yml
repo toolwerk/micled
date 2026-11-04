@@ -42,6 +42,9 @@ targets:
       - framework: ../../build/universal/libmicled_ffi.a   # als Eingabe des Linkers verfolgt
         embed: false
       - sdk: CoreAudio.framework
+      - sdk: CoreMediaIO.framework
+      - sdk: EventKit.framework
+      - sdk: AppIntents.framework
       - sdk: CoreFoundation.framework
       - sdk: IOKit.framework
       - sdk: Security.framework

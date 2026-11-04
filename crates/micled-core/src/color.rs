@@ -16,6 +16,8 @@ impl Rgb {
     pub const OFF: Rgb = Rgb { r: 0, g: 0, b: 0 };
     pub const RED: Rgb = Rgb { r: 255, g: 0, b: 0 };
     pub const GREEN: Rgb = Rgb { r: 0, g: 255, b: 0 };
+    pub const YELLOW: Rgb = Rgb { r: 255, g: 255, b: 0 };
+    pub const MAGENTA: Rgb = Rgb { r: 255, g: 0, b: 255 };
 
     /// Liest `ff8800`, `#FF8800` oder `f80`.
     pub fn parse(s: &str) -> Option<Rgb> {

@@ -1,11 +1,11 @@
-//! Entscheidungslogik ohne Seiteneffekte: Mikro an → Mikrofarbe,
-//! Mikro aus → vorherige oder feste Farbe. Gut testbar, weil Zeit und
-//! Mikrofon-Zustand von außen hineingereicht werden.
+//! Entscheidungslogik ohne Seiteneffekte: Mikro oder Kamera an → Mikro- bzw.
+//! Kamerafarbe, danach vorherige oder feste Farbe. Gut testbar, weil Zeit,
+//! Mikrofon- und Kamerazustand von außen hineingereicht werden.
 
 use std::time::{Duration, Instant};
 
 use crate::color::Rgb;
-use crate::lamp::Transport;
+use crate::lamp::{Frame, Transport};
 use crate::mic::MicUser;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -14,6 +14,17 @@ pub enum AfterMic {
     Restore,
     /// Immer auf die „Mikro aus“-Farbe
     Fixed,
+}
+
+/// Wo die Mikro- bzw. Kamerafarbe leuchtet. Die Luxafor Flag hat zwei Seiten
+/// mit je drei LEDs; die andere Seite behält dann die ruhende Farbe.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Side {
+    Both,
+    /// LEDs 1–3
+    A,
+    /// LEDs 4–6
+    B,
 }
 
 /// Gründe, aus denen niemand vor dem Mac sitzt. Mehrere können gleichzeitig
@@ -60,6 +71,16 @@ pub struct Config {
     pub ignored: Vec<String>,
     /// Lampe aus bei Ruhezustand, Bildschirm aus und Sperre (außer während eines Calls)
     pub off_when_away: bool,
+    /// Kamera auswerten: Kamera an zählt als aktiv und hat eine eigene Farbe
+    pub camera: bool,
+    pub camera_color: Rgb,
+    pub side: Side,
+    /// Ziel für „Auf Sendung“-Meldungen (leer = aus), siehe [`crate::onair`]
+    pub on_air_url: String,
+    /// Farbe der Vorwarnung vor Terminen
+    pub reminder_color: Rgb,
+    /// So lange vor Terminbeginn wird gewarnt
+    pub reminder_lead: Duration,
 }
 
 impl Default for Config {
@@ -73,6 +94,12 @@ impl Default for Config {
             release_delay: Duration::from_secs(3),
             ignored: DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect(),
             off_when_away: true,
+            camera: true,
+            camera_color: Rgb::MAGENTA,
+            side: Side::Both,
+            on_air_url: String::new(),
+            reminder_color: Rgb::YELLOW,
+            reminder_lead: Duration::from_secs(120),
         }
     }
 }
@@ -83,15 +110,30 @@ pub struct Engine {
     /// Die „ruhende“ Farbe, zu der nach dem Mikrofon zurückgekehrt wird
     base: Option<Rgb>,
     overriding: bool,
+    /// Zuletzt ausgegebene Mikro- bzw. Kamerafarbe
+    override_shown: Option<Rgb>,
     last_active: Option<Instant>,
     users: Vec<MicUser>,
+    camera: bool,
+    /// Aktiv, einschließlich der Wartezeit nach dem Ende (unabhängig von der Automatik)
+    on_air: bool,
     /// Gesetzte `Away`-Bits
     away: u8,
 }
 
 impl Engine {
     pub fn new(cfg: Config, base: Option<Rgb>) -> Self {
-        Engine { cfg, base, overriding: false, last_active: None, users: Vec::new(), away: 0 }
+        Engine {
+            cfg,
+            base,
+            overriding: false,
+            override_shown: None,
+            last_active: None,
+            users: Vec::new(),
+            camera: false,
+            on_air: false,
+            away: 0,
+        }
     }
 
     pub fn config(&self) -> &Config {
@@ -107,6 +149,16 @@ impl Engine {
     pub fn users(&self) -> &[MicUser] {
         &self.users
     }
+    /// Kamera in Benutzung (nur, wenn die Kamera ausgewertet wird)
+    pub fn camera_on(&self) -> bool {
+        self.camera
+    }
+
+    /// Auf Sendung: Mikro oder Kamera aktiv, kurze Pausen eingeschlossen.
+    /// Im Ruhezustand nie, sonst zählt ein vor dem Zuklappen laufender Call weiter.
+    pub fn live(&self) -> bool {
+        self.on_air && self.away & Away::Sleep.bit() == 0
+    }
 
     fn is_ignored(&self, u: &MicUser) -> bool {
         self.cfg.ignored.iter().any(|i| {
@@ -116,16 +168,35 @@ impl Engine {
     }
 
     /// Lampe soll wegen Abwesenheit aus sein
-    fn dark(&self) -> bool {
+    pub fn dark(&self) -> bool {
         self.cfg.off_when_away && self.away != 0
     }
 
-    /// Farbe, wenn kein Mikrofon aktiv ist
+    /// Farbe, wenn weder Mikrofon noch Kamera aktiv sind
     fn resting(&self) -> Rgb {
         if self.dark() {
             Rgb::OFF
         } else {
             self.base.unwrap_or(self.cfg.mic_off_color)
+        }
+    }
+
+    fn override_color(&self) -> Rgb {
+        if self.camera {
+            self.cfg.camera_color
+        } else {
+            self.cfg.mic_on_color
+        }
+    }
+
+    /// Was die Lampe für die ausgegebene Farbe `c` zeigen soll. Nur die Mikro-
+    /// bzw. Kamerafarbe kann auf eine Seite beschränkt sein, und nur per USB.
+    pub fn frame(&self, c: Rgb) -> Frame {
+        let split = self.overriding && self.override_shown == Some(c) && self.cfg.transport == Transport::Usb;
+        match (split, self.cfg.side) {
+            (true, Side::A) => Frame { a: c, b: self.resting() },
+            (true, Side::B) => Frame { a: self.resting(), b: c },
+            _ => Frame::solid(c),
         }
     }
 
@@ -138,8 +209,12 @@ impl Engine {
         } else {
             self.away &= !reason.bit();
         }
-        if was == self.dark() || self.overriding {
+        if was == self.dark() {
             return None;
+        }
+        if self.overriding {
+            // ruhende Seite einer geteilten Anzeige mitziehen
+            return (self.cfg.side != Side::Both).then(|| self.override_color());
         }
         Some(self.resting())
     }
@@ -151,31 +226,47 @@ impl Engine {
         }
     }
 
-    /// Neuer Mikrofon-Zustand. Liefert eine Farbe, wenn die Lampe umgeschaltet werden soll.
+    /// Neuer Mikrofon-Zustand ohne Kamera (Kurzform von [`Engine::on_input`])
     pub fn on_mic(&mut self, users: Vec<MicUser>, now: Instant) -> Option<Rgb> {
+        self.on_input(users, false, now)
+    }
+
+    /// Neuer Zustand von Mikrofon und Kamera. Liefert eine Farbe, wenn die
+    /// Lampe umgeschaltet werden soll.
+    pub fn on_input(&mut self, users: Vec<MicUser>, camera: bool, now: Instant) -> Option<Rgb> {
         self.users = users.into_iter().filter(|u| !self.is_ignored(u)).collect();
-        let active = !self.users.is_empty();
+        self.camera = camera && self.cfg.camera;
+        let active = !self.users.is_empty() || self.camera;
 
         if active {
             self.last_active = Some(now);
-            if self.cfg.enabled && !self.overriding {
-                self.overriding = true;
-                return Some(self.cfg.mic_on_color);
+        }
+        let since = self.last_active.map(|t| now.duration_since(t)).unwrap_or(Duration::MAX);
+        self.on_air = active || since < self.cfg.release_delay;
+
+        if active {
+            if self.cfg.enabled && (!self.overriding || self.override_shown != Some(self.override_color())) {
+                return Some(self.start_override());
             }
             return None;
         }
 
-        if self.overriding {
-            let since = self.last_active.map(|t| now.duration_since(t)).unwrap_or(Duration::MAX);
-            if since >= self.cfg.release_delay {
-                return Some(self.end_override());
-            }
+        if self.overriding && since >= self.cfg.release_delay {
+            return Some(self.end_override());
         }
         None
     }
 
+    fn start_override(&mut self) -> Rgb {
+        self.overriding = true;
+        let c = self.override_color();
+        self.override_shown = Some(c);
+        c
+    }
+
     fn end_override(&mut self) -> Rgb {
         self.overriding = false;
+        self.override_shown = None;
         let c = self.restore_color();
         self.base = Some(c);
         self.resting()
@@ -197,14 +288,17 @@ impl Engine {
     pub fn set_config(&mut self, cfg: Config) -> Option<Rgb> {
         let was_dark = self.dark();
         let old = std::mem::replace(&mut self.cfg, cfg);
-        if !self.overriding && was_dark != self.dark() {
-            return Some(self.resting());
+        if !self.cfg.camera {
+            self.camera = false;
         }
-        if self.overriding && !self.cfg.enabled {
+        if !self.overriding {
+            return (was_dark != self.dark()).then(|| self.resting());
+        }
+        if !self.cfg.enabled {
             return Some(self.end_override());
         }
-        if self.overriding && old.mic_on_color != self.cfg.mic_on_color {
-            return Some(self.cfg.mic_on_color);
+        if self.override_shown != Some(self.override_color()) || old.side != self.cfg.side || was_dark != self.dark() {
+            return Some(self.start_override());
         }
         None
     }
@@ -413,5 +507,138 @@ mod tests {
         let yellow = Rgb::parse("ffff00").unwrap();
         e.on_shared_color(yellow);
         assert_eq!(e.set_away(Away::Locked, false), Some(yellow));
+    }
+
+    // --- Kamera ---------------------------------------------------------
+
+    fn magenta() -> Rgb {
+        Rgb::parse("ff00ff").unwrap()
+    }
+
+    #[test]
+    fn camera_during_call_uses_camera_color() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        assert_eq!(e.on_input(vec![user("zoom")], true, t), Some(magenta()));
+    }
+
+    #[test]
+    fn camera_alone_counts_as_active() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        assert_eq!(e.on_input(vec![], true, t), Some(magenta()));
+        assert!(e.overriding());
+    }
+
+    #[test]
+    fn camera_switching_during_call_changes_color() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        assert_eq!(e.on_input(vec![user("zoom")], false, t), Some(Rgb::RED));
+        assert_eq!(e.on_input(vec![user("zoom")], true, t), Some(magenta()));
+        assert_eq!(e.on_input(vec![user("zoom")], true, t), None);
+        assert_eq!(e.on_input(vec![user("zoom")], false, t), Some(Rgb::RED));
+    }
+
+    #[test]
+    fn camera_ignored_when_switched_off() {
+        let cfg = Config { camera: false, ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        assert_eq!(e.on_input(vec![], true, Instant::now()), None);
+        assert!(!e.camera_on());
+    }
+
+    #[test]
+    fn new_camera_color_applies_immediately() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_input(vec![], true, t);
+        let cfg = Config { camera_color: Rgb::GREEN, ..e.config().clone() };
+        assert_eq!(e.set_config(cfg), Some(Rgb::GREEN));
+    }
+
+    #[test]
+    fn color_chosen_during_call_stays_until_call_ends() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        let yellow = Rgb::parse("ffff00").unwrap();
+        e.on_user_color(yellow);
+        assert_eq!(e.on_mic(vec![user("zoom")], t + Duration::from_secs(1)), None);
+        assert_eq!(e.frame(yellow), Frame::solid(yellow));
+    }
+
+    // --- Auf Sendung ----------------------------------------------------
+
+    #[test]
+    fn live_follows_activity_with_delay() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        assert!(!e.live());
+        e.on_mic(vec![user("zoom")], t);
+        assert!(e.live());
+        e.on_mic(vec![], t + Duration::from_secs(1));
+        assert!(e.live(), "kurze Pause zählt mit");
+        e.on_mic(vec![], t + Duration::from_secs(4));
+        assert!(!e.live());
+    }
+
+    #[test]
+    fn live_does_not_depend_on_automatic() {
+        let cfg = Config { enabled: false, ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        e.on_mic(vec![user("zoom")], Instant::now());
+        assert!(e.live());
+    }
+
+    #[test]
+    fn not_live_while_asleep_but_live_while_locked() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        e.set_away(Away::Locked, true);
+        assert!(e.live());
+        e.set_away(Away::Sleep, true);
+        assert!(!e.live());
+    }
+
+    // --- Seiten der Flag --------------------------------------------------
+
+    #[test]
+    fn frame_is_solid_by_default() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.frame(Rgb::RED), Frame::solid(Rgb::RED));
+    }
+
+    #[test]
+    fn mic_color_on_one_side_keeps_resting_color_on_the_other() {
+        let cfg = Config { side: Side::A, ..Config::default() };
+        let mut e = Engine::new(cfg, Some(blue()));
+        let c = e.on_mic(vec![user("zoom")], Instant::now()).unwrap();
+        assert_eq!(e.frame(c), Frame { a: Rgb::RED, b: blue() });
+        let cfg = Config { side: Side::B, ..e.config().clone() };
+        e.set_config(cfg);
+        assert_eq!(e.frame(c), Frame { a: blue(), b: Rgb::RED });
+    }
+
+    #[test]
+    fn resting_color_is_solid_even_with_side_setting() {
+        let cfg = Config { side: Side::A, ..Config::default() };
+        let e = Engine::new(cfg, Some(blue()));
+        assert_eq!(e.frame(blue()), Frame::solid(blue()));
+    }
+
+    #[test]
+    fn webhook_cannot_split_sides() {
+        let cfg = Config {
+            side: Side::A,
+            transport: Transport::Webhook { luxafor_id: "x".into() },
+            ..Config::default()
+        };
+        let mut e = Engine::new(cfg, Some(blue()));
+        let c = e.on_mic(vec![user("zoom")], Instant::now()).unwrap();
+        assert_eq!(e.frame(c), Frame::solid(Rgb::RED));
+    }
+
+    #[test]
+    fn changing_side_during_call_resends() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        let cfg = Config { side: Side::A, ..e.config().clone() };
+        assert_eq!(e.set_config(cfg), Some(Rgb::RED));
     }
 }

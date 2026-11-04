@@ -43,6 +43,50 @@ struct SettingsView: View {
                 }
             }
 
+            Section {
+                Toggle("Kamera auswerten", isOn: $model.cameraEnabled)
+                ColorPicker("Farbe bei Kamera an", selection: colorBinding($model.cameraHex), supportsOpacity: false)
+                    .disabled(!model.cameraEnabled)
+                Picker("Mikro- und Kamerafarbe auf", selection: $model.side) {
+                    Text("Beiden Seiten").tag("both")
+                    Text("Seite A (LEDs 1–3)").tag("a")
+                    Text("Seite B (LEDs 4–6)").tag("b")
+                }
+                .disabled(model.useWebhook)
+            } header: {
+                Text("Kamera und Anzeige")
+            } footer: {
+                Text("Kamera an zählt wie Mikro an, hat aber eine eigene Farbe. Bei nur einer Seite behält die andere die vorherige Farbe, z. B. Rot zum Raum und Grün zu dir. Nur per USB.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                TextField("Adresse", text: $model.onAirUrl, prompt: Text("http://homeassistant.local:8123/api/webhook/…"))
+                    .autocorrectionDisabled()
+            } header: {
+                Text("„Auf Sendung“ melden")
+            } footer: {
+                Text("Bei jedem Wechsel geht ein POST mit {\"on_air\": true, \"camera\": false, \"apps\": […]} an diese Adresse, z. B. an einen Home-Assistant-Webhook für ein Türschild. Leer = aus.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Vor Terminen blinken", isOn: $model.remindersEnabled)
+                ColorPicker("Farbe", selection: colorBinding($model.reminderHex), supportsOpacity: false)
+                    .disabled(!model.remindersEnabled)
+                LabeledContent("Vorlauf") {
+                    Stepper(value: $model.reminderLeadMinutes, in: 1...15, step: 1) {
+                        Text("\(Int(model.reminderLeadMinutes)) min")
+                    }
+                }
+                .disabled(!model.remindersEnabled)
+            } header: {
+                Text("Termine")
+            } footer: {
+                Text("Die Lampe blinkt kurz vor jedem Termin aus dem Kalender, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Schnellfarben im Menü") {
                 HStack {
                     ForEach(model.favorites.indices, id: \.self) { i in
@@ -101,7 +145,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 480)
-        .frame(minHeight: 520)
+        .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
     }
 }

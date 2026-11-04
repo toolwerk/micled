@@ -8,6 +8,9 @@ import ServiceManagement
 @MainActor
 @Observable
 final class AppModel {
+    /// Eine Instanz für Menü, Einstellungen, URL-Befehle und Kurzbefehle
+    static let shared = AppModel()
+
     // MARK: Einstellungen
 
     var enabled: Bool { didSet { persist() } }
@@ -21,12 +24,22 @@ final class AppModel {
     var ignored: [String] { didSet { persist() } }
     /// Lampe aus bei Ruhezustand, Bildschirm aus und Sperre
     var offWhenAway: Bool { didSet { persist() } }
+    var cameraEnabled: Bool { didSet { persist() } }
+    var cameraHex: String { didSet { persist() } }
+    /// "both", "a" (LEDs 1–3) oder "b" (LEDs 4–6)
+    var side: String { didSet { persist() } }
+    var onAirUrl: String { didSet { persist() } }
+    var remindersEnabled: Bool { didSet { persist(); updateCalendar() } }
+    var reminderHex: String { didSet { persist() } }
+    var reminderLeadMinutes: Double { didSet { persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
 
     // MARK: Status aus dem Kern
 
     private(set) var micUsers: [MicUser] = []
+    private(set) var cameraOn = false
     private(set) var overriding = false
+    private(set) var live = false
     private(set) var shownHex: String?
     private(set) var baseHex: String?
     private(set) var error: String?
@@ -35,11 +48,12 @@ final class AppModel {
 
     private var controller: MicLedController?
     private var awayObservers: [NSObjectProtocol] = []
+    private var calendar: CalendarWatcher?
     private let defaults = UserDefaults.standard
 
     static let defaultFavorites = ["00ff00", "ffff00", "ff0000", "0000ff", "ffffff"]
 
-    init() {
+    private init() {
         let d = UserDefaults.standard
         d.register(defaults: [
             Key.enabled: true,
@@ -51,6 +65,13 @@ final class AppModel {
             Key.releaseDelay: 3.0,
             Key.ignored: defaultIgnored(),
             Key.offWhenAway: true,
+            Key.cameraEnabled: true,
+            Key.cameraColor: "ff00ff",
+            Key.side: "both",
+            Key.onAirUrl: "",
+            Key.remindersEnabled: false,
+            Key.reminderColor: "ffff00",
+            Key.reminderLead: 2.0,
             Key.favorites: AppModel.defaultFavorites,
         ])
         enabled = d.bool(forKey: Key.enabled)
@@ -62,6 +83,13 @@ final class AppModel {
         releaseDelaySeconds = d.double(forKey: Key.releaseDelay)
         ignored = d.stringArray(forKey: Key.ignored) ?? defaultIgnored()
         offWhenAway = d.bool(forKey: Key.offWhenAway)
+        cameraEnabled = d.bool(forKey: Key.cameraEnabled)
+        cameraHex = d.string(forKey: Key.cameraColor) ?? "ff00ff"
+        side = d.string(forKey: Key.side) ?? "both"
+        onAirUrl = d.string(forKey: Key.onAirUrl) ?? ""
+        remindersEnabled = d.bool(forKey: Key.remindersEnabled)
+        reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
+        reminderLeadMinutes = d.double(forKey: Key.reminderLead)
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
 
         let observer = Observer { [weak self] status in
@@ -71,6 +99,7 @@ final class AppModel {
         self.controller = controller
         apply(controller.status())
         observeAway()
+        updateCalendar()
     }
 
     // MARK: Aktionen
@@ -83,6 +112,22 @@ final class AppModel {
 
     func turnOff() {
         controller?.turnOff()
+    }
+
+    /// `micled://color/ff8800`, `micled://off`, `micled://auto/on|off|toggle`
+    func handle(url: URL) {
+        switch parseUrlCommand(url: url.absoluteString) {
+        case .setColor(let hex): setColor(hex)
+        case .off: turnOff()
+        case .automatic(let on): enabled = on ?? !enabled
+        case nil: error = "Unbekannter Befehl: \(url.absoluteString)"
+        }
+    }
+
+    /// Sekunden auf Sendung seit Mitternacht
+    func liveSecondsToday() -> UInt64 {
+        let midnight = Calendar.current.startOfDay(for: Date())
+        return controller?.liveSecondsSince(since: UInt64(midnight.timeIntervalSince1970)) ?? 0
     }
 
     func ignore(_ user: MicUser) {
@@ -122,7 +167,13 @@ final class AppModel {
             afterMic: restorePrevious ? .restore : .fixed,
             releaseDelayMs: UInt32(max(0, releaseDelaySeconds) * 1000),
             ignored: ignored,
-            offWhenAway: offWhenAway
+            offWhenAway: offWhenAway,
+            cameraEnabled: cameraEnabled,
+            cameraColor: cameraHex,
+            side: side == "a" ? .a : side == "b" ? .b : .both,
+            onAirUrl: onAirUrl,
+            reminderColor: reminderHex,
+            reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60)
         )
     }
 
@@ -136,6 +187,13 @@ final class AppModel {
         defaults.set(releaseDelaySeconds, forKey: Key.releaseDelay)
         defaults.set(ignored, forKey: Key.ignored)
         defaults.set(offWhenAway, forKey: Key.offWhenAway)
+        defaults.set(cameraEnabled, forKey: Key.cameraEnabled)
+        defaults.set(cameraHex, forKey: Key.cameraColor)
+        defaults.set(side, forKey: Key.side)
+        defaults.set(onAirUrl, forKey: Key.onAirUrl)
+        defaults.set(remindersEnabled, forKey: Key.remindersEnabled)
+        defaults.set(reminderHex, forKey: Key.reminderColor)
+        defaults.set(reminderLeadMinutes, forKey: Key.reminderLead)
         defaults.set(favorites, forKey: Key.favorites)
         if pushConfig { controller?.updateConfig(config: config) }
     }
@@ -162,9 +220,28 @@ final class AppModel {
         }
     }
 
+    /// Kalender nur lesen, wenn die Vorwarnung eingeschaltet ist
+    private func updateCalendar() {
+        guard remindersEnabled else {
+            calendar?.stop()
+            calendar = nil
+            return
+        }
+        guard calendar == nil else { return }
+        let watcher = CalendarWatcher { [weak self] starts in
+            self?.controller?.setUpcoming(starts: starts)
+        } denied: { [weak self] in
+            self?.error = "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender"
+        }
+        calendar = watcher
+        watcher.start()
+    }
+
     private func apply(_ s: MicLedStatus) {
         micUsers = s.micUsers
+        cameraOn = s.camera
         overriding = s.overriding
+        live = s.live
         shownHex = s.shownColor
         baseHex = s.baseColor
         error = s.error
@@ -180,6 +257,13 @@ final class AppModel {
         static let releaseDelay = "releaseDelaySeconds"
         static let ignored = "ignored"
         static let offWhenAway = "offWhenAway"
+        static let cameraEnabled = "cameraEnabled"
+        static let cameraColor = "cameraColor"
+        static let side = "side"
+        static let onAirUrl = "onAirUrl"
+        static let remindersEnabled = "remindersEnabled"
+        static let reminderColor = "reminderColor"
+        static let reminderLead = "reminderLeadMinutes"
         static let favorites = "favorites"
     }
 }

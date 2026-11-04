@@ -12,6 +12,34 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Programme lassen sich ignorieren, etwa ein Diktierwerkzeug, das das Mikrofon dauerhaft offen hält. Bekannte Audio-Dienste wie `arkaudiod` von Rogue Amoeba sind ab Werk eingetragen.
 - Bei Ruhezustand, ausgeschaltetem Bildschirm und Sperre geht die Lampe aus und danach mit der vorherigen Farbe wieder an. Während eines Calls bleibt sie in der Mikrofarbe.
 - Wartezeit vor dem Zurückschalten (Standard 3 Sekunden), damit kurze Pausen nicht flackern.
+- Kamera-Erkennung über CoreMediaIO: Kamera an zählt wie Mikro an und hat eine eigene Farbe (Standard Magenta).
+- Mikro- und Kamerafarbe wahlweise nur auf einer Seite der Flag, die andere behält die vorherige Farbe (nur per USB).
+- „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
+- Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin aus dem Kalender (abschaltbar, Vorlauf einstellbar).
+- Im Menü steht, wie lange du heute auf Sendung warst.
+- Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
+
+## Steuerung von außen
+
+Adressen, z. B. für Raycast, das Stream Deck („Website öffnen“) oder `open` im Terminal:
+
+```text
+micled://color/ff8800      Farbe setzen (auch micled://farbe/rot)
+micled://off               Lampe aus
+micled://auto/on           Automatik an (auch off, toggle)
+```
+
+In der Kurzbefehle-App gibt es die Aktionen „Lampenfarbe setzen“, „Lampe ausschalten“ und „Mikrofon-Automatik schalten“. Damit lässt sich der Fokus-Modus anbinden: Kurzbefehle › Automation › Fokus „Arbeiten“ an › Lampenfarbe setzen „gelb“.
+
+## „Auf Sendung“ an Home Assistant
+
+In den Einstellungen die Webhook-Adresse eintragen, z. B. `http://homeassistant.local:8123/api/webhook/micled`. MicLED sendet bei jedem Wechsel:
+
+```json
+{"on_air": true, "camera": false, "apps": ["us.zoom.xos"]}
+```
+
+In einer Home-Assistant-Automation mit Webhook-Auslöser steht der Wert als `{{ trigger.json.on_air }}` bereit.
 
 ## Woher kennt MicLED die vorherige Farbe?
 
@@ -43,11 +71,13 @@ Vor dem ersten signierten Build die Team-ID in `apps/MicLED/project.yml` unter `
 Der Rust-Kern lässt sich ohne Xcode testen:
 
 ```bash
-cargo run -p micled-cli -- mic                 # wer nutzt gerade das Mikrofon?
+cargo run -p micled-cli -- mic                 # wer nutzt gerade das Mikrofon, läuft eine Kamera?
 cargo run -p micled-cli -- set ff8800          # Farbe setzen (auch: rot, gruen, aus)
+cargo run -p micled-cli -- set rot --side a    # nur Seite A (LEDs 1–3), Seite B geht aus
 cargo run -p micled-cli -- off
 cargo run -p micled-cli -- watch               # Automatik, Strg-C beendet
 cargo run -p micled-cli -- watch --on ff0000 --off 00ff00 --fixed --delay 5
+cargo run -p micled-cli -- watch --camera ff00ff --on-air-url http://…   # oder --no-camera
 cargo run -p micled-cli -- --webhook <ID> set gruen
 ```
 
