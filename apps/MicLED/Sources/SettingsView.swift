@@ -90,6 +90,9 @@ struct SettingsView: View {
             }
 
             Section("Allgemein") {
+                Toggle("Lampe aus bei Ruhezustand und Sperre", isOn: $model.offWhenAway)
+                Text("Gilt auch, wenn der Bildschirm ausgeht. Während eines Calls bleibt die Mikrofarbe. Danach kommt die vorherige Farbe zurück.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Anmelden starten", isOn: Binding(
                     get: { model.launchAtLogin },
                     set: { model.launchAtLogin = $0 }

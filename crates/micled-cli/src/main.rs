@@ -103,6 +103,8 @@ fn main() {
                 after_mic: if *fixed { AfterMic::Fixed } else { AfterMic::Restore },
                 release_delay: Duration::from_secs(*delay),
                 ignored: Config::default().ignored.into_iter().chain(ignore.iter().cloned()).collect(),
+                // Die CLI bekommt keine Meldungen zu Ruhezustand und Sperre
+                off_when_away: false,
             };
             println!("Automatik läuft, Strg-C beendet.");
             let _monitor = Monitor::start(cfg, None, Arc::new(Printer));

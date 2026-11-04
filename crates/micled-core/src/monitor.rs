@@ -8,7 +8,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use crate::color::Rgb;
-use crate::engine::{Config, Engine};
+use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp};
 use crate::mic::{self, MicUser};
 use crate::shared;
@@ -36,6 +36,7 @@ pub trait StatusListener: Send + Sync {
 enum Cmd {
     Config(Config),
     Color(Rgb),
+    Away(Away, bool),
     Stop,
 }
 
@@ -81,6 +82,7 @@ impl Monitor {
                         Ok(Cmd::Stop) | Err(RecvTimeoutError::Disconnected) => break,
                         Ok(Cmd::Config(c)) => w.set_config(c),
                         Ok(Cmd::Color(c)) => w.user_color(c),
+                        Ok(Cmd::Away(r, on)) => w.set_away(r, on),
                         Err(RecvTimeoutError::Timeout) => {}
                     }
                     w.tick();
@@ -108,6 +110,11 @@ impl Monitor {
     /// Farbe direkt setzen (wird zur neuen ruhenden Farbe)
     pub fn set_color(&self, c: Rgb) {
         let _ = self.tx.send(Cmd::Color(c));
+    }
+
+    /// Ruhezustand, Bildschirm aus oder Sperre beginnt (`on = true`) bzw. endet
+    pub fn set_away(&self, reason: Away, on: bool) {
+        let _ = self.tx.send(Cmd::Away(reason, on));
     }
 
     pub fn status(&self) -> Status {
@@ -153,6 +160,13 @@ impl Worker {
         }
         if let Some(c) = self.engine.set_config(cfg) {
             self.pending = Some(c);
+        }
+    }
+
+    fn set_away(&mut self, reason: Away, on: bool) {
+        if let Some(c) = self.engine.set_away(reason, on) {
+            self.pending = Some(c);
+            self.last_try = None;
         }
     }
 

@@ -23,6 +23,16 @@ pub enum AfterMic {
     Fixed,
 }
 
+#[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AwayReason {
+    /// Ruhezustand des Macs
+    Sleep,
+    /// Bildschirm ausgeschaltet
+    DisplaySleep,
+    /// Bildschirm gesperrt
+    Locked,
+}
+
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct MicLedConfig {
     pub enabled: bool,
@@ -33,6 +43,8 @@ pub struct MicLedConfig {
     pub after_mic: AfterMic,
     pub release_delay_ms: u32,
     pub ignored: Vec<String>,
+    /// Lampe aus bei Ruhezustand, Bildschirm aus und Sperre
+    pub off_when_away: bool,
 }
 
 #[derive(uniffi::Record, Clone, Debug)]
@@ -80,6 +92,7 @@ impl From<MicLedConfig> for core::Config {
             },
             release_delay: Duration::from_millis(c.release_delay_ms as u64),
             ignored: c.ignored,
+            off_when_away: c.off_when_away,
         }
     }
 }
@@ -135,6 +148,16 @@ impl MicLedController {
         if let Some(c) = Rgb::parse(&hex) {
             self.monitor.set_color(c);
         }
+    }
+
+    /// Ruhezustand, Bildschirm aus oder Sperre beginnt (`away = true`) bzw. endet
+    pub fn set_away(&self, reason: AwayReason, away: bool) {
+        let r = match reason {
+            AwayReason::Sleep => core::Away::Sleep,
+            AwayReason::DisplaySleep => core::Away::DisplaySleep,
+            AwayReason::Locked => core::Away::Locked,
+        };
+        self.monitor.set_away(r, away);
     }
 
     pub fn turn_off(&self) {

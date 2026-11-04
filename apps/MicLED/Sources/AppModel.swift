@@ -19,6 +19,8 @@ final class AppModel {
     var restorePrevious: Bool { didSet { persist() } }
     var releaseDelaySeconds: Double { didSet { persist() } }
     var ignored: [String] { didSet { persist() } }
+    /// Lampe aus bei Ruhezustand, Bildschirm aus und Sperre
+    var offWhenAway: Bool { didSet { persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
 
     // MARK: Status aus dem Kern
@@ -32,6 +34,7 @@ final class AppModel {
     var micActive: Bool { !micUsers.isEmpty }
 
     private var controller: MicLedController?
+    private var awayObservers: [NSObjectProtocol] = []
     private let defaults = UserDefaults.standard
 
     static let defaultFavorites = ["00ff00", "ffff00", "ff0000", "0000ff", "ffffff"]
@@ -47,6 +50,7 @@ final class AppModel {
             Key.restorePrevious: true,
             Key.releaseDelay: 3.0,
             Key.ignored: defaultIgnored(),
+            Key.offWhenAway: true,
             Key.favorites: AppModel.defaultFavorites,
         ])
         enabled = d.bool(forKey: Key.enabled)
@@ -57,6 +61,7 @@ final class AppModel {
         restorePrevious = d.bool(forKey: Key.restorePrevious)
         releaseDelaySeconds = d.double(forKey: Key.releaseDelay)
         ignored = d.stringArray(forKey: Key.ignored) ?? defaultIgnored()
+        offWhenAway = d.bool(forKey: Key.offWhenAway)
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
 
         let observer = Observer { [weak self] status in
@@ -65,6 +70,7 @@ final class AppModel {
         let controller = MicLedController(config: config, observer: observer)
         self.controller = controller
         apply(controller.status())
+        observeAway()
     }
 
     // MARK: Aktionen
@@ -115,7 +121,8 @@ final class AppModel {
             micOffColor: micOffHex,
             afterMic: restorePrevious ? .restore : .fixed,
             releaseDelayMs: UInt32(max(0, releaseDelaySeconds) * 1000),
-            ignored: ignored
+            ignored: ignored,
+            offWhenAway: offWhenAway
         )
     }
 
@@ -128,8 +135,31 @@ final class AppModel {
         defaults.set(restorePrevious, forKey: Key.restorePrevious)
         defaults.set(releaseDelaySeconds, forKey: Key.releaseDelay)
         defaults.set(ignored, forKey: Key.ignored)
+        defaults.set(offWhenAway, forKey: Key.offWhenAway)
         defaults.set(favorites, forKey: Key.favorites)
         if pushConfig { controller?.updateConfig(config: config) }
+    }
+
+    /// Ruhezustand, Bildschirm aus und Sperre an den Kern melden.
+    /// Was daraus für die Lampe folgt, entscheidet der Kern.
+    private func observeAway() {
+        let ws = NSWorkspace.shared.notificationCenter
+        let dist = DistributedNotificationCenter.default()
+        let events: [(NotificationCenter, Notification.Name, AwayReason, Bool)] = [
+            (ws, NSWorkspace.willSleepNotification, .sleep, true),
+            (ws, NSWorkspace.didWakeNotification, .sleep, false),
+            (ws, NSWorkspace.screensDidSleepNotification, .displaySleep, true),
+            (ws, NSWorkspace.screensDidWakeNotification, .displaySleep, false),
+            (dist, Notification.Name("com.apple.screenIsLocked"), .locked, true),
+            (dist, Notification.Name("com.apple.screenIsUnlocked"), .locked, false),
+        ]
+        awayObservers = events.map { center, name, reason, away in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.controller?.setAway(reason: reason, away: away)
+                }
+            }
+        }
     }
 
     private func apply(_ s: MicLedStatus) {
@@ -149,6 +179,7 @@ final class AppModel {
         static let restorePrevious = "restorePrevious"
         static let releaseDelay = "releaseDelaySeconds"
         static let ignored = "ignored"
+        static let offWhenAway = "offWhenAway"
         static let favorites = "favorites"
     }
 }
