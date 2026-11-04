@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Baut den Rust-Kern als universelle statische Bibliothek, erzeugt die
 # Swift-Bindings (UniFFI) und packt alles in build/MicLEDCore.xcframework.
-# Läuft als Pre-Build-Phase in Xcode und einmal aus setup.sh.
+# Läuft im Xcode-Target MicLEDCore (vor der App) und einmal aus setup.sh.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

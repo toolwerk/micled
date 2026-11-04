@@ -60,7 +60,7 @@ apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh
 ```
 
-Die Xcode-Pre-Build-Phase ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und packt beides in `build/MicLEDCore.xcframework`. Generierte Dateien werden nicht eingecheckt.
+Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und packt beides in `build/MicLEDCore.xcframework`. Generierte Dateien werden nicht eingecheckt.
 
 ## Release
 
