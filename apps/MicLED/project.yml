@@ -1,0 +1,56 @@
+# Xcode-Projekt wird mit `xcodegen generate` erzeugt, .xcodeproj nicht einchecken.
+name: MicLED
+options:
+  bundleIdPrefix: net.staude
+  deploymentTarget:
+    macOS: "14.0"   # CoreAudio-Prozessobjekte für die Mikrofon-Erkennung gibt es ab macOS 14
+  createIntermediateGroups: true
+  developmentLanguage: de
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: "7N2W4T6UPV"
+
+targets:
+  MicLED:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: Generated         # von scripts/build-rust.sh erzeugt, nicht eingecheckt
+        optional: true
+        createIntermediateGroups: false
+      - path: Resources/Assets.xcassets
+    dependencies:
+      - framework: ../../build/MicLEDCore.xcframework
+        embed: false
+      - sdk: CoreAudio.framework
+      - sdk: CoreFoundation.framework
+      - sdk: IOKit.framework
+      - sdk: Security.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: ServiceManagement.framework
+    preBuildScripts:
+      - name: Rust-Kern und Swift-Bindings bauen
+        script: '"${SRCROOT}/../../scripts/build-rust.sh"'
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        PRODUCT_NAME: MicLED
+        PRODUCT_BUNDLE_IDENTIFIER: net.staude.micled
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: Resources/MicLED.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO   # Pre-Build-Skript schreibt nach build/ und Generated/
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+        DEAD_CODE_STRIPPING: YES
+      configs:
+        Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual

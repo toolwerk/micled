@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["crates/micled-core", "crates/micled-cli", "crates/micled-ffi"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Frank Neumann-Staude <frank@staude.net>"]
+
+[workspace.dependencies]
+micled-core = { path = "crates/micled-core" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,7 @@
+/target
+/build
+/dist
+apps/MicLED/Generated/
+*.xcodeproj
+xcuserdata/
+.DS_Store

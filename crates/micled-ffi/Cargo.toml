@@ -1,0 +1,19 @@
+[package]
+name = "micled-ffi"
+description = "UniFFI-Schicht von MicLED für die Swift-App"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "micled_ffi"
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[dependencies]
+micled-core.workspace = true
+uniffi = { version = "0.32", features = ["cli"] }

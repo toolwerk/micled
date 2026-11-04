@@ -1,0 +1,104 @@
+import SwiftUI
+
+struct SettingsView: View {
+    @Environment(AppModel.self) private var model
+    @State private var current: [MicUser] = []
+
+    var body: some View {
+        @Bindable var model = model
+
+        Form {
+            Section("Verbindung zur Lampe") {
+                Picker("Ansteuerung", selection: $model.useWebhook) {
+                    Text("USB direkt").tag(false)
+                    Text("Webhook (Luxafor-App)").tag(true)
+                }
+                .pickerStyle(.segmented)
+                if model.useWebhook {
+                    TextField("Luxafor-ID", text: $model.luxaforId, prompt: Text("Luxafor-App, Tab „Webhook“"))
+                    Text("Die Luxafor-App muss laufen. Sie gibt die Befehle an die Lampe weiter.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Mikrofon") {
+                Toggle("Automatisch umschalten", isOn: $model.enabled)
+                ColorPicker("Farbe bei Mikro an", selection: colorBinding($model.micOnHex), supportsOpacity: false)
+                Picker("Wenn das Mikro aus geht", selection: $model.restorePrevious) {
+                    Text("Vorherige Farbe wiederherstellen").tag(true)
+                    Text("Feste Farbe setzen").tag(false)
+                }
+                ColorPicker(
+                    model.restorePrevious ? "Farbe, falls keine vorherige bekannt" : "Farbe bei Mikro aus",
+                    selection: colorBinding($model.micOffHex),
+                    supportsOpacity: false
+                )
+                LabeledContent("Zurückschalten nach") {
+                    Stepper(value: $model.releaseDelaySeconds, in: 0...60, step: 1) {
+                        Text("\(Int(model.releaseDelaySeconds)) s Stille")
+                    }
+                }
+            }
+
+            Section("Schnellfarben im Menü") {
+                HStack {
+                    ForEach(model.favorites.indices, id: \.self) { i in
+                        ColorPicker("", selection: colorBinding($model.favorites[i]), supportsOpacity: false)
+                            .labelsHidden()
+                    }
+                    Spacer()
+                    Button("Zurücksetzen") { model.favorites = AppModel.defaultFavorites }
+                }
+            }
+
+            Section {
+                if model.ignored.isEmpty {
+                    Text("Keine").foregroundStyle(.secondary)
+                }
+                ForEach(model.ignored, id: \.self) { key in
+                    HStack {
+                        Text(key).font(.system(.body, design: .monospaced))
+                        Spacer()
+                        Button("Entfernen") { model.ignored.removeAll { $0 == key } }
+                    }
+                }
+                DisclosureGroup("Gerade am Mikrofon") {
+                    if current.isEmpty {
+                        Text("Kein Programm nutzt das Mikrofon.").foregroundStyle(.secondary)
+                    }
+                    ForEach(current, id: \.pid) { user in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(model.displayName(user))
+                                Text(user.bundleId.isEmpty ? user.name : user.bundleId)
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Ignorieren") { model.ignore(user) }
+                        }
+                    }
+                    Button("Aktualisieren") { current = model.currentUsers() }
+                }
+            } header: {
+                Text("Ignorierte Programme")
+            } footer: {
+                Text("Diese Programme schalten die Lampe nicht um, z. B. ein Diktier- oder Aufnahmewerkzeug, das das Mikrofon dauerhaft offen hält.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Allgemein") {
+                Toggle("Beim Anmelden starten", isOn: Binding(
+                    get: { model.launchAtLogin },
+                    set: { model.launchAtLogin = $0 }
+                ))
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 480)
+        .frame(minHeight: 520)
+        .onAppear { current = model.currentUsers() }
+    }
+}

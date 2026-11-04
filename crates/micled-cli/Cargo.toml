@@ -1,0 +1,15 @@
+[package]
+name = "micled-cli"
+description = "Kommandozeile für MicLED: Lampe setzen, Mikrofon prüfen, Automatik testen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "micled"
+path = "src/main.rs"
+
+[dependencies]
+micled-core.workspace = true
+clap = { version = "4", features = ["derive"] }

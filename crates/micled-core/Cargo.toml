@@ -1,0 +1,15 @@
+[package]
+name = "micled-core"
+description = "Kern von MicLED: Luxafor-Steuerung (USB/Webhook) und Mikrofon-Erkennung"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+hidapi = { version = "2.6", default-features = false, features = ["linux-static-hidraw", "macos-shared-device", "windows-native"] }
+ureq = { version = "3", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+log = "0.4"
