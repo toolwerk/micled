@@ -76,9 +76,7 @@ struct SettingsView: View {
                 }
                 .disabled(!model.remindersEnabled)
                 Toggle("Kalender von macOS", isOn: $model.useSystemCalendar)
-                    .disabled(!model.remindersEnabled)
                 Toggle("Nextcloud direkt", isOn: $model.nextcloudEnabled)
-                    .disabled(!model.remindersEnabled)
                 if model.nextcloudEnabled {
                     TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
                     TextField("Benutzer", text: $model.nextcloudUser)
@@ -94,7 +92,7 @@ struct SettingsView: View {
             } header: {
                 Text("Termine")
             } footer: {
-                Text("Die Lampe blinkt kurz vor jedem Termin, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
+                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
