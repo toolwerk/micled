@@ -144,6 +144,26 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section {
+                Toggle("Abends dimmen", isOn: $model.dimEnabled)
+                DatePicker("Von", selection: timeBinding($model.dimFromMinutes), displayedComponents: .hourAndMinute)
+                    .disabled(!model.dimEnabled)
+                DatePicker("Bis", selection: timeBinding($model.dimToMinutes), displayedComponents: .hourAndMinute)
+                    .disabled(!model.dimEnabled)
+                LabeledContent("Helligkeit") {
+                    HStack {
+                        Slider(value: $model.dimPercent, in: 10...100, step: 5)
+                        Text("\(Int(model.dimPercent)) %").monospacedDigit().frame(width: 44, alignment: .trailing)
+                    }
+                }
+                .disabled(!model.dimEnabled)
+            } header: {
+                Text("Helligkeit")
+            } footer: {
+                Text("Die Lampe hat keine eigene Helligkeit, MicLED rechnet die Farben herunter. Gilt für alle Farben. „Bis“ vor „Von“ heißt über Mitternacht.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Schnellfarben im Menü") {
                 HStack {
                     ForEach(model.favorites.indices, id: \.self) { i in
@@ -204,5 +224,16 @@ struct SettingsView: View {
         .frame(width: 480)
         .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
+    }
+
+    /// Minuten nach Mitternacht als Uhrzeit für den `DatePicker`
+    private func timeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
+        Binding(
+            get: { Calendar.current.startOfDay(for: Date()).addingTimeInterval(TimeInterval(minutes.wrappedValue * 60)) },
+            set: {
+                let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
+                minutes.wrappedValue = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            }
+        )
     }
 }

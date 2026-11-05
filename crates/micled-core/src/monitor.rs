@@ -13,7 +13,7 @@ use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
-use crate::{caldav, camera, onair, shared};
+use crate::{caldav, camera, dim, onair, shared};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -53,7 +53,7 @@ pub trait StatusListener: Send + Sync {
 }
 
 enum Cmd {
-    Config(Config),
+    Config(Box<Config>),
     Color(Rgb),
     Away(Away, bool),
     Upcoming(Vec<u64>),
@@ -124,12 +124,13 @@ impl Monitor {
                     fetched: Arc::new(Mutex::new(None)),
                     fetching: false,
                     calendar_error: None,
+                    brightness: 100,
                 };
                 w.file_mtime = w.mtime();
                 loop {
                     match rx.recv_timeout(POLL) {
                         Ok(Cmd::Stop) | Err(RecvTimeoutError::Disconnected) => break,
-                        Ok(Cmd::Config(c)) => w.set_config(c),
+                        Ok(Cmd::Config(c)) => w.set_config(*c),
                         Ok(Cmd::Color(c)) => w.user_color(c),
                         Ok(Cmd::Away(r, on)) => w.set_away(r, on),
                         Ok(Cmd::Timer(t)) => w.set_timer(t),
@@ -163,7 +164,7 @@ impl Monitor {
     }
 
     pub fn update_config(&self, cfg: Config) {
-        let _ = self.tx.send(Cmd::Config(cfg));
+        let _ = self.tx.send(Cmd::Config(Box::new(cfg)));
     }
 
     /// Farbe direkt setzen (wird zur neuen ruhenden Farbe)
@@ -247,6 +248,8 @@ struct Worker {
     fetched: Fetched,
     fetching: bool,
     calendar_error: Option<String>,
+    /// Zuletzt angewandte Helligkeit in Prozent
+    brightness: u8,
 }
 
 impl Worker {
@@ -403,12 +406,21 @@ impl Worker {
             self.flash(self.engine.config().reminder_color);
         }
 
-        // 4. Lampe schalten (mit Wiederholung, falls sie gerade fehlt)
+        // 4. Helligkeit: an den Grenzen der Dimm-Zeit die Farbe neu senden
+        let brightness = dim::percent(self.engine.config().dim, dim::local_minute());
+        if brightness != self.brightness {
+            self.brightness = brightness;
+            if let (None, Some(c)) = (self.pending, self.shown) {
+                self.push(c);
+            }
+        }
+
+        // 5. Lampe schalten (mit Wiederholung, falls sie gerade fehlt)
         if let Some(c) = self.pending {
             let due = self.last_try.map(|t| t.elapsed() >= RETRY).unwrap_or(true);
             if due {
                 self.last_try = Some(Instant::now());
-                match self.lamp.set(c) {
+                match self.lamp.set(dim::apply(c, self.brightness)) {
                     Ok(()) => {
                         log::info!("Lampe auf {c}");
                         self.pending = None;
@@ -430,13 +442,13 @@ impl Worker {
             } else {
                 self.shown.unwrap_or(Rgb::OFF)
             };
-            if let Err(e) = self.lamp.set(c) {
-                log::warn!("Vorwarnung: {e}");
+            if let Err(e) = self.lamp.set(dim::apply(c, self.brightness)) {
+                log::warn!("Blinken: {e}");
                 self.flash_left = 0;
             }
         }
 
-        // 5. Auf Sendung: Statistik und Meldung nach außen
+        // 6. Auf Sendung: Statistik und Meldung nach außen
         let live = self.engine.live();
         if live != self.live || (live && self.engine.camera_on() != self.camera_reported) {
             self.set_live(live);

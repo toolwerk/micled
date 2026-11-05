@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use crate::caldav::Nextcloud;
 use crate::color::Rgb;
+use crate::dim::Dim;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
 
@@ -80,6 +81,8 @@ pub struct Config {
     /// Fokus von macOS auf der Lampe zeigen
     pub focus_enabled: bool,
     pub focus_color: Rgb,
+    /// Abends dimmen (`None` = aus)
+    pub dim: Option<Dim>,
 }
 
 impl Default for Config {
@@ -103,6 +106,7 @@ impl Default for Config {
             timer_color: Rgb { r: 0x80, g: 0x00, b: 0xff },
             focus_enabled: false,
             focus_color: Rgb { r: 0xff, g: 0x88, b: 0x00 },
+            dim: None,
         }
     }
 }

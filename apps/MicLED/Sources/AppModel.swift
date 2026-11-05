@@ -45,6 +45,11 @@ final class AppModel {
     /// Fokus von macOS auf der Lampe zeigen
     var focusEnabled: Bool { didSet { persist(); updateFocus() } }
     var focusHex: String { didSet { persist() } }
+    /// Abends dimmen, Zeiten in Minuten nach Mitternacht
+    var dimEnabled: Bool { didSet { persist() } }
+    var dimFromMinutes: Int { didSet { persist() } }
+    var dimToMinutes: Int { didSet { persist() } }
+    var dimPercent: Double { didSet { persist() } }
 
     // MARK: Status aus dem Kern
 
@@ -98,6 +103,10 @@ final class AppModel {
             Key.timerColor: "8000ff",
             Key.focusEnabled: false,
             Key.focusColor: "ff8800",
+            Key.dimEnabled: false,
+            Key.dimFrom: 18 * 60,
+            Key.dimTo: 7 * 60,
+            Key.dimPercent: 50.0,
         ])
         enabled = d.bool(forKey: Key.enabled)
         useWebhook = d.bool(forKey: Key.useWebhook)
@@ -123,6 +132,10 @@ final class AppModel {
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
         focusHex = d.string(forKey: Key.focusColor) ?? "ff8800"
+        dimEnabled = d.bool(forKey: Key.dimEnabled)
+        dimFromMinutes = d.integer(forKey: Key.dimFrom)
+        dimToMinutes = d.integer(forKey: Key.dimTo)
+        dimPercent = d.double(forKey: Key.dimPercent)
         appColors = (d.array(forKey: Key.appColors) as? [[String: String]] ?? []).compactMap { entry in
             guard let key = entry["key"], let hex = entry["hex"] else { return nil }
             return AppColor(key: key, hex: hex)
@@ -245,7 +258,11 @@ final class AppModel {
             appColors: appColors,
             timerColor: timerHex,
             focusEnabled: focusEnabled,
-            focusColor: focusHex
+            focusColor: focusHex,
+            dimEnabled: dimEnabled,
+            dimFromMin: UInt16(clamping: dimFromMinutes),
+            dimToMin: UInt16(clamping: dimToMinutes),
+            dimPercent: UInt8(clamping: Int(dimPercent))
         )
     }
 
@@ -277,6 +294,10 @@ final class AppModel {
         defaults.set(timerHex, forKey: Key.timerColor)
         defaults.set(focusEnabled, forKey: Key.focusEnabled)
         defaults.set(focusHex, forKey: Key.focusColor)
+        defaults.set(dimEnabled, forKey: Key.dimEnabled)
+        defaults.set(dimFromMinutes, forKey: Key.dimFrom)
+        defaults.set(dimToMinutes, forKey: Key.dimTo)
+        defaults.set(dimPercent, forKey: Key.dimPercent)
         defaults.set(appColors.map { ["key": $0.key, "hex": $0.hex] }, forKey: Key.appColors)
         if pushConfig { controller?.updateConfig(config: config) }
     }
@@ -374,6 +395,10 @@ final class AppModel {
         static let timerColor = "timerColor"
         static let focusEnabled = "focusEnabled"
         static let focusColor = "focusColor"
+        static let dimEnabled = "dimEnabled"
+        static let dimFrom = "dimFromMinutes"
+        static let dimTo = "dimToMinutes"
+        static let dimPercent = "dimPercent"
     }
 }
 

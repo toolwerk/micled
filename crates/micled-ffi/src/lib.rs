@@ -76,6 +76,11 @@ pub struct MicLedConfig {
     /// Fokus von macOS auf der Lampe zeigen
     pub focus_enabled: bool,
     pub focus_color: String,
+    /// Abends dimmen: Zeitspanne in Minuten nach Mitternacht, Helligkeit in Prozent
+    pub dim_enabled: bool,
+    pub dim_from_min: u16,
+    pub dim_to_min: u16,
+    pub dim_percent: u8,
 }
 
 /// Farbe für ein Programm (Bundle-ID oder Prozessname)
@@ -141,6 +146,11 @@ impl From<MicLedConfig> for core::Config {
             nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
             timer_color: color(&c.timer_color, Rgb { r: 0x80, g: 0, b: 0xff }),
             focus_enabled: c.focus_enabled,
+            dim: c.dim_enabled.then_some(core::dim::Dim {
+                from_min: c.dim_from_min,
+                to_min: c.dim_to_min,
+                percent: c.dim_percent,
+            }),
             focus_color: color(&c.focus_color, Rgb { r: 0xff, g: 0x88, b: 0 }),
             app_colors: c.app_colors.iter().filter_map(|a| Some((a.key.clone(), Rgb::parse(&a.hex)?))).collect(),
             enabled: c.enabled,
