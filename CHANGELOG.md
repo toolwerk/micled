@@ -4,6 +4,8 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-05
+
 ### Hinzugefügt
 
 - Rust-Kern: Luxafor per USB-HID (Gerät wird nur pro Befehl geöffnet) und Webhook, Mikrofon-Erkennung über CoreAudio-Prozessobjekte, Umschaltlogik mit Wartezeit, gemeinsame Statusdatei mit dem Stream-Deck-Plugin.
@@ -23,3 +25,6 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Tagessumme „auf Sendung“ im Menü, gespeichert in `~/Library/Application Support/net.staude.micled/calls.json`.
 - `micled://`-Adressen und Aktionen für die Kurzbefehle-App.
 - `setup.sh`, `scripts/build-rust.sh`, `scripts/bump-build.sh`, `scripts/release.sh`, CI für Linux und macOS.
+
+[Unreleased]: https://github.com/toolwerk/micled/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/toolwerk/micled/releases/tag/v0.1.0
