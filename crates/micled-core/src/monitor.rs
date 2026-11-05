@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::color::Rgb;
 use crate::engine::{Away, Config, Engine};
-use crate::lamp::{self, Frame, Lamp, Transport};
+use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
 use crate::reminder::Reminders;
 use crate::stats::CallLog;
@@ -284,7 +284,7 @@ impl Worker {
             let due = self.last_try.map(|t| t.elapsed() >= RETRY).unwrap_or(true);
             if due {
                 self.last_try = Some(Instant::now());
-                match self.lamp.set_frame(self.engine.frame(c)) {
+                match self.lamp.set(c) {
                     Ok(()) => {
                         log::info!("Lampe auf {c}");
                         self.pending = None;
@@ -299,12 +299,12 @@ impl Worker {
             }
         } else if self.flash_left > 0 {
             self.flash_left -= 1;
-            let frame = if self.flash_left % 2 == 1 {
-                Frame::solid(self.engine.config().reminder_color)
+            let c = if self.flash_left % 2 == 1 {
+                self.engine.config().reminder_color
             } else {
-                self.engine.frame(self.shown.unwrap_or(Rgb::OFF))
+                self.shown.unwrap_or(Rgb::OFF)
             };
-            if let Err(e) = self.lamp.set_frame(frame) {
+            if let Err(e) = self.lamp.set(c) {
                 log::warn!("Vorwarnung: {e}");
                 self.flash_left = 0;
             }

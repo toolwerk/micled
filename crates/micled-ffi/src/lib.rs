@@ -33,16 +33,6 @@ pub enum AwayReason {
     Locked,
 }
 
-/// Wo die Mikro- bzw. Kamerafarbe leuchtet (nur per USB)
-#[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LampSide {
-    Both,
-    /// LEDs 1–3
-    A,
-    /// LEDs 4–6
-    B,
-}
-
 /// Befehl aus einer `micled://`-Adresse
 #[derive(uniffi::Enum, Clone, Debug, PartialEq, Eq)]
 pub enum UrlCommand {
@@ -67,7 +57,6 @@ pub struct MicLedConfig {
     /// Kamera an zählt als aktiv und hat eine eigene Farbe
     pub camera_enabled: bool,
     pub camera_color: String,
-    pub side: LampSide,
     /// POST bei „Auf Sendung“ an/aus, leer = aus
     pub on_air_url: String,
     pub reminder_color: String,
@@ -126,11 +115,6 @@ impl From<MicLedConfig> for core::Config {
             off_when_away: c.off_when_away,
             camera: c.camera_enabled,
             camera_color: color(&c.camera_color, Rgb::MAGENTA),
-            side: match c.side {
-                LampSide::Both => core::Side::Both,
-                LampSide::A => core::Side::A,
-                LampSide::B => core::Side::B,
-            },
             on_air_url: c.on_air_url,
             reminder_color: color(&c.reminder_color, Rgb::YELLOW),
             reminder_lead: Duration::from_secs(c.reminder_lead_s as u64),

@@ -26,8 +26,6 @@ final class AppModel {
     var offWhenAway: Bool { didSet { persist() } }
     var cameraEnabled: Bool { didSet { persist() } }
     var cameraHex: String { didSet { persist() } }
-    /// "both", "a" (LEDs 1–3) oder "b" (LEDs 4–6)
-    var side: String { didSet { persist() } }
     var onAirUrl: String { didSet { persist() } }
     var remindersEnabled: Bool { didSet { persist(); updateCalendar() } }
     var reminderHex: String { didSet { persist() } }
@@ -67,7 +65,6 @@ final class AppModel {
             Key.offWhenAway: true,
             Key.cameraEnabled: true,
             Key.cameraColor: "ff00ff",
-            Key.side: "both",
             Key.onAirUrl: "",
             Key.remindersEnabled: false,
             Key.reminderColor: "ffff00",
@@ -85,7 +82,6 @@ final class AppModel {
         offWhenAway = d.bool(forKey: Key.offWhenAway)
         cameraEnabled = d.bool(forKey: Key.cameraEnabled)
         cameraHex = d.string(forKey: Key.cameraColor) ?? "ff00ff"
-        side = d.string(forKey: Key.side) ?? "both"
         onAirUrl = d.string(forKey: Key.onAirUrl) ?? ""
         remindersEnabled = d.bool(forKey: Key.remindersEnabled)
         reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
@@ -170,7 +166,6 @@ final class AppModel {
             offWhenAway: offWhenAway,
             cameraEnabled: cameraEnabled,
             cameraColor: cameraHex,
-            side: side == "a" ? .a : side == "b" ? .b : .both,
             onAirUrl: onAirUrl,
             reminderColor: reminderHex,
             reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60)
@@ -189,7 +184,6 @@ final class AppModel {
         defaults.set(offWhenAway, forKey: Key.offWhenAway)
         defaults.set(cameraEnabled, forKey: Key.cameraEnabled)
         defaults.set(cameraHex, forKey: Key.cameraColor)
-        defaults.set(side, forKey: Key.side)
         defaults.set(onAirUrl, forKey: Key.onAirUrl)
         defaults.set(remindersEnabled, forKey: Key.remindersEnabled)
         defaults.set(reminderHex, forKey: Key.reminderColor)
@@ -259,7 +253,6 @@ final class AppModel {
         static let offWhenAway = "offWhenAway"
         static let cameraEnabled = "cameraEnabled"
         static let cameraColor = "cameraColor"
-        static let side = "side"
         static let onAirUrl = "onAirUrl"
         static let remindersEnabled = "remindersEnabled"
         static let reminderColor = "reminderColor"

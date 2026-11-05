@@ -47,16 +47,10 @@ struct SettingsView: View {
                 Toggle("Kamera auswerten", isOn: $model.cameraEnabled)
                 ColorPicker("Farbe bei Kamera an", selection: colorBinding($model.cameraHex), supportsOpacity: false)
                     .disabled(!model.cameraEnabled)
-                Picker("Mikro- und Kamerafarbe auf", selection: $model.side) {
-                    Text("Beiden Seiten").tag("both")
-                    Text("Seite A (LEDs 1–3)").tag("a")
-                    Text("Seite B (LEDs 4–6)").tag("b")
-                }
-                .disabled(model.useWebhook)
             } header: {
-                Text("Kamera und Anzeige")
+                Text("Kamera")
             } footer: {
-                Text("Kamera an zählt wie Mikro an, hat aber eine eigene Farbe. Bei nur einer Seite behält die andere die vorherige Farbe, z. B. Rot zum Raum und Grün zu dir. Nur per USB.")
+                Text("Kamera an zählt wie Mikro an, hat aber eine eigene Farbe.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

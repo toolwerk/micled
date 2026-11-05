@@ -12,7 +12,6 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Bekannte Audio-Dienste, die das Mikrofon dauerhaft offen halten (`com.rogueamoeba.arkaudiod`), werden ab Werk ignoriert.
 - Lampe geht bei Ruhezustand, ausgeschaltetem Bildschirm und Bildschirmsperre aus und bekommt danach ihre vorherige Farbe zurück. Während eines Calls bleibt die Mikrofarbe. Abschaltbar in den Einstellungen.
 - Kamera-Erkennung über CoreMediaIO mit eigener Farbe.
-- Mikro- und Kamerafarbe wahlweise nur auf einer Seite der Luxafor Flag.
 - „Auf Sendung“-Meldung per HTTP-POST, z. B. an Home Assistant.
 - Vorwarnung vor Kalenderterminen durch kurzes Blinken.
 - Tagessumme „auf Sendung“ im Menü, gespeichert in `~/Library/Application Support/net.staude.micled/calls.json`.

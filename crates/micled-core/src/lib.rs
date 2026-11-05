@@ -14,7 +14,7 @@ pub mod shared;
 pub mod stats;
 
 pub use color::Rgb;
-pub use engine::{AfterMic, Away, Config, Side, DEFAULT_IGNORED};
-pub use lamp::{Frame, Transport};
+pub use engine::{AfterMic, Away, Config, DEFAULT_IGNORED};
+pub use lamp::Transport;
 pub use mic::MicUser;
 pub use monitor::{Monitor, Status, StatusListener};

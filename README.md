@@ -13,7 +13,6 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Bei Ruhezustand, ausgeschaltetem Bildschirm und Sperre geht die Lampe aus und danach mit der vorherigen Farbe wieder an. Während eines Calls bleibt sie in der Mikrofarbe.
 - Wartezeit vor dem Zurückschalten (Standard 3 Sekunden), damit kurze Pausen nicht flackern.
 - Kamera-Erkennung über CoreMediaIO: Kamera an zählt wie Mikro an und hat eine eigene Farbe (Standard Magenta).
-- Mikro- und Kamerafarbe wahlweise nur auf einer Seite der Flag, die andere behält die vorherige Farbe (nur per USB).
 - „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
 - Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin aus dem Kalender (abschaltbar, Vorlauf einstellbar).
 - Im Menü steht, wie lange du heute auf Sendung warst.
@@ -73,7 +72,6 @@ Der Rust-Kern lässt sich ohne Xcode testen:
 ```bash
 cargo run -p micled-cli -- mic                 # wer nutzt gerade das Mikrofon, läuft eine Kamera?
 cargo run -p micled-cli -- set ff8800          # Farbe setzen (auch: rot, gruen, aus)
-cargo run -p micled-cli -- set rot --side a    # nur Seite A (LEDs 1–3), Seite B geht aus
 cargo run -p micled-cli -- off
 cargo run -p micled-cli -- watch               # Automatik, Strg-C beendet
 cargo run -p micled-cli -- watch --on ff0000 --off 00ff00 --fixed --delay 5

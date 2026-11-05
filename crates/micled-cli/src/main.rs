@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use micled_core::{camera, lamp, mic, AfterMic, Config, Frame, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{camera, lamp, mic, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -19,13 +19,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Feste Farbe setzen, z. B. `micled set ff8800` oder nur eine Seite mit `--side a`
-    Set {
-        color: String,
-        /// Nur Seite a (LEDs 1–3) oder b (LEDs 4–6) setzen, die andere geht aus
-        #[arg(long, value_parser = ["a", "b"])]
-        side: Option<String>,
-    },
+    /// Feste Farbe setzen, z. B. `micled set ff8800`
+    Set { color: String },
     /// Lampe ausschalten
     Off,
     /// Zeigt, welche Programme gerade das Mikrofon nutzen und ob eine Kamera läuft
@@ -99,15 +94,7 @@ fn main() {
     let cli = Cli::parse();
     let t = transport(&cli);
     let result = match &cli.cmd {
-        Cmd::Set { color: c, side } => {
-            let c = color(c);
-            let f = match side.as_deref() {
-                Some("a") => Frame { a: c, b: Rgb::OFF },
-                Some("b") => Frame { a: Rgb::OFF, b: c },
-                _ => Frame::solid(c),
-            };
-            lamp::open(&t).set_frame(f).map_err(|e| e.to_string())
-        }
+        Cmd::Set { color: c } => lamp::open(&t).set(color(c)).map_err(|e| e.to_string()),
         Cmd::Off => lamp::open(&t).set(Rgb::OFF).map_err(|e| e.to_string()),
         Cmd::Mic => mic::users().map(|users| {
             if users.is_empty() {
