@@ -26,3 +26,5 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p micled-cli -- mic
 ```
+
+Nach sichtbaren Änderungen an Menü, Einstellungen oder Statistik `scripts/screenshots.sh` laufen lassen und die Bilder in `docs/images/` mit einchecken.

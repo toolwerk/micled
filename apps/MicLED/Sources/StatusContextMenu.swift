@@ -93,6 +93,7 @@ struct StatusLabel: View {
                 let window = openWindow
                 StatusContextMenu.shared.openStats = { window(id: "stats") }
                 StatusContextMenu.shared.install()
+                ScreenshotMode.openWindows(openWindow: openWindow, openSettings: open)
             }
     }
 }

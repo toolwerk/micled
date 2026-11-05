@@ -30,12 +30,23 @@ struct MicLEDApp: App {
         Window("Statistik", id: "stats") {
             StatsView()
                 .environment(model)
+                .screenshotActive()
         }
+        .windowResizability(.contentSize)
+
+        // Nur im Screenshot-Modus geöffnet: das Menü als normales Fenster
+        Window("MicLED-Menü", id: "menu") {
+            MenuView()
+                .environment(model)
+                .screenshotActive()
+        }
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
 
         Settings {
             SettingsView()
                 .environment(model)
+                .screenshotActive()
         }
     }
 }

@@ -78,12 +78,13 @@ final class AppModel {
     private var awayObservers: [NSObjectProtocol] = []
     private var calendar: CalendarWatcher?
     private var focusWatcher: FocusWatcher?
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
     static let defaultFavorites = ["00ff00", "ffff00", "ff0000", "0000ff", "ffffff"]
 
     private init() {
-        let d = UserDefaults.standard
+        let d = ScreenshotMode.isActive ? ScreenshotMode.defaults() : UserDefaults.standard
+        defaults = d
         d.register(defaults: [
             Key.enabled: true,
             Key.useWebhook: false,
@@ -136,9 +137,9 @@ final class AppModel {
         nextcloudEnabled = d.bool(forKey: Key.nextcloudEnabled)
         nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
-        nextcloudPassword = Keychain.read(.nextcloud)
+        nextcloudPassword = ScreenshotMode.isActive ? "" : Keychain.read(.nextcloud)
         slackEnabled = d.bool(forKey: Key.slackEnabled)
-        slackToken = Keychain.read(.slack)
+        slackToken = ScreenshotMode.isActive ? "" : Keychain.read(.slack)
         slackText = d.string(forKey: Key.slackText) ?? "Im Call"
         slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
@@ -152,6 +153,15 @@ final class AppModel {
         appColors = (d.array(forKey: Key.appColors) as? [[String: String]] ?? []).compactMap { entry in
             guard let key = entry["key"], let hex = entry["hex"] else { return nil }
             return AppColor(key: key, hex: hex)
+        }
+
+        if ScreenshotMode.isActive {
+            micUsers = [MicUser(pid: 0, bundleId: "us.zoom.xos", name: "Zoom")]
+            overriding = true
+            live = true
+            shownHex = "ff0000"
+            baseHex = "0000ff"
+            return
         }
 
         let observer = Observer { [weak self] status in
@@ -224,7 +234,10 @@ final class AppModel {
 
     /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
     func liveSecondsPerDay(bounds: [UInt64]) -> [UInt64] {
-        controller?.liveSecondsPerDay(bounds: bounds) ?? []
+        if ScreenshotMode.isActive {
+            return bounds.dropLast().map { ScreenshotMode.seconds(forDay: Date(timeIntervalSince1970: TimeInterval($0))) }
+        }
+        return controller?.liveSecondsPerDay(bounds: bounds) ?? []
     }
 
     func callsCsv() -> String {
@@ -233,6 +246,7 @@ final class AppModel {
 
     /// Sekunden auf Sendung seit Mitternacht
     func liveSecondsToday() -> UInt64 {
+        if ScreenshotMode.isActive { return 2 * 3600 + 10 * 60 }
         let midnight = Calendar.current.startOfDay(for: Date())
         return controller?.liveSecondsSince(since: UInt64(midnight.timeIntervalSince1970)) ?? 0
     }

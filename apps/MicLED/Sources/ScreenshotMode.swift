@@ -1,0 +1,83 @@
+import AppKit
+import SwiftUI
+
+/// Screenshot-Modus für die README (`scripts/screenshots.sh`): Beispieldaten
+/// statt echter, kein Rust-Kern, also keine Lampe, kein Slack, kein Nextcloud.
+/// Nur in Debug-Builds; im Release ist der Modus immer aus.
+enum ScreenshotMode {
+    static var isActive: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("--screenshots")
+        #else
+        false
+        #endif
+    }
+
+    private static func argument(_ name: String) -> String? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
+    /// `--appearance light|dark`
+    static var appearance: NSAppearance? {
+        argument("--appearance").map { NSAppearance(named: $0 == "dark" ? .darkAqua : .aqua)! }
+    }
+
+    /// `--window menu|stats|settings`: nur dieses Fenster öffnen, damit es aktiv
+    /// (und nicht ausgegraut) aufgenommen wird
+    static var window: String { argument("--window") ?? "menu" }
+
+    static let suiteName = "net.staude.micled.screenshots"
+
+    /// Eigene, beim Start geleerte Einstellungen
+    static func defaults() -> UserDefaults {
+        UserDefaults.standard.removePersistentDomain(forName: suiteName)
+        let d = UserDefaults(suiteName: suiteName) ?? .standard
+        d.set(["ff0000", "00ff00", "ffff00", "0000ff", "ffffff"], forKey: "favorites")
+        d.set([["key": "com.plaud.mac", "hex": "ff8800"]], forKey: "appColors")
+        d.set(true, forKey: "slackEnabled")
+        d.set(true, forKey: "dimEnabled")
+        d.set(true, forKey: "remindersEnabled")
+        return d
+    }
+
+    /// Feste Zeit auf Sendung: Wochenende frei, werktags 40–220 min
+    static func seconds(forDay start: Date) -> UInt64 {
+        if Calendar.current.isDateInWeekend(start) { return 0 }
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: start) ?? 0
+        let minutes = [95, 140, 60, 220, 130, 40, 175, 110][day % 8]
+        return UInt64(minutes * 60)
+    }
+
+    /// Das gewählte Fenster öffnen (aus dem Symbol heraus, das die Aktionen kennt)
+    @MainActor
+    static func openWindows(openWindow: OpenWindowAction, openSettings: OpenSettingsAction) {
+        guard isActive else { return }
+        if let appearance { NSApp.appearance = appearance }
+        NSApp.activate()
+        switch window {
+        case "stats": openWindow(id: "stats")
+        case "settings": openSettings()
+        default: openWindow(id: "menu")
+        }
+        // aktiv werden, auch wenn das Terminal vorne ist, damit Schalter nicht grau erscheinen
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first { $0.isVisible && $0.canBecomeKey }?.makeKeyAndOrderFront(nil)
+        }
+    }
+}
+
+extension View {
+    /// Im Screenshot-Modus wie ein aktives Fenster zeichnen; macOS lässt die
+    /// aus dem Terminal gestartete App nicht nach vorn, Schalter wären sonst grau.
+    @ViewBuilder
+    func screenshotActive() -> some View {
+        if ScreenshotMode.isActive {
+            environment(\.controlActiveState, .key)
+        } else {
+            self
+        }
+    }
+}

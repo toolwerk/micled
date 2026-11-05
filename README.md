@@ -1,8 +1,58 @@
 # MicLED
 
-MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, sobald ein Programm das Mikrofon nutzt. Geht das Mikrofon wieder aus, springt die Lampe auf die Farbe von vorher zurück oder auf eine feste Farbe.
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](#voraussetzungen)
+[![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](apps/MicLED)
+[![Rust](https://img.shields.io/badge/Rust-Kern-B7410E?logo=rust&logoColor=white)](crates/micled-core)
+[![CI](https://github.com/staude/micled/actions/workflows/ci.yml/badge.svg)](https://github.com/staude/micled/actions/workflows/ci.yml)
+[![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-blue)](LICENSE)
+
+**Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/menu-dark.png">
+    <img src="docs/images/menu-light.png" alt="Menü von MicLED: Mikrofon aktiv in Zoom, Schnellfarben, Konzentrations-Timer und Zeit auf Sendung" width="360">
+  </picture>
+</p>
 
 ## Funktionen
+
+- 🎙️ **Mikrofon und Kamera** werden erkannt, egal welches Programm: Zoom, Teams, Meet im Browser, FaceTime oder Plaud. Ton wird dabei nicht gelesen.
+- 🎨 **Farben nach Wunsch**: eigene Farbe für Mikrofon, Kamera und einzelne Programme, danach zurück zur vorherigen Farbe.
+- ⏱️ **Konzentrations-Timer** mit eigener Farbe; am Ende blinkt die Lampe.
+- 🌙 **Fokus und Abend**: eigene Farbe, solange ein Fokus von macOS an ist, abends gedimmt.
+- 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
+- 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
+- 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
+- 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
+- ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
+- 🔌 **USB direkt** ohne Luxafor-App, wahlweise über den Luxafor-Webhook.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-dark.png">
+        <img src="docs/images/settings-light.png" alt="Einstellungen von MicLED">
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/stats-dark.png">
+        <img src="docs/images/stats-light.png" alt="Statistik: Minuten auf Sendung je Tag als Balken">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Einstellungen</td>
+    <td align="center">Statistik</td>
+  </tr>
+</table>
+
+<details>
+<summary><b>Alle Funktionen im Detail</b></summary>
 
 - Erkennt jedes Programm, das gerade vom Mikrofon liest (Zoom, Teams, Meet im Browser, Plaud, FaceTime …), über CoreAudio. Ton wird dabei nicht gelesen, eine Mikrofon-Freigabe ist nicht nötig.
 - Zwei einstellbare Farben: „Mikro an“ (Standard Rot) und „Mikro aus“ (Standard Grün).
@@ -23,6 +73,8 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Statistik: Im Menü steht, wie lange du heute auf Sendung warst. Das Fenster „Statistik“ zeigt die letzten 7 oder 30 Tage als Balken und exportiert alle Calls als CSV. Gespeichert wird ein Jahr.
 - Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
 
+</details>
+
 ## Steuerung von außen
 
 Adressen, z. B. für Raycast, das Stream Deck („Website öffnen“) oder `open` im Terminal:
@@ -35,7 +87,7 @@ micled://timer/25          Konzentrations-Timer für 25 Minuten (timer/off beend
 micled://focus/on          Fokus melden (auch off), z. B. aus einer Fokus-Automation
 ```
 
-In der Kurzbefehle-App gibt es die Aktionen „Lampenfarbe setzen“, „Lampe ausschalten“, „Mikrofon-Automatik schalten“, „Konzentration starten“, „Konzentration beenden“ und „Fokus an MicLED melden“. Damit lässt sich der Fokus-Modus anbinden: Kurzbefehle › Automation › Fokus „Arbeiten“ an › Lampenfarbe setzen „gelb“.
+In der Kurzbefehle-App gibt es die Aktionen „Lampenfarbe setzen“, „Lampe ausschalten“, „Mikrofon-Automatik schalten“, „Konzentration starten“, „Konzentration beenden“ und „Fokus an MicLED melden“. Gibt macOS den Fokus nicht frei, meldet ihn eine Automation: Kurzbefehle › Automation › Fokus „Arbeiten“ an › „Fokus an MicLED melden“ (und eine zweite für aus).
 
 ## „Auf Sendung“ an Home Assistant
 
@@ -112,10 +164,19 @@ crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdate
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
-scripts/             build-rust.sh, bump-build.sh, release.sh
+scripts/             build-rust.sh, bump-build.sh, release.sh, screenshots.sh
+docs/images/         Screenshots für diese README
 ```
 
 Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und legt Bibliothek und Header unter `build/universal` und `build/include` ab. Generierte Dateien werden nicht eingecheckt.
+
+## Screenshots aktualisieren
+
+```bash
+scripts/screenshots.sh
+```
+
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Release
 
