@@ -182,6 +182,11 @@ final class AppModel {
         controller?.startTimer(minutes: UInt32(max(0, minutes)))
     }
 
+    /// Beim Beenden der App: Kern anhalten (wartet kurz auf Slack)
+    func shutdown() {
+        controller?.stop()
+    }
+
     func stopTimer() {
         controller?.startTimer(minutes: 0)
     }

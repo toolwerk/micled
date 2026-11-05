@@ -122,12 +122,15 @@ struct SettingsView: View {
                 if model.appColors.isEmpty {
                     Text("Keine, alle Programme nutzen die Mikrofarbe.").foregroundStyle(.secondary)
                 }
-                ForEach(model.appColors.indices, id: \.self) { i in
+                ForEach($model.appColors, id: \.key) { $entry in
                     HStack {
-                        ColorPicker(selection: colorBinding($model.appColors[i].hex), supportsOpacity: false) {
-                            Text(model.appColors[i].key).font(.system(.body, design: .monospaced))
+                        ColorPicker(selection: colorBinding($entry.hex), supportsOpacity: false) {
+                            Text(entry.key).font(.system(.body, design: .monospaced))
                         }
-                        Button("Entfernen") { model.appColors.remove(at: i) }
+                        Button("Entfernen") {
+                            let key = entry.key
+                            model.appColors.removeAll { $0.key == key }
+                        }
                     }
                 }
                 DisclosureGroup("Gerade am Mikrofon") {
@@ -251,7 +254,10 @@ struct SettingsView: View {
     /// Minuten nach Mitternacht als Uhrzeit für den `DatePicker`
     private func timeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
         Binding(
-            get: { Calendar.current.startOfDay(for: Date()).addingTimeInterval(TimeInterval(minutes.wrappedValue * 60)) },
+            get: {
+                let m = minutes.wrappedValue
+                return Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: Date()) ?? Date()
+            },
             set: {
                 let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
                 minutes.wrappedValue = (c.hour ?? 0) * 60 + (c.minute ?? 0)

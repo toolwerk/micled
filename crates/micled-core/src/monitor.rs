@@ -163,6 +163,7 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
+                w.slack.shutdown(Duration::from_secs(3));
             })
             .expect("Monitor-Thread");
         Monitor { tx, status, calls, thread: Mutex::new(Some(thread)) }
@@ -391,6 +392,10 @@ impl Worker {
                     self.pending = None;
                     self.flash_left = 0;
                     self.lamp_error = None;
+                    // das Stream Deck setzt die volle Helligkeit, beim Dimmen nachziehen
+                    if self.brightness < 100 {
+                        self.push(s.color);
+                    }
                 }
             }
         }
@@ -479,9 +484,7 @@ impl Worker {
 
     /// Aktuellen Zustand „Auf Sendung“ an Slack melden (falls eingerichtet)
     fn report_slack(&self) {
-        if let Some(cfg) = self.engine.config().slack.clone() {
-            self.slack.send(cfg, self.live, unix_now());
-        }
+        self.slack.send(self.engine.config().slack.clone(), self.live);
     }
 
     fn set_live(&mut self, live: bool) {

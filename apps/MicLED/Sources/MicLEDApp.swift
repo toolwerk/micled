@@ -5,6 +5,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls { AppModel.shared.handle(url: url) }
     }
+
+    /// Kern sauber anhalten: eigener Slack-Status wird noch zurückgesetzt
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { AppModel.shared.shutdown() }
+    }
 }
 
 @main
