@@ -39,6 +39,8 @@ final class AppModel {
     /// Liegt im Schlüsselbund
     var nextcloudPassword: String { didSet { Keychain.setPassword(nextcloudPassword); persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
+    /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
+    var appColors: [AppColor] { didSet { persist() } }
 
     // MARK: Status aus dem Kern
 
@@ -82,6 +84,7 @@ final class AppModel {
             Key.nextcloudServer: "",
             Key.nextcloudUser: "",
             Key.favorites: AppModel.defaultFavorites,
+            Key.appColors: [[String: String]](),
         ])
         enabled = d.bool(forKey: Key.enabled)
         useWebhook = d.bool(forKey: Key.useWebhook)
@@ -104,6 +107,10 @@ final class AppModel {
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
         nextcloudPassword = Keychain.password()
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
+        appColors = (d.array(forKey: Key.appColors) as? [[String: String]] ?? []).compactMap { entry in
+            guard let key = entry["key"], let hex = entry["hex"] else { return nil }
+            return AppColor(key: key, hex: hex)
+        }
 
         let observer = Observer { [weak self] status in
             Task { @MainActor in self?.apply(status) }
@@ -153,6 +160,12 @@ final class AppModel {
         return controller?.liveSecondsSince(since: UInt64(midnight.timeIntervalSince1970)) ?? 0
     }
 
+    /// Programm in die Liste „Farbe je Programm“ aufnehmen (Start mit der Mikrofarbe)
+    func assignColor(_ user: MicUser) {
+        let key = user.bundleId.isEmpty ? user.name : user.bundleId
+        if !appColors.contains(where: { $0.key == key }) { appColors.append(AppColor(key: key, hex: micOnHex)) }
+    }
+
     func ignore(_ user: MicUser) {
         let key = user.bundleId.isEmpty ? user.name : user.bundleId
         if !ignored.contains(key) { ignored.append(key) }
@@ -198,7 +211,8 @@ final class AppModel {
             reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60),
             nextcloudServer: nextcloudActive ? nextcloudServer : "",
             nextcloudUser: nextcloudActive ? nextcloudUser : "",
-            nextcloudPassword: nextcloudActive ? nextcloudPassword : ""
+            nextcloudPassword: nextcloudActive ? nextcloudPassword : "",
+            appColors: appColors
         )
     }
 
@@ -227,6 +241,7 @@ final class AppModel {
         defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
         defaults.set(nextcloudUser, forKey: Key.nextcloudUser)
         defaults.set(favorites, forKey: Key.favorites)
+        defaults.set(appColors.map { ["key": $0.key, "hex": $0.hex] }, forKey: Key.appColors)
         if pushConfig { controller?.updateConfig(config: config) }
     }
 
@@ -300,6 +315,7 @@ final class AppModel {
         static let nextcloudServer = "nextcloudServer"
         static let nextcloudUser = "nextcloudUser"
         static let favorites = "favorites"
+        static let appColors = "appColors"
     }
 }
 

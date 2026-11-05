@@ -96,6 +96,38 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section {
+                if model.appColors.isEmpty {
+                    Text("Keine, alle Programme nutzen die Mikrofarbe.").foregroundStyle(.secondary)
+                }
+                ForEach(model.appColors.indices, id: \.self) { i in
+                    HStack {
+                        ColorPicker(selection: colorBinding($model.appColors[i].hex), supportsOpacity: false) {
+                            Text(model.appColors[i].key).font(.system(.body, design: .monospaced))
+                        }
+                        Button("Entfernen") { model.appColors.remove(at: i) }
+                    }
+                }
+                DisclosureGroup("Gerade am Mikrofon") {
+                    if current.isEmpty {
+                        Text("Kein Programm nutzt das Mikrofon.").foregroundStyle(.secondary)
+                    }
+                    ForEach(current, id: \.pid) { user in
+                        HStack {
+                            Text(model.displayName(user))
+                            Spacer()
+                            Button("Farbe zuweisen") { model.assignColor(user) }
+                        }
+                    }
+                    Button("Aktualisieren") { current = model.currentUsers() }
+                }
+            } header: {
+                Text("Farbe je Programm")
+            } footer: {
+                Text("Statt der Mikrofarbe, z. B. Orange für eine Aufnahme mit Plaud. Nutzen mehrere Programme das Mikrofon, gilt der oberste Eintrag. Die Kamerafarbe hat Vorrang.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Schnellfarben im Menü") {
                 HStack {
                     ForEach(model.favorites.indices, id: \.self) { i in

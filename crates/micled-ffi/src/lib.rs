@@ -66,6 +66,15 @@ pub struct MicLedConfig {
     pub nextcloud_user: String,
     /// App-Passwort (liegt in der App im Schlüsselbund)
     pub nextcloud_password: String,
+    /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
+    pub app_colors: Vec<AppColor>,
+}
+
+/// Farbe für ein Programm (Bundle-ID oder Prozessname)
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AppColor {
+    pub key: String,
+    pub hex: String,
 }
 
 /// Ergebnis von [`nextcloud_check`]
@@ -118,6 +127,7 @@ impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
         core::Config {
             nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
+            app_colors: c.app_colors.iter().filter_map(|a| Some((a.key.clone(), Rgb::parse(&a.hex)?))).collect(),
             enabled: c.enabled,
             transport: match c.transport {
                 TransportKind::Usb => core::Transport::Usb,

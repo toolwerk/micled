@@ -41,7 +41,8 @@ struct MenuView: View {
                 .controlSize(.small)
             HStack(spacing: 6) {
                 Text("Mikro an")
-                Circle().fill(Color(hex: model.micOnHex)).frame(width: 10, height: 10)
+                Circle().fill(Color(hex: model.overriding ? (model.shownHex ?? model.micOnHex) : model.micOnHex))
+                    .frame(width: 10, height: 10)
                 Text("· danach")
                 if model.restorePrevious {
                     Text("vorherige Farbe")

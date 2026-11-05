@@ -72,6 +72,9 @@ pub struct Config {
     pub reminder_lead: Duration,
     /// Termine zusätzlich direkt aus Nextcloud lesen (`None` = aus)
     pub nextcloud: Option<Nextcloud>,
+    /// Eigene Farbe je Programm (Bundle-ID oder Prozessname). Bei mehreren
+    /// aktiven Programmen gewinnt der erste passende Eintrag.
+    pub app_colors: Vec<(String, Rgb)>,
 }
 
 impl Default for Config {
@@ -91,8 +94,15 @@ impl Default for Config {
             reminder_color: Rgb::YELLOW,
             reminder_lead: Duration::from_secs(120),
             nextcloud: None,
+            app_colors: Vec::new(),
         }
     }
+}
+
+/// Passt ein Eintrag (Bundle-ID oder Prozessname) auf das Programm?
+fn matches(key: &str, u: &MicUser) -> bool {
+    let k = key.trim();
+    !k.is_empty() && (k.eq_ignore_ascii_case(&u.bundle_id) || k.eq_ignore_ascii_case(&u.name))
 }
 
 #[derive(Debug)]
@@ -152,10 +162,7 @@ impl Engine {
     }
 
     fn is_ignored(&self, u: &MicUser) -> bool {
-        self.cfg.ignored.iter().any(|i| {
-            let i = i.trim();
-            !i.is_empty() && (i.eq_ignore_ascii_case(&u.bundle_id) || i.eq_ignore_ascii_case(&u.name))
-        })
+        self.cfg.ignored.iter().any(|i| matches(i, u))
     }
 
     /// Lampe soll wegen Abwesenheit aus sein
@@ -172,12 +179,17 @@ impl Engine {
         }
     }
 
+    /// Kamera vor Programmfarbe vor Mikrofarbe
     fn override_color(&self) -> Rgb {
         if self.camera {
-            self.cfg.camera_color
-        } else {
-            self.cfg.mic_on_color
+            return self.cfg.camera_color;
         }
+        self.cfg
+            .app_colors
+            .iter()
+            .find(|(key, _)| self.users.iter().any(|u| matches(key, u)))
+            .map(|&(_, c)| c)
+            .unwrap_or(self.cfg.mic_on_color)
     }
 
     /// Abwesenheit beginnt (`on = true`) oder endet. Während eines Calls bleibt
@@ -569,5 +581,60 @@ mod tests {
         assert!(e.live());
         e.set_away(Away::Sleep, true);
         assert!(!e.live());
+    }
+
+    // --- Farbe je Programm ------------------------------------------------
+
+    fn orange() -> Rgb {
+        Rgb::parse("ff8800").unwrap()
+    }
+
+    fn with_app_colors() -> (Engine, Instant) {
+        let cfg = Config {
+            app_colors: vec![("com.example.plaud".into(), orange()), ("zoom".into(), Rgb::YELLOW)],
+            ..Config::default()
+        };
+        (Engine::new(cfg, Some(blue())), Instant::now())
+    }
+
+    #[test]
+    fn app_color_replaces_mic_color() {
+        let (mut e, t) = with_app_colors();
+        assert_eq!(e.on_mic(vec![user("plaud")], t), Some(orange()));
+    }
+
+    #[test]
+    fn app_without_entry_uses_mic_color() {
+        let (mut e, t) = with_app_colors();
+        assert_eq!(e.on_mic(vec![user("teams")], t), Some(Rgb::RED));
+    }
+
+    #[test]
+    fn first_entry_wins_with_several_apps() {
+        let (mut e, t) = with_app_colors();
+        assert_eq!(e.on_mic(vec![user("zoom"), user("plaud")], t), Some(orange()));
+    }
+
+    #[test]
+    fn camera_beats_app_color() {
+        let (mut e, t) = with_app_colors();
+        assert_eq!(e.on_input(vec![user("plaud")], true, t), Some(Rgb::MAGENTA));
+    }
+
+    #[test]
+    fn color_follows_apps_joining_and_leaving() {
+        let (mut e, t) = with_app_colors();
+        assert_eq!(e.on_mic(vec![user("zoom")], t), Some(Rgb::YELLOW));
+        assert_eq!(e.on_mic(vec![user("zoom"), user("plaud")], t), Some(orange()));
+        assert_eq!(e.on_mic(vec![user("zoom")], t), Some(Rgb::YELLOW));
+        assert_eq!(e.on_mic(vec![user("zoom")], t), None);
+    }
+
+    #[test]
+    fn changing_app_color_during_call_applies() {
+        let (mut e, t) = with_app_colors();
+        e.on_mic(vec![user("plaud")], t);
+        let cfg = Config { app_colors: vec![("com.example.plaud".into(), Rgb::GREEN)], ..e.config().clone() };
+        assert_eq!(e.set_config(cfg), Some(Rgb::GREEN));
     }
 }
