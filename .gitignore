@@ -5,3 +5,4 @@ apps/MicLED/Generated/
 *.xcodeproj
 xcuserdata/
 .DS_Store
+/.worktrees/
