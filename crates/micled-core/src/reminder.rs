@@ -1,5 +1,6 @@
 //! Vorwarnung vor Terminen: entscheidet, wann die Lampe kurz blinken soll.
-//! Die Startzeiten liefert die App aus dem Kalender (Unix-Sekunden).
+//! Die Startzeiten kommen aus den Kalendern von macOS und aus Nextcloud
+//! (Unix-Sekunden).
 
 use std::collections::HashSet;
 
@@ -29,9 +30,24 @@ impl Reminders {
     }
 }
 
+/// Startzeiten aus mehreren Quellen zusammenführen. Ein Termin, der in beiden
+/// steht (Nextcloud auch in macOS eingebunden), zählt einmal.
+pub fn merge(a: &[u64], b: &[u64]) -> Vec<u64> {
+    let mut all: Vec<u64> = a.iter().chain(b).copied().collect();
+    all.sort_unstable();
+    all.dedup();
+    all
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merge_drops_duplicates() {
+        assert_eq!(merge(&[2000, 1000], &[1000, 3000]), vec![1000, 2000, 3000]);
+        assert_eq!(merge(&[], &[]), Vec::<u64>::new());
+    }
 
     #[test]
     fn warns_once_inside_lead_time() {

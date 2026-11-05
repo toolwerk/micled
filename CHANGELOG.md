@@ -13,7 +13,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Lampe geht bei Ruhezustand, ausgeschaltetem Bildschirm und Bildschirmsperre aus und bekommt danach ihre vorherige Farbe zurück. Während eines Calls bleibt die Mikrofarbe. Abschaltbar in den Einstellungen.
 - Kamera-Erkennung über CoreMediaIO mit eigener Farbe.
 - „Auf Sendung“-Meldung per HTTP-POST, z. B. an Home Assistant.
-- Vorwarnung vor Kalenderterminen durch kurzes Blinken.
+- Vorwarnung vor Kalenderterminen durch kurzes Blinken, Termine aus den Kalendern von macOS und optional direkt aus Nextcloud (CalDAV, App-Passwort im Schlüsselbund).
 - Tagessumme „auf Sendung“ im Menü, gespeichert in `~/Library/Application Support/net.staude.micled/calls.json`.
 - `micled://`-Adressen und Aktionen für die Kurzbefehle-App.
 - `setup.sh`, `scripts/build-rust.sh`, `scripts/bump-build.sh`, `scripts/release.sh`, CI für Linux und macOS.

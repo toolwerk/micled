@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var current: [MicUser] = []
+    @State private var nextcloudResult = ""
 
     var body: some View {
         @Bindable var model = model
@@ -74,10 +75,26 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!model.remindersEnabled)
+                Toggle("Kalender von macOS", isOn: $model.useSystemCalendar)
+                    .disabled(!model.remindersEnabled)
+                Toggle("Nextcloud direkt", isOn: $model.nextcloudEnabled)
+                    .disabled(!model.remindersEnabled)
+                if model.nextcloudEnabled {
+                    TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
+                    TextField("Benutzer", text: $model.nextcloudUser)
+                    SecureField("App-Passwort", text: $model.nextcloudPassword)
+                    HStack {
+                        Button("Verbindung prüfen") {
+                            nextcloudResult = "Prüfe …"
+                            Task { nextcloudResult = await model.checkNextcloud() }
+                        }
+                        Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             } header: {
                 Text("Termine")
             } footer: {
-                Text("Die Lampe blinkt kurz vor jedem Termin aus dem Kalender, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB.")
+                Text("Die Lampe blinkt kurz vor jedem Termin, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

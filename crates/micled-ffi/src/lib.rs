@@ -61,6 +61,19 @@ pub struct MicLedConfig {
     pub on_air_url: String,
     pub reminder_color: String,
     pub reminder_lead_s: u32,
+    /// Termine direkt aus Nextcloud; ist eines der drei Felder leer, ist es aus
+    pub nextcloud_server: String,
+    pub nextcloud_user: String,
+    /// App-Passwort (liegt in der App im Schlüsselbund)
+    pub nextcloud_password: String,
+}
+
+/// Ergebnis von [`nextcloud_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct NextcloudCheck {
+    /// Gefundene Kalender mit Terminen
+    pub calendars: u32,
+    pub error: Option<String>,
 }
 
 #[derive(uniffi::Record, Clone, Debug)]
@@ -96,9 +109,15 @@ fn color(s: &str, fallback: Rgb) -> Rgb {
     Rgb::parse(s).unwrap_or(fallback)
 }
 
+fn nextcloud(server: String, user: String, password: String) -> Option<core::Nextcloud> {
+    let filled = [&server, &user, &password].iter().all(|s| !s.trim().is_empty());
+    filled.then_some(core::Nextcloud { server, user, password })
+}
+
 impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
         core::Config {
+            nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
             enabled: c.enabled,
             transport: match c.transport {
                 TransportKind::Usb => core::Transport::Usb,
@@ -230,6 +249,20 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
 #[uniffi::export]
 pub fn parse_color(text: String) -> Option<String> {
     Rgb::parse(&text).map(|c| c.hex())
+}
+
+/// Zugang zu Nextcloud prüfen (blockiert bis zu einigen Sekunden, nicht im
+/// Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn nextcloud_check(server: String, user: String, password: String) -> NextcloudCheck {
+    let result = match nextcloud(server, user, password) {
+        Some(nc) => core::caldav::check(&nc),
+        None => Err("Server, Benutzer und App-Passwort eintragen".into()),
+    };
+    match result {
+        Ok(n) => NextcloudCheck { calendars: n as u32, error: None },
+        Err(e) => NextcloudCheck { calendars: 0, error: Some(e) },
+    }
 }
 
 /// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)

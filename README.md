@@ -14,7 +14,7 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Wartezeit vor dem Zurückschalten (Standard 3 Sekunden), damit kurze Pausen nicht flackern.
 - Kamera-Erkennung über CoreMediaIO: Kamera an zählt wie Mikro an und hat eine eigene Farbe (Standard Magenta).
 - „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
-- Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin aus dem Kalender (abschaltbar, Vorlauf einstellbar).
+- Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin (Vorlauf einstellbar, ab Werk aus). Termine kommen aus den Kalendern von macOS und auf Wunsch direkt aus Nextcloud.
 - Im Menü steht, wie lange du heute auf Sendung warst.
 - Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
 
@@ -39,6 +39,15 @@ In den Einstellungen die Webhook-Adresse eintragen, z. B. `http://homeassistant.
 ```
 
 In einer Home-Assistant-Automation mit Webhook-Auslöser steht der Wert als `{{ trigger.json.on_air }}` bereit.
+
+## Termine aus Nextcloud
+
+Für die Vorwarnung gibt es zwei Wege:
+
+1. **Über macOS** (empfohlen, wenn du den Kalender ohnehin auf dem Mac nutzt): Systemeinstellungen › Internet-Accounts › Account hinzufügen › Andere › CalDAV-Account, Accounttyp „Manuell“, Server `https://<deine-nextcloud>/remote.php/dav`. MicLED liest alle Kalender, die in der Kalender-App erscheinen.
+2. **Direkt in MicLED**: Einstellungen › Termine › „Nextcloud direkt“ einschalten, Server (z. B. `https://cloud.example.org`), Benutzer und ein App-Passwort eintragen. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ an. MicLED speichert es im Schlüsselbund und fragt alle zwei Minuten die Termine der nächsten Stunde ab, Serientermine eingeschlossen. „Verbindung prüfen“ zeigt, wie viele Kalender gefunden wurden.
+
+Beide Wege lassen sich kombinieren, ein Termin in beiden Quellen blinkt nur einmal. Wer nur Nextcloud direkt nutzt, schaltet „Kalender von macOS“ aus; dann fragt MicLED auch nicht nach dem Kalenderzugriff. Beim direkten Abruf wird nicht ausgewertet, ob du einen Termin abgelehnt hast.
 
 ## Woher kennt MicLED die vorherige Farbe?
 
@@ -77,12 +86,13 @@ cargo run -p micled-cli -- watch               # Automatik, Strg-C beendet
 cargo run -p micled-cli -- watch --on ff0000 --off 00ff00 --fixed --delay 5
 cargo run -p micled-cli -- watch --camera ff00ff --on-air-url http://…   # oder --no-camera
 cargo run -p micled-cli -- --webhook <ID> set gruen
+MICLED_NEXTCLOUD_PASSWORD=<app-passwort> cargo run -p micled-cli -- nextcloud https://cloud.example.org <benutzer>
 ```
 
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon-Erkennung, Logik, Statusdatei
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen

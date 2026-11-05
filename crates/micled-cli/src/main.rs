@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use micled_core::{camera, lamp, mic, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{caldav, camera, lamp, mic, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -25,6 +25,13 @@ enum Cmd {
     Off,
     /// Zeigt, welche Programme gerade das Mikrofon nutzen und ob eine Kamera läuft
     Mic,
+    /// Termine der nächsten Stunde aus Nextcloud lesen.
+    /// Das App-Passwort kommt aus der Umgebungsvariable MICLED_NEXTCLOUD_PASSWORD.
+    Nextcloud {
+        /// Adresse der Instanz, z. B. https://cloud.example.org
+        server: String,
+        user: String,
+    },
     /// Automatik laufen lassen, bis Strg-C
     Watch {
         /// Farbe bei aktivem Mikrofon
@@ -108,6 +115,25 @@ fn main() {
                 Err(e) => println!("Kamera: {e}"),
             }
         }),
+        Cmd::Nextcloud { server, user } => {
+            let nc = micled_core::Nextcloud {
+                server: server.clone(),
+                user: user.clone(),
+                password: std::env::var("MICLED_NEXTCLOUD_PASSWORD").unwrap_or_default(),
+            };
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+            caldav::check(&nc).and_then(|n| {
+                println!("{n} Kalender mit Terminen gefunden.");
+                let starts = caldav::fetch(&nc, now)?;
+                if starts.is_empty() {
+                    println!("Keine Termine in der nächsten Stunde.");
+                }
+                for s in starts {
+                    println!("{}  in {} min", caldav::format_utc(s), s.saturating_sub(now) / 60);
+                }
+                Ok(())
+            })
+        }
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,

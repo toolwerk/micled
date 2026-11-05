@@ -11,14 +11,21 @@ use crate::color::Rgb;
 use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
-use crate::reminder::Reminders;
+use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
-use crate::{camera, onair, shared};
+use crate::{caldav, camera, onair, shared};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
 /// Wechsel bei der Termin-Vorwarnung (je Abfrage einer), gerade Anzahl
 const FLASH_STEPS: u8 = 10;
+/// Abstand der Abrufe aus Nextcloud
+const NEXTCLOUD_EVERY: Duration = Duration::from_secs(120);
+/// Wartezeit nach einer Änderung der Zugangsdaten (Tippen nicht abrufen)
+const NEXTCLOUD_SETTLE: Duration = Duration::from_secs(3);
+
+/// Ergebnis eines Abrufs aus Nextcloud, gekennzeichnet mit der Runde
+type Fetched = Arc<Mutex<Option<(u64, Result<Vec<u64>, String>)>>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Status {
@@ -100,6 +107,13 @@ impl Monitor {
                     calls: log,
                     calls_path,
                     on_air_error: Arc::new(Mutex::new(None)),
+                    local_starts: vec![],
+                    remote_starts: vec![],
+                    next_fetch: Some(Instant::now()),
+                    round: 0,
+                    fetched: Arc::new(Mutex::new(None)),
+                    fetching: false,
+                    calendar_error: None,
                 };
                 w.file_mtime = w.mtime();
                 loop {
@@ -108,7 +122,10 @@ impl Monitor {
                         Ok(Cmd::Config(c)) => w.set_config(c),
                         Ok(Cmd::Color(c)) => w.user_color(c),
                         Ok(Cmd::Away(r, on)) => w.set_away(r, on),
-                        Ok(Cmd::Upcoming(s)) => w.reminders.set(s),
+                        Ok(Cmd::Upcoming(s)) => {
+                            w.local_starts = s;
+                            w.update_reminders();
+                        }
                         Err(RecvTimeoutError::Timeout) => {}
                     }
                     w.tick();
@@ -191,6 +208,17 @@ struct Worker {
     calls: Arc<Mutex<CallLog>>,
     calls_path: Option<PathBuf>,
     on_air_error: Arc<Mutex<Option<String>>>,
+    /// Termine aus den Kalendern von macOS (von der App)
+    local_starts: Vec<u64>,
+    /// Termine aus Nextcloud
+    remote_starts: Vec<u64>,
+    /// Nächster Abruf aus Nextcloud (`None` = aus)
+    next_fetch: Option<Instant>,
+    /// Zählt Änderungen der Zugangsdaten; ältere Ergebnisse werden verworfen
+    round: u64,
+    fetched: Fetched,
+    fetching: bool,
+    calendar_error: Option<String>,
 }
 
 impl Worker {
@@ -210,12 +238,56 @@ impl Worker {
             self.last_try = None;
         }
         let url_changed = cfg.on_air_url != self.engine.config().on_air_url;
+        if cfg.nextcloud != self.engine.config().nextcloud {
+            self.round += 1;
+            self.fetching = false;
+            self.calendar_error = None;
+            self.remote_starts.clear();
+            self.next_fetch = cfg.nextcloud.as_ref().map(|_| Instant::now() + NEXTCLOUD_SETTLE);
+            self.update_reminders();
+        }
         if let Some(c) = self.engine.set_config(cfg) {
             self.push(c);
         }
         if url_changed {
             *self.on_air_error.lock().unwrap() = None;
         }
+    }
+
+    fn update_reminders(&mut self) {
+        self.reminders.set(reminder::merge(&self.local_starts, &self.remote_starts));
+    }
+
+    /// Termine aus Nextcloud abrufen (eigener Thread) und Ergebnisse übernehmen
+    fn poll_nextcloud(&mut self) {
+        let done = self.fetched.lock().unwrap().take();
+        if let Some((round, result)) = done {
+            if round == self.round {
+                self.fetching = false;
+                match result {
+                    Ok(starts) => {
+                        self.remote_starts = starts;
+                        self.calendar_error = None;
+                    }
+                    Err(e) => {
+                        log::warn!("{e}");
+                        self.calendar_error = Some(e);
+                    }
+                }
+                self.update_reminders();
+            }
+        }
+        let Some(nc) = self.engine.config().nextcloud.clone() else { return };
+        if self.fetching || self.next_fetch.is_some_and(|t| Instant::now() < t) {
+            return;
+        }
+        self.fetching = true;
+        self.next_fetch = Some(Instant::now() + NEXTCLOUD_EVERY);
+        let (round, slot) = (self.round, self.fetched.clone());
+        std::thread::spawn(move || {
+            let r = caldav::fetch(&nc, unix_now());
+            *slot.lock().unwrap() = Some((round, r));
+        });
     }
 
     fn set_away(&mut self, reason: Away, on: bool) {
@@ -269,6 +341,7 @@ impl Worker {
         }
 
         // 3. Termin-Vorwarnung (nur in Ruhe und per USB, der Webhook ist zu träge)
+        self.poll_nextcloud();
         let lead = self.engine.config().reminder_lead.as_secs();
         if self.reminders.due(unix_now(), lead)
             && !self.engine.overriding()
@@ -369,7 +442,8 @@ impl Worker {
                 .lamp_error
                 .clone()
                 .or_else(|| self.mic_error.clone())
-                .or_else(|| self.on_air_error.lock().unwrap().clone()),
+                .or_else(|| self.on_air_error.lock().unwrap().clone())
+                .or_else(|| self.calendar_error.clone()),
         }
     }
 }

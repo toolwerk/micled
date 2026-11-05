@@ -4,6 +4,7 @@
 
 use std::time::{Duration, Instant};
 
+use crate::caldav::Nextcloud;
 use crate::color::Rgb;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
@@ -69,6 +70,8 @@ pub struct Config {
     pub reminder_color: Rgb,
     /// So lange vor Terminbeginn wird gewarnt
     pub reminder_lead: Duration,
+    /// Termine zusätzlich direkt aus Nextcloud lesen (`None` = aus)
+    pub nextcloud: Option<Nextcloud>,
 }
 
 impl Default for Config {
@@ -87,6 +90,7 @@ impl Default for Config {
             on_air_url: String::new(),
             reminder_color: Rgb::YELLOW,
             reminder_lead: Duration::from_secs(120),
+            nextcloud: None,
         }
     }
 }

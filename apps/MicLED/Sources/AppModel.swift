@@ -30,6 +30,14 @@ final class AppModel {
     var remindersEnabled: Bool { didSet { persist(); updateCalendar() } }
     var reminderHex: String { didSet { persist() } }
     var reminderLeadMinutes: Double { didSet { persist() } }
+    /// Termine aus den Kalendern von macOS (EventKit)
+    var useSystemCalendar: Bool { didSet { persist(); updateCalendar() } }
+    /// Termine zusätzlich direkt aus Nextcloud
+    var nextcloudEnabled: Bool { didSet { persist() } }
+    var nextcloudServer: String { didSet { persist() } }
+    var nextcloudUser: String { didSet { persist() } }
+    /// Liegt im Schlüsselbund
+    var nextcloudPassword: String { didSet { Keychain.setPassword(nextcloudPassword); persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
 
     // MARK: Status aus dem Kern
@@ -69,6 +77,10 @@ final class AppModel {
             Key.remindersEnabled: false,
             Key.reminderColor: "ffff00",
             Key.reminderLead: 2.0,
+            Key.useSystemCalendar: true,
+            Key.nextcloudEnabled: false,
+            Key.nextcloudServer: "",
+            Key.nextcloudUser: "",
             Key.favorites: AppModel.defaultFavorites,
         ])
         enabled = d.bool(forKey: Key.enabled)
@@ -86,6 +98,11 @@ final class AppModel {
         remindersEnabled = d.bool(forKey: Key.remindersEnabled)
         reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
         reminderLeadMinutes = d.double(forKey: Key.reminderLead)
+        useSystemCalendar = d.bool(forKey: Key.useSystemCalendar)
+        nextcloudEnabled = d.bool(forKey: Key.nextcloudEnabled)
+        nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
+        nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
+        nextcloudPassword = Keychain.password()
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
 
         let observer = Observer { [weak self] status in
@@ -118,6 +135,16 @@ final class AppModel {
         case .automatic(let on): enabled = on ?? !enabled
         case nil: error = "Unbekannter Befehl: \(url.absoluteString)"
         }
+    }
+
+    /// Zugang zu Nextcloud prüfen, liefert eine Meldung für die Einstellungen
+    func checkNextcloud() async -> String {
+        let (server, user, password) = (nextcloudServer, nextcloudUser, nextcloudPassword)
+        let result = await Task.detached {
+            nextcloudCheck(server: server, user: user, password: password)
+        }.value
+        if let error = result.error { return error }
+        return result.calendars == 1 ? "Verbunden, 1 Kalender" : "Verbunden, \(result.calendars) Kalender"
     }
 
     /// Sekunden auf Sendung seit Mitternacht
@@ -168,8 +195,15 @@ final class AppModel {
             cameraColor: cameraHex,
             onAirUrl: onAirUrl,
             reminderColor: reminderHex,
-            reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60)
+            reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60),
+            nextcloudServer: nextcloudActive ? nextcloudServer : "",
+            nextcloudUser: nextcloudActive ? nextcloudUser : "",
+            nextcloudPassword: nextcloudActive ? nextcloudPassword : ""
         )
+    }
+
+    private var nextcloudActive: Bool {
+        remindersEnabled && nextcloudEnabled
     }
 
     private func persist(pushConfig: Bool = true) {
@@ -188,6 +222,10 @@ final class AppModel {
         defaults.set(remindersEnabled, forKey: Key.remindersEnabled)
         defaults.set(reminderHex, forKey: Key.reminderColor)
         defaults.set(reminderLeadMinutes, forKey: Key.reminderLead)
+        defaults.set(useSystemCalendar, forKey: Key.useSystemCalendar)
+        defaults.set(nextcloudEnabled, forKey: Key.nextcloudEnabled)
+        defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
+        defaults.set(nextcloudUser, forKey: Key.nextcloudUser)
         defaults.set(favorites, forKey: Key.favorites)
         if pushConfig { controller?.updateConfig(config: config) }
     }
@@ -214,9 +252,9 @@ final class AppModel {
         }
     }
 
-    /// Kalender nur lesen, wenn die Vorwarnung eingeschaltet ist
+    /// Kalender von macOS nur lesen, wenn Vorwarnung und Quelle eingeschaltet sind
     private func updateCalendar() {
-        guard remindersEnabled else {
+        guard remindersEnabled, useSystemCalendar else {
             calendar?.stop()
             calendar = nil
             return
@@ -257,6 +295,10 @@ final class AppModel {
         static let remindersEnabled = "remindersEnabled"
         static let reminderColor = "reminderColor"
         static let reminderLead = "reminderLeadMinutes"
+        static let useSystemCalendar = "useSystemCalendar"
+        static let nextcloudEnabled = "nextcloudEnabled"
+        static let nextcloudServer = "nextcloudServer"
+        static let nextcloudUser = "nextcloudUser"
         static let favorites = "favorites"
     }
 }
