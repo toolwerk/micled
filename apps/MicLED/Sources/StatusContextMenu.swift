@@ -31,6 +31,18 @@ final class StatusContextMenu: NSObject {
         guard secondary, let window = event.window, Self.isStatusItemWindow(window),
               let view = window.contentView else { return false }
         let menu = NSMenu()
+        if AppModel.shared.timerUntil.map({ $0 > Date() }) == true {
+            menu.addItem(withTitle: "Konzentration beenden", action: #selector(stopTimer), keyEquivalent: "").target = self
+        } else {
+            let sub = NSMenu()
+            for m in AppModel.timerChoices {
+                let item = sub.addItem(withTitle: "\(m) Minuten", action: #selector(startTimer(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = m
+            }
+            menu.addItem(withTitle: "Konzentration", action: nil, keyEquivalent: "").submenu = sub
+        }
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Einstellungen …", action: #selector(settings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "MicLED beenden", action: #selector(quit), keyEquivalent: "q").target = self
@@ -45,6 +57,14 @@ final class StatusContextMenu: NSObject {
     @objc private func settings() {
         NSApp.activate()
         openSettings?()
+    }
+
+    @objc private func startTimer(_ item: NSMenuItem) {
+        AppModel.shared.startTimer(minutes: item.tag)
+    }
+
+    @objc private func stopTimer() {
+        AppModel.shared.stopTimer()
     }
 
     @objc private func quit() {

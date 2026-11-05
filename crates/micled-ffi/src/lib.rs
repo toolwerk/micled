@@ -40,6 +40,10 @@ pub enum UrlCommand {
     Off,
     /// `on = None` schaltet um
     Automatic { on: Option<bool> },
+    /// Konzentrations-Timer, `minutes = 0` beendet ihn
+    Timer { minutes: u32 },
+    /// Fokus von macOS an/aus (aus einer Kurzbefehle-Automation)
+    Focus { on: bool },
 }
 
 #[derive(uniffi::Record, Clone, Debug)]
@@ -68,6 +72,10 @@ pub struct MicLedConfig {
     pub nextcloud_password: String,
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     pub app_colors: Vec<AppColor>,
+    pub timer_color: String,
+    /// Fokus von macOS auf der Lampe zeigen
+    pub focus_enabled: bool,
+    pub focus_color: String,
 }
 
 /// Farbe für ein Programm (Bundle-ID oder Prozessname)
@@ -100,6 +108,10 @@ pub struct MicLedStatus {
     pub camera: bool,
     /// Mikro- bzw. Kamerafarbe ist gerade aktiv
     pub overriding: bool,
+    /// Ende des Konzentrations-Timers (Unix-Sekunden)
+    pub timer_until: Option<u64>,
+    /// Fokus von macOS ist an
+    pub focus: bool,
     /// Auf Sendung (Mikro oder Kamera, kurze Pausen eingeschlossen)
     pub live: bool,
     /// Farbe nach dem Mikrofon, `None` = noch unbekannt
@@ -127,6 +139,9 @@ impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
         core::Config {
             nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
+            timer_color: color(&c.timer_color, Rgb { r: 0x80, g: 0, b: 0xff }),
+            focus_enabled: c.focus_enabled,
+            focus_color: color(&c.focus_color, Rgb { r: 0xff, g: 0x88, b: 0 }),
             app_colors: c.app_colors.iter().filter_map(|a| Some((a.key.clone(), Rgb::parse(&a.hex)?))).collect(),
             enabled: c.enabled,
             transport: match c.transport {
@@ -164,6 +179,8 @@ impl From<core::Status> for MicLedStatus {
             mic_users: s.mic_users.into_iter().map(Into::into).collect(),
             camera: s.camera,
             overriding: s.overriding,
+            timer_until: s.timer_until,
+            focus: s.focus,
             live: s.live,
             base_color: s.base.map(|c| c.hex()),
             shown_color: s.shown.map(|c| c.hex()),
@@ -226,6 +243,16 @@ impl MicLedController {
         self.monitor.live_seconds_since(since)
     }
 
+    /// Konzentrations-Timer für `minutes` Minuten, 0 beendet ihn
+    pub fn start_timer(&self, minutes: u32) {
+        self.monitor.start_timer(minutes);
+    }
+
+    /// Fokus von macOS beginnt oder endet
+    pub fn set_focus(&self, on: bool) {
+        self.monitor.set_focus(on);
+    }
+
     pub fn turn_off(&self) {
         self.monitor.set_color(Rgb::OFF);
     }
@@ -252,6 +279,8 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
         core::command::Command::SetColor(c) => UrlCommand::SetColor { hex: c.hex() },
         core::command::Command::Off => UrlCommand::Off,
         core::command::Command::Automatic(on) => UrlCommand::Automatic { on },
+        core::command::Command::Timer(minutes) => UrlCommand::Timer { minutes },
+        core::command::Command::Focus(on) => UrlCommand::Focus { on },
     })
 }
 

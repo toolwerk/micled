@@ -3,6 +3,8 @@
 //! - `micled://color/ff8800` (auch `micled://farbe/rot`) setzt eine Farbe
 //! - `micled://off` schaltet die Lampe aus
 //! - `micled://auto/on`, `/off`, `/toggle` schaltet die Automatik
+//! - `micled://timer/25` startet einen Konzentrations-Timer, `micled://timer/off` beendet ihn
+//! - `micled://focus/on`, `/off` meldet einen Fokus von macOS (für Kurzbefehle-Automationen)
 
 use crate::color::Rgb;
 
@@ -12,6 +14,9 @@ pub enum Command {
     Off,
     /// `None` = umschalten
     Automatic(Option<bool>),
+    /// Minuten, 0 = beenden
+    Timer(u32),
+    Focus(bool),
 }
 
 pub fn parse(url: &str) -> Option<Command> {
@@ -26,6 +31,10 @@ pub fn parse(url: &str) -> Option<Command> {
         ("auto", Some("on" | "an")) => Some(Command::Automatic(Some(true))),
         ("auto", Some("off" | "aus")) => Some(Command::Automatic(Some(false))),
         ("auto", Some("toggle") | None) => Some(Command::Automatic(None)),
+        ("timer", Some("off" | "aus" | "stop")) => Some(Command::Timer(0)),
+        ("timer", Some(m)) => m.parse().ok().filter(|&m| (1..=600).contains(&m)).map(Command::Timer),
+        ("focus" | "fokus", Some("on" | "an")) => Some(Command::Focus(true)),
+        ("focus" | "fokus", Some("off" | "aus")) => Some(Command::Focus(false)),
         _ => None,
     }
 }
@@ -51,6 +60,17 @@ mod tests {
         assert_eq!(parse("micled://auto/aus"), Some(Command::Automatic(Some(false))));
         assert_eq!(parse("micled://auto/toggle"), Some(Command::Automatic(None)));
         assert_eq!(parse("micled://auto"), Some(Command::Automatic(None)));
+    }
+
+    #[test]
+    fn parses_timer_and_focus() {
+        assert_eq!(parse("micled://timer/25"), Some(Command::Timer(25)));
+        assert_eq!(parse("micled://timer/off"), Some(Command::Timer(0)));
+        assert_eq!(parse("micled://timer/0"), None);
+        assert_eq!(parse("micled://timer/abc"), None);
+        assert_eq!(parse("micled://timer"), None);
+        assert_eq!(parse("micled://focus/on"), Some(Command::Focus(true)));
+        assert_eq!(parse("micled://fokus/aus"), Some(Command::Focus(false)));
     }
 
     #[test]

@@ -41,6 +41,10 @@ final class AppModel {
     var favorites: [String] { didSet { persist(pushConfig: false) } }
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     var appColors: [AppColor] { didSet { persist() } }
+    var timerHex: String { didSet { persist() } }
+    /// Fokus von macOS auf der Lampe zeigen
+    var focusEnabled: Bool { didSet { persist(); updateFocus() } }
+    var focusHex: String { didSet { persist() } }
 
     // MARK: Status aus dem Kern
 
@@ -48,6 +52,11 @@ final class AppModel {
     private(set) var cameraOn = false
     private(set) var overriding = false
     private(set) var live = false
+    /// Ende des Konzentrations-Timers
+    private(set) var timerUntil: Date?
+    private(set) var focusOn = false
+    /// Fokus lässt sich nicht direkt lesen, nur über Kurzbefehle
+    private(set) var focusUnavailable = false
     private(set) var shownHex: String?
     private(set) var baseHex: String?
     private(set) var error: String?
@@ -57,6 +66,7 @@ final class AppModel {
     private var controller: MicLedController?
     private var awayObservers: [NSObjectProtocol] = []
     private var calendar: CalendarWatcher?
+    private var focusWatcher: FocusWatcher?
     private let defaults = UserDefaults.standard
 
     static let defaultFavorites = ["00ff00", "ffff00", "ff0000", "0000ff", "ffffff"]
@@ -85,6 +95,9 @@ final class AppModel {
             Key.nextcloudUser: "",
             Key.favorites: AppModel.defaultFavorites,
             Key.appColors: [[String: String]](),
+            Key.timerColor: "8000ff",
+            Key.focusEnabled: false,
+            Key.focusColor: "ff8800",
         ])
         enabled = d.bool(forKey: Key.enabled)
         useWebhook = d.bool(forKey: Key.useWebhook)
@@ -107,6 +120,9 @@ final class AppModel {
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
         nextcloudPassword = Keychain.password()
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
+        timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
+        focusEnabled = d.bool(forKey: Key.focusEnabled)
+        focusHex = d.string(forKey: Key.focusColor) ?? "ff8800"
         appColors = (d.array(forKey: Key.appColors) as? [[String: String]] ?? []).compactMap { entry in
             guard let key = entry["key"], let hex = entry["hex"] else { return nil }
             return AppColor(key: key, hex: hex)
@@ -120,6 +136,7 @@ final class AppModel {
         apply(controller.status())
         observeAway()
         updateCalendar()
+        updateFocus()
     }
 
     // MARK: Aktionen
@@ -134,12 +151,25 @@ final class AppModel {
         controller?.turnOff()
     }
 
+    /// Konzentrations-Timer starten, 0 beendet ihn
+    func startTimer(minutes: Int) {
+        controller?.startTimer(minutes: UInt32(max(0, minutes)))
+    }
+
+    func stopTimer() {
+        controller?.startTimer(minutes: 0)
+    }
+
+    static let timerChoices = [15, 25, 50, 90]
+
     /// `micled://color/ff8800`, `micled://off`, `micled://auto/on|off|toggle`
     func handle(url: URL) {
         switch parseUrlCommand(url: url.absoluteString) {
         case .setColor(let hex): setColor(hex)
         case .off: turnOff()
         case .automatic(let on): enabled = on ?? !enabled
+        case .timer(let minutes): startTimer(minutes: Int(minutes))
+        case .focus(let on): controller?.setFocus(on: on)
         case nil: error = "Unbekannter Befehl: \(url.absoluteString)"
         }
     }
@@ -212,7 +242,10 @@ final class AppModel {
             nextcloudServer: nextcloudActive ? nextcloudServer : "",
             nextcloudUser: nextcloudActive ? nextcloudUser : "",
             nextcloudPassword: nextcloudActive ? nextcloudPassword : "",
-            appColors: appColors
+            appColors: appColors,
+            timerColor: timerHex,
+            focusEnabled: focusEnabled,
+            focusColor: focusHex
         )
     }
 
@@ -241,6 +274,9 @@ final class AppModel {
         defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
         defaults.set(nextcloudUser, forKey: Key.nextcloudUser)
         defaults.set(favorites, forKey: Key.favorites)
+        defaults.set(timerHex, forKey: Key.timerColor)
+        defaults.set(focusEnabled, forKey: Key.focusEnabled)
+        defaults.set(focusHex, forKey: Key.focusColor)
         defaults.set(appColors.map { ["key": $0.key, "hex": $0.hex] }, forKey: Key.appColors)
         if pushConfig { controller?.updateConfig(config: config) }
     }
@@ -284,11 +320,30 @@ final class AppModel {
         watcher.start()
     }
 
+    /// Fokus nur abfragen, wenn er angezeigt werden soll
+    private func updateFocus() {
+        guard focusEnabled else {
+            focusWatcher?.stop()
+            focusWatcher = nil
+            return
+        }
+        guard focusWatcher == nil else { return }
+        let watcher = FocusWatcher { [weak self] on in
+            self?.controller?.setFocus(on: on)
+        } unavailable: { [weak self] in
+            self?.focusUnavailable = true
+        }
+        focusWatcher = watcher
+        watcher.start()
+    }
+
     private func apply(_ s: MicLedStatus) {
         micUsers = s.micUsers
         cameraOn = s.camera
         overriding = s.overriding
         live = s.live
+        timerUntil = s.timerUntil.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+        focusOn = s.focus
         shownHex = s.shownColor
         baseHex = s.baseColor
         error = s.error
@@ -316,6 +371,9 @@ final class AppModel {
         static let nextcloudUser = "nextcloudUser"
         static let favorites = "favorites"
         static let appColors = "appColors"
+        static let timerColor = "timerColor"
+        static let focusEnabled = "focusEnabled"
+        static let focusColor = "focusColor"
     }
 }
 

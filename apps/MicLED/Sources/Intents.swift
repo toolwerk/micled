@@ -75,6 +75,48 @@ struct SetAutomaticIntent: AppIntent {
     }
 }
 
+struct StartTimerIntent: AppIntent {
+    static let title: LocalizedStringResource = "Konzentration starten"
+    static let description = IntentDescription("Zeigt die Timerfarbe für die gewählte Zeit, am Ende blinkt die Lampe.")
+
+    @Parameter(title: "Minuten", default: 25, inclusiveRange: (1, 600))
+    var minutes: Int
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Konzentration für \(\.$minutes) Minuten")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppModel.shared.startTimer(minutes: minutes)
+        return .result()
+    }
+}
+
+struct StopTimerIntent: AppIntent {
+    static let title: LocalizedStringResource = "Konzentration beenden"
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppModel.shared.stopTimer()
+        return .result()
+    }
+}
+
+struct SetFocusIntent: AppIntent {
+    static let title: LocalizedStringResource = "Fokus an MicLED melden"
+    static let description = IntentDescription("Für eine Fokus-Automation: zeigt die Fokusfarbe, solange der Fokus an ist.")
+
+    @Parameter(title: "Fokus an", default: true)
+    var on: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppModel.shared.handle(url: URL(string: on ? "micled://focus/on" : "micled://focus/off")!)
+        return .result()
+    }
+}
+
 struct MicLEDShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -82,6 +124,12 @@ struct MicLEDShortcuts: AppShortcutsProvider {
             phrases: ["\(.applicationName) ausschalten", "Lampe aus mit \(.applicationName)"],
             shortTitle: "Lampe aus",
             systemImageName: "lightbulb.slash"
+        )
+        AppShortcut(
+            intent: StartTimerIntent(),
+            phrases: ["Konzentration mit \(.applicationName) starten"],
+            shortTitle: "Konzentration",
+            systemImageName: "timer"
         )
         AppShortcut(
             intent: SetAutomaticIntent(),

@@ -16,6 +16,8 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Farbe je Programm, z. B. Orange für eine Aufnahme mit Plaud und Rot für Calls. Bei mehreren Programmen gilt der oberste Eintrag, die Kamerafarbe hat Vorrang.
 - „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
 - Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin (Vorlauf einstellbar, ab Werk aus). Termine kommen aus den Kalendern von macOS und auf Wunsch direkt aus Nextcloud.
+- Konzentrations-Timer: Die Lampe zeigt 15 bis 90 Minuten lang eine eigene Farbe und blinkt am Ende. Start im Menü, per Rechtsklick auf das Symbol, über `micled://timer/25` oder Kurzbefehle.
+- Fokus von macOS: Solange ein Fokus an ist, leuchtet die Lampe in der Fokusfarbe. Gibt macOS den Fokus nicht frei, meldet ihn eine Kurzbefehle-Automation („Fokus an MicLED melden“).
 - Im Menü steht, wie lange du heute auf Sendung warst.
 - Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
 
@@ -27,9 +29,11 @@ Adressen, z. B. für Raycast, das Stream Deck („Website öffnen“) oder `open
 micled://color/ff8800      Farbe setzen (auch micled://farbe/rot)
 micled://off               Lampe aus
 micled://auto/on           Automatik an (auch off, toggle)
+micled://timer/25          Konzentrations-Timer für 25 Minuten (timer/off beendet ihn)
+micled://focus/on          Fokus melden (auch off), z. B. aus einer Fokus-Automation
 ```
 
-In der Kurzbefehle-App gibt es die Aktionen „Lampenfarbe setzen“, „Lampe ausschalten“ und „Mikrofon-Automatik schalten“. Damit lässt sich der Fokus-Modus anbinden: Kurzbefehle › Automation › Fokus „Arbeiten“ an › Lampenfarbe setzen „gelb“.
+In der Kurzbefehle-App gibt es die Aktionen „Lampenfarbe setzen“, „Lampe ausschalten“, „Mikrofon-Automatik schalten“, „Konzentration starten“, „Konzentration beenden“ und „Fokus an MicLED melden“. Damit lässt sich der Fokus-Modus anbinden: Kurzbefehle › Automation › Fokus „Arbeiten“ an › Lampenfarbe setzen „gelb“.
 
 ## „Auf Sendung“ an Home Assistant
 

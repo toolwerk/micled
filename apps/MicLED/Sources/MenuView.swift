@@ -53,6 +53,28 @@ struct MenuView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
+            Divider()
+
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                HStack(spacing: 6) {
+                    Image(systemName: "timer").foregroundStyle(.secondary)
+                    if let until = model.timerUntil, until > context.date {
+                        Text("Konzentration noch \(Self.duration(UInt64(until.timeIntervalSince(context.date)) + 59))")
+                        Spacer()
+                        Button("Beenden") { model.stopTimer() }
+                    } else {
+                        Text("Konzentration")
+                        Spacer()
+                        ForEach(AppModel.timerChoices, id: \.self) { m in
+                            Button("\(m)") { model.startTimer(minutes: m) }
+                        }
+                        Text("min").foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.borderless)
+            }
+
             TimelineView(.periodic(from: .now, by: 30)) { _ in
                 Label("Heute \(Self.duration(model.liveSecondsToday())) auf Sendung", systemImage: "clock")
                     .font(.caption)

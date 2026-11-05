@@ -45,6 +45,7 @@ targets:
       - sdk: CoreMediaIO.framework
       - sdk: EventKit.framework
       - sdk: AppIntents.framework
+      - sdk: Intents.framework
       - sdk: CoreFoundation.framework
       - sdk: IOKit.framework
       - sdk: Security.framework

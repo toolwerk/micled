@@ -75,6 +75,11 @@ pub struct Config {
     /// Eigene Farbe je Programm (Bundle-ID oder Prozessname). Bei mehreren
     /// aktiven Programmen gewinnt der erste passende Eintrag.
     pub app_colors: Vec<(String, Rgb)>,
+    /// Farbe während eines Konzentrations-Timers
+    pub timer_color: Rgb,
+    /// Fokus von macOS auf der Lampe zeigen
+    pub focus_enabled: bool,
+    pub focus_color: Rgb,
 }
 
 impl Default for Config {
@@ -95,6 +100,9 @@ impl Default for Config {
             reminder_lead: Duration::from_secs(120),
             nextcloud: None,
             app_colors: Vec::new(),
+            timer_color: Rgb { r: 0x80, g: 0x00, b: 0xff },
+            focus_enabled: false,
+            focus_color: Rgb { r: 0xff, g: 0x88, b: 0x00 },
         }
     }
 }
@@ -120,6 +128,12 @@ pub struct Engine {
     on_air: bool,
     /// Gesetzte `Away`-Bits
     away: u8,
+    /// Ende des Konzentrations-Timers (Unix-Sekunden)
+    timer: Option<u64>,
+    /// Fokus von macOS ist an
+    focus: bool,
+    /// Während des Fokus wurde eine Farbe gewählt; sie gilt bis zum nächsten Wechsel
+    focus_suspended: bool,
 }
 
 impl Engine {
@@ -134,6 +148,9 @@ impl Engine {
             camera: false,
             on_air: false,
             away: 0,
+            timer: None,
+            focus: false,
+            focus_suspended: false,
         }
     }
 
@@ -170,13 +187,63 @@ impl Engine {
         self.cfg.off_when_away && self.away != 0
     }
 
-    /// Farbe, wenn weder Mikrofon noch Kamera aktiv sind
-    fn resting(&self) -> Rgb {
+    /// Farbe, wenn weder Mikrofon noch Kamera aktiv sind. Über der ruhenden
+    /// Farbe liegen Timer und Fokus; beide kommen nie in die Statusdatei.
+    pub fn resting(&self) -> Rgb {
         if self.dark() {
             Rgb::OFF
+        } else if self.timer.is_some() {
+            self.cfg.timer_color
+        } else if self.focus_shown() {
+            self.cfg.focus_color
         } else {
             self.base.unwrap_or(self.cfg.mic_off_color)
         }
+    }
+
+    fn focus_shown(&self) -> bool {
+        self.focus && self.cfg.focus_enabled && !self.focus_suspended
+    }
+
+    /// Ende des laufenden Konzentrations-Timers (Unix-Sekunden)
+    pub fn timer(&self) -> Option<u64> {
+        self.timer
+    }
+
+    /// Fokus von macOS ist an (unabhängig davon, ob er angezeigt wird)
+    pub fn focus(&self) -> bool {
+        self.focus
+    }
+
+    /// Farbe, falls sich die ruhende Anzeige geändert hat und kein Call läuft
+    fn resting_if_changed(&self, before: Rgb) -> Option<Rgb> {
+        let now = self.resting();
+        (!self.overriding && now != before).then_some(now)
+    }
+
+    /// Konzentrations-Timer bis `until` (Unix-Sekunden) starten oder verlängern
+    pub fn start_timer(&mut self, until: u64) -> Option<Rgb> {
+        let before = self.resting();
+        self.timer = Some(until);
+        self.resting_if_changed(before)
+    }
+
+    /// Timer beenden (abgelaufen oder abgebrochen)
+    pub fn stop_timer(&mut self) -> Option<Rgb> {
+        let before = self.resting();
+        self.timer = None;
+        self.resting_if_changed(before)
+    }
+
+    /// Fokus von macOS beginnt oder endet
+    pub fn set_focus(&mut self, on: bool) -> Option<Rgb> {
+        if self.focus == on {
+            return None;
+        }
+        let before = self.resting();
+        self.focus = on;
+        self.focus_suspended = false;
+        self.resting_if_changed(before)
     }
 
     /// Kamera vor Programmfarbe vor Mikrofarbe
@@ -263,25 +330,28 @@ impl Engine {
 
     /// Farbe direkt in MicLED gewählt. Gilt sofort, auch während des Mikrofons,
     /// und wird zur neuen ruhenden Farbe.
+    /// Beendet einen laufenden Timer und blendet den Fokus bis zu seinem nächsten Wechsel aus.
     pub fn on_user_color(&mut self, c: Rgb) -> Rgb {
-        self.base = Some(c);
+        self.on_shared_color(c);
         c
     }
 
     /// Ein anderes Programm (Stream Deck) hat die Lampe gesetzt.
     pub fn on_shared_color(&mut self, c: Rgb) {
         self.base = Some(c);
+        self.timer = None;
+        self.focus_suspended = self.focus;
     }
 
     /// Einstellungen ändern. Liefert eine Farbe, falls das sofort sichtbar werden muss.
     pub fn set_config(&mut self, cfg: Config) -> Option<Rgb> {
-        let was_dark = self.dark();
+        let before = self.resting();
         self.cfg = cfg;
         if !self.cfg.camera {
             self.camera = false;
         }
         if !self.overriding {
-            return (was_dark != self.dark()).then(|| self.resting());
+            return self.resting_if_changed(before);
         }
         if !self.cfg.enabled {
             return Some(self.end_override());
@@ -636,5 +706,115 @@ mod tests {
         e.on_mic(vec![user("plaud")], t);
         let cfg = Config { app_colors: vec![("com.example.plaud".into(), Rgb::GREEN)], ..e.config().clone() };
         assert_eq!(e.set_config(cfg), Some(Rgb::GREEN));
+    }
+
+    // --- Timer und Fokus --------------------------------------------------
+
+    const VIOLET: Rgb = Rgb { r: 0x80, g: 0x00, b: 0xff };
+    const ORANGE: Rgb = Rgb { r: 0xff, g: 0x88, b: 0x00 };
+
+    fn focus_engine() -> (Engine, Instant) {
+        let cfg = Config { focus_enabled: true, ..Config::default() };
+        (Engine::new(cfg, Some(blue())), Instant::now())
+    }
+
+    #[test]
+    fn timer_shows_color_and_restores() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        assert_eq!(e.start_timer(1000), Some(VIOLET));
+        assert_eq!(e.timer(), Some(1000));
+        assert_eq!(e.start_timer(2000), None, "verlängern ändert nichts Sichtbares");
+        assert_eq!(e.stop_timer(), Some(blue()));
+        assert_eq!(e.stop_timer(), None);
+    }
+
+    #[test]
+    fn call_interrupts_timer_and_timer_returns_after() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.start_timer(1000);
+        assert_eq!(e.on_mic(vec![user("zoom")], t), Some(Rgb::RED));
+        e.on_mic(vec![], t + Duration::from_secs(1));
+        assert_eq!(e.on_mic(vec![], t + Duration::from_secs(5)), Some(VIOLET));
+    }
+
+    #[test]
+    fn timer_ending_during_call_shows_nothing_until_call_ends() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.start_timer(1000);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.stop_timer(), None);
+        e.on_mic(vec![], t + Duration::from_secs(1));
+        assert_eq!(e.on_mic(vec![], t + Duration::from_secs(5)), Some(blue()));
+    }
+
+    #[test]
+    fn choosing_a_color_ends_the_timer() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        e.start_timer(1000);
+        e.on_user_color(Rgb::GREEN);
+        assert_eq!(e.timer(), None);
+        assert_eq!(e.resting(), Rgb::GREEN);
+    }
+
+    #[test]
+    fn timer_is_dark_while_locked() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        e.start_timer(1000);
+        assert_eq!(e.set_away(Away::Locked, true), Some(Rgb::OFF));
+        assert_eq!(e.set_away(Away::Locked, false), Some(VIOLET));
+    }
+
+    #[test]
+    fn focus_shows_color_and_restores() {
+        let (mut e, _) = focus_engine();
+        assert_eq!(e.set_focus(true), Some(ORANGE));
+        assert_eq!(e.set_focus(true), None);
+        assert_eq!(e.set_focus(false), Some(blue()));
+    }
+
+    #[test]
+    fn focus_ignored_when_disabled() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        assert_eq!(e.set_focus(true), None);
+        assert!(e.focus());
+        let cfg = Config { focus_enabled: true, ..e.config().clone() };
+        assert_eq!(e.set_config(cfg), Some(ORANGE), "Einschalten wirkt sofort");
+    }
+
+    #[test]
+    fn call_beats_focus_and_focus_returns_after() {
+        let (mut e, t) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.on_mic(vec![user("zoom")], t), Some(Rgb::RED));
+        assert_eq!(e.set_focus(false), None, "während des Calls nichts");
+        e.set_focus(true);
+        e.on_mic(vec![], t + Duration::from_secs(1));
+        assert_eq!(e.on_mic(vec![], t + Duration::from_secs(5)), Some(ORANGE));
+    }
+
+    #[test]
+    fn timer_beats_focus() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.start_timer(1000), Some(VIOLET));
+        assert_eq!(e.stop_timer(), Some(ORANGE));
+    }
+
+    #[test]
+    fn color_chosen_during_focus_holds_until_focus_changes() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        e.on_user_color(Rgb::GREEN);
+        assert_eq!(e.resting(), Rgb::GREEN);
+        assert_eq!(e.set_focus(false), None, "bleibt grün");
+        assert_eq!(e.set_focus(true), Some(ORANGE));
+    }
+
+    #[test]
+    fn focus_and_lock_together() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.set_away(Away::Locked, true), Some(Rgb::OFF));
+        assert_eq!(e.set_away(Away::Locked, false), Some(ORANGE));
     }
 }

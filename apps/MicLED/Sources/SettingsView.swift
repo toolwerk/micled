@@ -128,6 +128,22 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section {
+                ColorPicker("Farbe beim Konzentrations-Timer", selection: colorBinding($model.timerHex), supportsOpacity: false)
+                Toggle("Fokus von macOS anzeigen", isOn: $model.focusEnabled)
+                ColorPicker("Farbe bei Fokus", selection: colorBinding($model.focusHex), supportsOpacity: false)
+                    .disabled(!model.focusEnabled)
+                if model.focusEnabled && model.focusUnavailable {
+                    Text("macOS gibt den Fokus nicht frei. Lege in Kurzbefehle › Automation je Fokus „Fokus an MicLED melden“ an (an und aus).")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Konzentration und Fokus")
+            } footer: {
+                Text("Den Timer startest du im Menü, per Rechtsklick auf das Symbol, mit micled://timer/25 oder in Kurzbefehlen. Am Ende blinkt die Lampe kurz. Ein Call hat Vorrang, eine gewählte Farbe beendet den Timer.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Schnellfarben im Menü") {
                 HStack {
                     ForEach(model.favorites.indices, id: \.self) { i in

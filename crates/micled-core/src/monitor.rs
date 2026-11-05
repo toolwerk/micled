@@ -37,6 +37,10 @@ pub struct Status {
     pub overriding: bool,
     /// Auf Sendung (Mikro oder Kamera, kurze Pausen eingeschlossen)
     pub live: bool,
+    /// Ende des Konzentrations-Timers (Unix-Sekunden)
+    pub timer_until: Option<u64>,
+    /// Fokus von macOS ist an
+    pub focus: bool,
     /// Farbe, zu der nach dem Mikrofon zurückgeschaltet wird (`None` = unbekannt)
     pub base: Option<Rgb>,
     /// Zuletzt erfolgreich gesetzte bzw. von anderer Stelle gemeldete Farbe
@@ -53,6 +57,9 @@ enum Cmd {
     Color(Rgb),
     Away(Away, bool),
     Upcoming(Vec<u64>),
+    /// Timer bis zu dieser Zeit (Unix-Sekunden), `None` beendet ihn
+    Timer(Option<u64>),
+    Focus(bool),
     Stop,
 }
 
@@ -78,6 +85,8 @@ impl Monitor {
             camera: false,
             overriding: false,
             live: false,
+            timer_until: None,
+            focus: false,
             base,
             shown: base,
             error: None,
@@ -102,6 +111,7 @@ impl Monitor {
                     mic_error: None,
                     reminders: Reminders::default(),
                     flash_left: 0,
+                    flash_color: Rgb::OFF,
                     live: false,
                     camera_reported: false,
                     calls: log,
@@ -122,6 +132,12 @@ impl Monitor {
                         Ok(Cmd::Config(c)) => w.set_config(c),
                         Ok(Cmd::Color(c)) => w.user_color(c),
                         Ok(Cmd::Away(r, on)) => w.set_away(r, on),
+                        Ok(Cmd::Timer(t)) => w.set_timer(t),
+                        Ok(Cmd::Focus(on)) => {
+                            if let Some(c) = w.engine.set_focus(on) {
+                                w.push(c);
+                            }
+                        }
                         Ok(Cmd::Upcoming(s)) => {
                             w.local_starts = s;
                             w.update_reminders();
@@ -165,6 +181,17 @@ impl Monitor {
         let _ = self.tx.send(Cmd::Upcoming(starts));
     }
 
+    /// Konzentrations-Timer für `minutes` Minuten starten, 0 beendet ihn
+    pub fn start_timer(&self, minutes: u32) {
+        let until = (minutes > 0).then(|| unix_now() + minutes as u64 * 60);
+        let _ = self.tx.send(Cmd::Timer(until));
+    }
+
+    /// Fokus von macOS beginnt oder endet
+    pub fn set_focus(&self, on: bool) {
+        let _ = self.tx.send(Cmd::Focus(on));
+    }
+
     /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen
     pub fn live_seconds_since(&self, since: u64) -> u64 {
         self.calls.lock().unwrap().total_since(since, unix_now())
@@ -200,8 +227,9 @@ struct Worker {
     lamp_error: Option<String>,
     mic_error: Option<String>,
     reminders: Reminders,
-    /// Verbleibende Wechsel der Termin-Vorwarnung
+    /// Verbleibende Wechsel beim Blinken (Vorwarnung, Ende des Timers)
     flash_left: u8,
+    flash_color: Rgb,
     /// Zuletzt nach außen gemeldeter Zustand „Auf Sendung“
     live: bool,
     camera_reported: bool,
@@ -290,6 +318,24 @@ impl Worker {
         });
     }
 
+    fn set_timer(&mut self, until: Option<u64>) {
+        let c = match until {
+            Some(t) => self.engine.start_timer(t),
+            None => self.engine.stop_timer(),
+        };
+        if let Some(c) = c {
+            self.push(c);
+        }
+    }
+
+    /// Blinken starten (nur in Ruhe und per USB, der Webhook ist zu träge)
+    fn flash(&mut self, color: Rgb) {
+        if !self.engine.overriding() && !self.engine.dark() && self.engine.config().transport == Transport::Usb {
+            self.flash_color = color;
+            self.flash_left = FLASH_STEPS;
+        }
+    }
+
     fn set_away(&mut self, reason: Away, on: bool) {
         if let Some(c) = self.engine.set_away(reason, on) {
             self.push(c);
@@ -340,16 +386,21 @@ impl Worker {
             self.push(c);
         }
 
-        // 3. Termin-Vorwarnung (nur in Ruhe und per USB, der Webhook ist zu träge)
+        // 3. Ende des Timers und Termin-Vorwarnung
+        let now = unix_now();
+        if let Some(until) = self.engine.timer().filter(|&t| now >= t) {
+            if let Some(c) = self.engine.stop_timer() {
+                self.push(c);
+            }
+            // nur blinken, wenn das Ende gerade erst war (nicht nach dem Aufwachen)
+            if now - until < 5 {
+                self.flash(self.engine.config().timer_color);
+            }
+        }
         self.poll_nextcloud();
         let lead = self.engine.config().reminder_lead.as_secs();
-        if self.reminders.due(unix_now(), lead)
-            && !self.engine.overriding()
-            && !self.engine.dark()
-            && self.pending.is_none()
-            && self.engine.config().transport == Transport::Usb
-        {
-            self.flash_left = FLASH_STEPS;
+        if self.reminders.due(now, lead) && self.pending.is_none() {
+            self.flash(self.engine.config().reminder_color);
         }
 
         // 4. Lampe schalten (mit Wiederholung, falls sie gerade fehlt)
@@ -370,10 +421,12 @@ impl Worker {
                     }
                 }
             }
+        } else if self.flash_left > 0 && (self.engine.overriding() || self.engine.dark()) {
+            self.flash_left = 0;
         } else if self.flash_left > 0 {
             self.flash_left -= 1;
             let c = if self.flash_left % 2 == 1 {
-                self.engine.config().reminder_color
+                self.flash_color
             } else {
                 self.shown.unwrap_or(Rgb::OFF)
             };
@@ -436,6 +489,8 @@ impl Worker {
             camera: self.engine.camera_on(),
             overriding: self.engine.overriding(),
             live: self.live,
+            timer_until: self.engine.timer(),
+            focus: self.engine.focus(),
             base: self.engine.base(),
             shown: self.shown,
             error: self
