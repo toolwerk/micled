@@ -138,7 +138,7 @@ Farbwechsel aus der Luxafor-App bekommt MicLED nicht mit.
 
 ```bash
 ./setup.sh            # Werkzeuge prüfen, Tests, Rust-Kern bauen, Xcode-Projekt erzeugen
-./setup.sh --github   # zusätzlich privates Repo toolwerk/micled anlegen und pushen
+./setup.sh --github   # zusätzlich öffentliches Repo toolwerk/micled anlegen und pushen (nur beim allerersten Mal)
 open apps/MicLED/MicLED.xcodeproj
 ```
 

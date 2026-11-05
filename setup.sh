@@ -25,7 +25,7 @@ if [ "${1:-}" = "--github" ]; then
   need gh "brew install gh"
   git add -A
   git diff --cached --quiet || git commit -m "Erster Stand: Rust-Kern, CLI, Menüleisten-App"
-  gh repo create toolwerk/micled --private --source . --push
+  gh repo create toolwerk/micled --public --source . --push
 fi
 
 cat <<MSG
