@@ -3,7 +3,7 @@
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](#voraussetzungen)
 [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](apps/MicLED)
 [![Rust](https://img.shields.io/badge/Rust-Kern-B7410E?logo=rust&logoColor=white)](crates/micled-core)
-[![CI](https://github.com/staude/micled/actions/workflows/ci.yml/badge.svg)](https://github.com/staude/micled/actions/workflows/ci.yml)
+[![CI](https://github.com/toolwerk/micled/actions/workflows/ci.yml/badge.svg)](https://github.com/toolwerk/micled/actions/workflows/ci.yml)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-blue)](LICENSE)
 
 **Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
@@ -138,7 +138,7 @@ Farbwechsel aus der Luxafor-App bekommt MicLED nicht mit.
 
 ```bash
 ./setup.sh            # Werkzeuge prüfen, Tests, Rust-Kern bauen, Xcode-Projekt erzeugen
-./setup.sh --github   # zusätzlich privates Repo staude/micled anlegen und pushen
+./setup.sh --github   # zusätzlich privates Repo toolwerk/micled anlegen und pushen
 open apps/MicLED/MicLED.xcodeproj
 ```
 
