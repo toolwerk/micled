@@ -53,11 +53,28 @@ fn origin(url: &str) -> &str {
     }
 }
 
-fn resolve(base: &str, href: &str) -> String {
-    if href.contains("://") {
-        href.to_string()
+/// Das Passwort geht nur verschlüsselt raus; `http://` nur für den eigenen Rechner
+pub fn check_secure(server: &str) -> Result<(), String> {
+    let local = ["http://localhost", "http://127.0.0.1", "http://[::1]"];
+    let ok = server.starts_with("https://")
+        || local.iter().any(|l| server == *l || server.starts_with(&format!("{l}:")) || server.starts_with(&format!("{l}/")));
+    if ok {
+        Ok(())
     } else {
-        format!("{}{href}", origin(base))
+        Err("Nextcloud nur über https:// erreichbar eintragen".into())
+    }
+}
+
+/// `href` aus einer Antwort zur vollen Adresse machen. Adressen auf anderen
+/// Servern werden abgelehnt, damit die Zugangsdaten dort nicht hingehen.
+fn resolve(base: &str, href: &str) -> Result<String, String> {
+    if !href.contains("://") {
+        return Ok(format!("{}{href}", origin(base)));
+    }
+    if origin(href) == origin(base) {
+        Ok(href.to_string())
+    } else {
+        Err(format!("Nextcloud verweist auf einen anderen Server: {}", origin(href)))
     }
 }
 
@@ -259,14 +276,15 @@ impl Client {
 
     /// Adressen aller Termin-Kalender des Benutzers
     fn calendars(&self, server: &str) -> Result<Vec<String>, String> {
+        check_secure(server)?;
         let root = format!("{server}/remote.php/dav/");
         let principal = href_of(&self.call("PROPFIND", &root, "0", PRINCIPAL)?, "current-user-principal")?
             .ok_or("Nextcloud: kein Benutzerkonto gefunden")?;
-        let principal = resolve(server, &principal);
+        let principal = resolve(server, &principal)?;
         let home = href_of(&self.call("PROPFIND", &principal, "0", HOME)?, "calendar-home-set")?
             .ok_or("Nextcloud: kein Kalenderordner gefunden")?;
-        let home = resolve(server, &home);
-        Ok(calendars(&self.call("PROPFIND", &home, "1", CALENDARS)?)?.into_iter().map(|h| resolve(server, &h)).collect())
+        let home = resolve(server, &home)?;
+        calendars(&self.call("PROPFIND", &home, "1", CALENDARS)?)?.into_iter().map(|h| resolve(server, &h)).collect()
     }
 }
 
@@ -398,9 +416,19 @@ END:VCALENDAR
         assert_eq!(normalize(" staude.cloud/ "), "https://staude.cloud");
         assert_eq!(normalize("https://example.org/nextcloud/"), "https://example.org/nextcloud");
         assert_eq!(
-            resolve("https://example.org/nextcloud", "/nextcloud/remote.php/dav/calendars/f/"),
+            resolve("https://example.org/nextcloud", "/nextcloud/remote.php/dav/calendars/f/").unwrap(),
             "https://example.org/nextcloud/remote.php/dav/calendars/f/"
         );
+    }
+
+    #[test]
+    fn credentials_only_over_https_and_same_server() {
+        assert!(check_secure("https://cloud.example.org").is_ok());
+        assert!(check_secure("http://localhost:8080").is_ok());
+        assert!(check_secure("http://cloud.example.org").is_err());
+        assert!(check_secure("http://localhost.evil.org").is_err());
+        assert!(resolve("https://a.org", "https://a.org/x/").is_ok());
+        assert!(resolve("https://a.org", "https://b.org/x/").is_err());
     }
 
     #[test]
