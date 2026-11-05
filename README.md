@@ -9,9 +9,11 @@
 **Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
 
 <p align="center">
+  <img src="docs/images/lamp.gif" alt="Luxafor Flag am Monitor: grün, beim Call rot, danach wieder grün" width="340">
+  &nbsp;&nbsp;
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/menu-dark.png">
-    <img src="docs/images/menu-light.png" alt="Menü von MicLED: Mikrofon aktiv in Zoom, Schnellfarben, Konzentrations-Timer und Zeit auf Sendung" width="360">
+    <img src="docs/images/menu-light.png" alt="Menü von MicLED: Mikrofon aktiv in Zoom, Schnellfarben, Konzentrations-Timer und Zeit auf Sendung" width="300">
   </picture>
 </p>
 
@@ -165,7 +167,7 @@ crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh, screenshots.sh
-docs/images/         Screenshots für diese README
+docs/images/         Screenshots und Lampen-Video (lamp.gif) für diese README
 ```
 
 Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und legt Bibliothek und Header unter `build/universal` und `build/include` ab. Generierte Dateien werden nicht eingecheckt.
