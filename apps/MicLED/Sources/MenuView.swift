@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @State private var custom = Color.orange
 
     var body: some View {
@@ -76,9 +77,17 @@ struct MenuView: View {
             }
 
             TimelineView(.periodic(from: .now, by: 30)) { _ in
-                Label("Heute \(Self.duration(model.liveSecondsToday())) auf Sendung", systemImage: "clock")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Label("Heute \(Self.duration(model.liveSecondsToday())) auf Sendung", systemImage: "clock")
+                    Spacer()
+                    Button("Statistik") {
+                        NSApp.activate()
+                        openWindow(id: "stats")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Divider()

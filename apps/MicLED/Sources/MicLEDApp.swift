@@ -22,6 +22,12 @@ struct MicLEDApp: App {
         }
         .menuBarExtraStyle(.window)
 
+        Window("Statistik", id: "stats") {
+            StatsView()
+                .environment(model)
+        }
+        .windowResizability(.contentSize)
+
         Settings {
             SettingsView()
                 .environment(model)

@@ -15,6 +15,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Eigene Farbe je Programm am Mikrofon.
 - Konzentrations-Timer mit eigener Farbe und Blinken am Ende.
 - Abends dimmen in einer einstellbaren Zeitspanne.
+- Fenster „Statistik“ mit Balken je Tag und CSV-Export, Calls werden ein Jahr gespeichert.
 - Fokus von macOS als eigene Farbe, per `INFocusStatusCenter` oder Kurzbefehle-Automation.
 - „Auf Sendung“-Meldung per HTTP-POST, z. B. an Home Assistant.
 - Vorwarnung vor Kalenderterminen durch kurzes Blinken, Termine aus den Kalendern von macOS und optional direkt aus Nextcloud (CalDAV, App-Passwort im Schlüsselbund).

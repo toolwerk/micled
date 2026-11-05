@@ -197,6 +197,15 @@ final class AppModel {
         return result.calendars == 1 ? "Verbunden, 1 Kalender" : "Verbunden, \(result.calendars) Kalender"
     }
 
+    /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
+    func liveSecondsPerDay(bounds: [UInt64]) -> [UInt64] {
+        controller?.liveSecondsPerDay(bounds: bounds) ?? []
+    }
+
+    func callsCsv() -> String {
+        controller?.callsCsv() ?? "start,end,seconds\n"
+    }
+
     /// Sekunden auf Sendung seit Mitternacht
     func liveSecondsToday() -> UInt64 {
         let midnight = Calendar.current.startOfDay(for: Date())

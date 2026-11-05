@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 /// Ältere Einträge werden beim Speichern verworfen
-const KEEP_SECS: u64 = 60 * 24 * 3600;
+const KEEP_SECS: u64 = 365 * 24 * 3600;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CallLog {
@@ -41,6 +41,34 @@ impl CallLog {
         closed.chain(open).sum()
     }
 
+    /// Sekunden auf Sendung je Tag. `bounds` sind aufsteigende Tagesgrenzen
+    /// (lokale Mitternachten), Ergebnis hat einen Eintrag weniger. Ein Call über
+    /// Mitternacht wird aufgeteilt, ein laufender zählt bis `now`.
+    pub fn per_day(&self, bounds: &[u64], now: u64) -> Vec<u64> {
+        let open = self.open.map(|s| (s, now));
+        bounds
+            .windows(2)
+            .map(|w| {
+                let (from, to) = (w[0], w[1]);
+                self.sessions
+                    .iter()
+                    .copied()
+                    .chain(open)
+                    .map(|(s, e)| e.min(to).saturating_sub(s.max(from)))
+                    .sum()
+            })
+            .collect()
+    }
+
+    /// Alle gespeicherten Calls als CSV: `start,end,seconds` in UTC (ISO 8601)
+    pub fn to_csv(&self) -> String {
+        let mut out = String::from("start,end,seconds\n");
+        for &(s, e) in &self.sessions {
+            out.push_str(&format!("{},{},{}\n", iso(s), iso(e), e.saturating_sub(s)));
+        }
+        out
+    }
+
     pub fn default_path() -> Option<PathBuf> {
         let home = std::env::var_os("HOME")?;
         Some(PathBuf::from(home).join("Library/Application Support/net.staude.micled/calls.json"))
@@ -61,9 +89,35 @@ impl CallLog {
     }
 }
 
+/// `2026-11-05T14:00:00Z`
+fn iso(t: u64) -> String {
+    let b = crate::caldav::format_utc(t);
+    format!("{}-{}-{}T{}:{}:{}Z", &b[0..4], &b[4..6], &b[6..8], &b[9..11], &b[11..13], &b[13..15])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn per_day_splits_at_bounds() {
+        let mut log = CallLog::default();
+        log.start(90);
+        log.stop(130); // 10 s an Tag 1, 30 s an Tag 2
+        log.start(150);
+        log.stop(160);
+        log.start(250); // läuft noch
+        assert_eq!(log.per_day(&[0, 100, 200, 300], 260), vec![10, 40, 10]);
+        assert_eq!(log.per_day(&[0], 260), Vec::<u64>::new());
+    }
+
+    #[test]
+    fn csv_format() {
+        let mut log = CallLog::default();
+        log.start(1793887200);
+        log.stop(1793887200 + 90);
+        assert_eq!(log.to_csv(), "start,end,seconds\n2026-11-05T14:00:00Z,2026-11-05T14:01:30Z,90\n");
+    }
 
     #[test]
     fn sums_closed_and_running_sessions_since() {

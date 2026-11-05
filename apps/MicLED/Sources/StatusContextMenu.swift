@@ -13,6 +13,7 @@ final class StatusContextMenu: NSObject {
 
     /// Kommt aus der SwiftUI-Umgebung des Symbols (`openSettings`)
     var openSettings: (() -> Void)?
+    var openStats: (() -> Void)?
     private var monitor: Any?
 
     func install() {
@@ -43,6 +44,7 @@ final class StatusContextMenu: NSObject {
             menu.addItem(withTitle: "Konzentration", action: nil, keyEquivalent: "").submenu = sub
         }
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Statistik", action: #selector(stats), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Einstellungen …", action: #selector(settings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "MicLED beenden", action: #selector(quit), keyEquivalent: "q").target = self
@@ -67,6 +69,11 @@ final class StatusContextMenu: NSObject {
         AppModel.shared.stopTimer()
     }
 
+    @objc private func stats() {
+        NSApp.activate()
+        openStats?()
+    }
+
     @objc private func quit() {
         NSApp.terminate(nil)
     }
@@ -76,12 +83,15 @@ final class StatusContextMenu: NSObject {
 struct StatusLabel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Image(nsImage: StatusIcon.image(hex: model.shownHex, micActive: model.micActive, cameraOn: model.cameraOn))
             .onAppear {
                 let open = openSettings
                 StatusContextMenu.shared.openSettings = { open() }
+                let window = openWindow
+                StatusContextMenu.shared.openStats = { window(id: "stats") }
                 StatusContextMenu.shared.install()
             }
     }

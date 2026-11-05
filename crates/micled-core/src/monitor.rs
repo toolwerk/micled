@@ -198,6 +198,16 @@ impl Monitor {
         self.calls.lock().unwrap().total_since(since, unix_now())
     }
 
+    /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
+    pub fn live_seconds_per_day(&self, bounds: &[u64]) -> Vec<u64> {
+        self.calls.lock().unwrap().per_day(bounds, unix_now())
+    }
+
+    /// Gespeicherte Calls als CSV
+    pub fn calls_csv(&self) -> String {
+        self.calls.lock().unwrap().to_csv()
+    }
+
     pub fn status(&self) -> Status {
         self.status.lock().unwrap().clone()
     }

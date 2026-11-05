@@ -19,7 +19,7 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Konzentrations-Timer: Die Lampe zeigt 15 bis 90 Minuten lang eine eigene Farbe und blinkt am Ende. Start im Menü, per Rechtsklick auf das Symbol, über `micled://timer/25` oder Kurzbefehle.
 - Fokus von macOS: Solange ein Fokus an ist, leuchtet die Lampe in der Fokusfarbe. Gibt macOS den Fokus nicht frei, meldet ihn eine Kurzbefehle-Automation („Fokus an MicLED melden“).
 - Abends dimmen: In einer einstellbaren Zeitspanne (Standard 18–7 Uhr) leuchtet die Lampe gedimmt, die Farben rechnet MicLED herunter.
-- Im Menü steht, wie lange du heute auf Sendung warst.
+- Statistik: Im Menü steht, wie lange du heute auf Sendung warst. Das Fenster „Statistik“ zeigt die letzten 7 oder 30 Tage als Balken und exportiert alle Calls als CSV. Gespeichert wird ein Jahr.
 - Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
 
 ## Steuerung von außen

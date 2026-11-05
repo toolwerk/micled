@@ -263,6 +263,16 @@ impl MicLedController {
         self.monitor.set_focus(on);
     }
 
+    /// Sekunden auf Sendung je Tag; `bounds` sind aufsteigende lokale Mitternachten
+    pub fn live_seconds_per_day(&self, bounds: Vec<u64>) -> Vec<u64> {
+        self.monitor.live_seconds_per_day(&bounds)
+    }
+
+    /// Gespeicherte Calls als CSV (`start,end,seconds`, UTC)
+    pub fn calls_csv(&self) -> String {
+        self.monitor.calls_csv()
+    }
+
     pub fn turn_off(&self) {
         self.monitor.set_color(Rgb::OFF);
     }
