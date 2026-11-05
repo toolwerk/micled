@@ -17,7 +17,8 @@ struct MicLEDApp: App {
             MenuView()
                 .environment(model)
         } label: {
-            Image(nsImage: StatusIcon.image(hex: model.shownHex, micActive: model.micActive, cameraOn: model.cameraOn))
+            StatusLabel()
+                .environment(model)
         }
         .menuBarExtraStyle(.window)
 
