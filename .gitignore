@@ -6,3 +6,9 @@ apps/MicLED/Generated/
 xcuserdata/
 .DS_Store
 /.worktrees/
+# Zugangsdaten und Signatur nie einchecken
+.env*
+*.p12
+*.p8
+*.cer
+*.mobileprovision
