@@ -81,6 +81,18 @@ pub struct MicLedConfig {
     pub dim_from_min: u16,
     pub dim_to_min: u16,
     pub dim_percent: u8,
+    /// Slack-Status bei „Auf Sendung“; leerer Token = aus
+    pub slack_token: String,
+    pub slack_text: String,
+    pub slack_emoji: String,
+}
+
+/// Ergebnis von [`slack_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct SlackCheck {
+    /// „Benutzer in Workspace“
+    pub name: Option<String>,
+    pub error: Option<String>,
 }
 
 /// Farbe für ein Programm (Bundle-ID oder Prozessname)
@@ -146,6 +158,11 @@ impl From<MicLedConfig> for core::Config {
             nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
             timer_color: color(&c.timer_color, Rgb { r: 0x80, g: 0, b: 0xff }),
             focus_enabled: c.focus_enabled,
+            slack: (!c.slack_token.trim().is_empty() && !c.slack_text.trim().is_empty()).then(|| core::slack::Slack {
+                token: c.slack_token,
+                text: c.slack_text.trim().to_string(),
+                emoji: c.slack_emoji.trim().to_string(),
+            }),
             dim: c.dim_enabled.then_some(core::dim::Dim {
                 from_min: c.dim_from_min,
                 to_min: c.dim_to_min,
@@ -321,6 +338,15 @@ pub fn nextcloud_check(server: String, user: String, password: String) -> Nextcl
     match result {
         Ok(n) => NextcloudCheck { calendars: n as u32, error: None },
         Err(e) => NextcloudCheck { calendars: 0, error: Some(e) },
+    }
+}
+
+/// Slack-Token prüfen (blockiert, nicht im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn slack_check(token: String) -> SlackCheck {
+    match core::slack::check(&token) {
+        Ok(name) => SlackCheck { name: Some(name), error: None },
+        Err(e) => SlackCheck { name: None, error: Some(e) },
     }
 }
 

@@ -37,7 +37,13 @@ final class AppModel {
     var nextcloudServer: String { didSet { persist() } }
     var nextcloudUser: String { didSet { persist() } }
     /// Liegt im Schlüsselbund
-    var nextcloudPassword: String { didSet { Keychain.setPassword(nextcloudPassword); persist() } }
+    var nextcloudPassword: String { didSet { Keychain.write(.nextcloud, nextcloudPassword); persist() } }
+    /// Slack-Status bei „Auf Sendung“
+    var slackEnabled: Bool { didSet { persist() } }
+    /// Liegt im Schlüsselbund
+    var slackToken: String { didSet { Keychain.write(.slack, slackToken); persist() } }
+    var slackText: String { didSet { persist() } }
+    var slackEmoji: String { didSet { persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     var appColors: [AppColor] { didSet { persist() } }
@@ -103,6 +109,9 @@ final class AppModel {
             Key.timerColor: "8000ff",
             Key.focusEnabled: false,
             Key.focusColor: "ff8800",
+            Key.slackEnabled: false,
+            Key.slackText: "Im Call",
+            Key.slackEmoji: ":red_circle:",
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
             Key.dimTo: 7 * 60,
@@ -127,7 +136,11 @@ final class AppModel {
         nextcloudEnabled = d.bool(forKey: Key.nextcloudEnabled)
         nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
-        nextcloudPassword = Keychain.password()
+        nextcloudPassword = Keychain.read(.nextcloud)
+        slackEnabled = d.bool(forKey: Key.slackEnabled)
+        slackToken = Keychain.read(.slack)
+        slackText = d.string(forKey: Key.slackText) ?? "Im Call"
+        slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -195,6 +208,13 @@ final class AppModel {
         }.value
         if let error = result.error { return error }
         return result.calendars == 1 ? "Verbunden, 1 Kalender" : "Verbunden, \(result.calendars) Kalender"
+    }
+
+    /// Slack-Token prüfen, liefert eine Meldung für die Einstellungen
+    func checkSlack() async -> String {
+        let token = slackToken
+        let result = await Task.detached { slackCheck(token: token) }.value
+        return result.error ?? "Verbunden als \(result.name ?? "?")"
     }
 
     /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
@@ -271,7 +291,10 @@ final class AppModel {
             dimEnabled: dimEnabled,
             dimFromMin: UInt16(clamping: dimFromMinutes),
             dimToMin: UInt16(clamping: dimToMinutes),
-            dimPercent: UInt8(clamping: Int(dimPercent))
+            dimPercent: UInt8(clamping: Int(dimPercent)),
+            slackToken: slackEnabled ? slackToken : "",
+            slackText: slackText,
+            slackEmoji: slackEmoji
         )
     }
 
@@ -303,6 +326,9 @@ final class AppModel {
         defaults.set(timerHex, forKey: Key.timerColor)
         defaults.set(focusEnabled, forKey: Key.focusEnabled)
         defaults.set(focusHex, forKey: Key.focusColor)
+        defaults.set(slackEnabled, forKey: Key.slackEnabled)
+        defaults.set(slackText, forKey: Key.slackText)
+        defaults.set(slackEmoji, forKey: Key.slackEmoji)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -404,6 +430,9 @@ final class AppModel {
         static let timerColor = "timerColor"
         static let focusEnabled = "focusEnabled"
         static let focusColor = "focusColor"
+        static let slackEnabled = "slackEnabled"
+        static let slackText = "slackText"
+        static let slackEmoji = "slackEmoji"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"

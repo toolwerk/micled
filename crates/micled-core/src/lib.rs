@@ -13,6 +13,7 @@ pub mod monitor;
 pub mod onair;
 pub mod reminder;
 pub mod shared;
+pub mod slack;
 pub mod stats;
 
 pub use caldav::Nextcloud;

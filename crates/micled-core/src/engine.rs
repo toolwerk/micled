@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use crate::caldav::Nextcloud;
 use crate::color::Rgb;
 use crate::dim::Dim;
+use crate::slack::Slack;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
 
@@ -83,6 +84,8 @@ pub struct Config {
     pub focus_color: Rgb,
     /// Abends dimmen (`None` = aus)
     pub dim: Option<Dim>,
+    /// Slack-Status bei „Auf Sendung“ (`None` = aus)
+    pub slack: Option<Slack>,
 }
 
 impl Default for Config {
@@ -107,6 +110,7 @@ impl Default for Config {
             focus_enabled: false,
             focus_color: Rgb { r: 0xff, g: 0x88, b: 0x00 },
             dim: None,
+            slack: None,
         }
     }
 }

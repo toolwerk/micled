@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var current: [MicUser] = []
     @State private var nextcloudResult = ""
+    @State private var slackResult = ""
 
     var body: some View {
         @Bindable var model = model
@@ -62,6 +63,27 @@ struct SettingsView: View {
                 Text("„Auf Sendung“ melden")
             } footer: {
                 Text("Bei jedem Wechsel geht ein POST mit {\"on_air\": true, \"camera\": false, \"apps\": […]} an diese Adresse, z. B. an einen Home-Assistant-Webhook für ein Türschild. Leer = aus.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Slack-Status setzen", isOn: $model.slackEnabled)
+                if model.slackEnabled {
+                    SecureField("User-Token", text: $model.slackToken, prompt: Text("xoxp-…"))
+                    TextField("Statustext", text: $model.slackText)
+                    TextField("Emoji", text: $model.slackEmoji, prompt: Text(":red_circle:"))
+                    HStack {
+                        Button("Verbindung prüfen") {
+                            slackResult = "Prüfe …"
+                            Task { slackResult = await model.checkSlack() }
+                        }
+                        Text(slackResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Slack")
+            } footer: {
+                Text("Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

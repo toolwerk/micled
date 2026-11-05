@@ -13,7 +13,7 @@ use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
-use crate::{caldav, camera, dim, onair, shared};
+use crate::{caldav, camera, dim, onair, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -96,6 +96,7 @@ impl Monitor {
         let (tx, rx) = channel::<Cmd>();
         let st = status.clone();
         let log = calls.clone();
+        let slack_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
             .spawn(move || {
@@ -125,7 +126,11 @@ impl Monitor {
                     fetching: false,
                     calendar_error: None,
                     brightness: 100,
+                    slack: slack::Updater::start(slack_error.clone()),
+                    slack_error,
                 };
+                // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
+                w.report_slack();
                 w.file_mtime = w.mtime();
                 loop {
                     match rx.recv_timeout(POLL) {
@@ -260,6 +265,8 @@ struct Worker {
     calendar_error: Option<String>,
     /// Zuletzt angewandte Helligkeit in Prozent
     brightness: u8,
+    slack: slack::Updater,
+    slack_error: Arc<Mutex<Option<String>>>,
 }
 
 impl Worker {
@@ -279,6 +286,7 @@ impl Worker {
             self.last_try = None;
         }
         let url_changed = cfg.on_air_url != self.engine.config().on_air_url;
+        let slack_changed = cfg.slack != self.engine.config().slack;
         if cfg.nextcloud != self.engine.config().nextcloud {
             self.round += 1;
             self.fetching = false;
@@ -292,6 +300,10 @@ impl Worker {
         }
         if url_changed {
             *self.on_air_error.lock().unwrap() = None;
+        }
+        if slack_changed {
+            *self.slack_error.lock().unwrap() = None;
+            self.report_slack();
         }
     }
 
@@ -465,6 +477,13 @@ impl Worker {
         }
     }
 
+    /// Aktuellen Zustand „Auf Sendung“ an Slack melden (falls eingerichtet)
+    fn report_slack(&self) {
+        if let Some(cfg) = self.engine.config().slack.clone() {
+            self.slack.send(cfg, self.live, unix_now());
+        }
+    }
+
     fn set_live(&mut self, live: bool) {
         if live != self.live {
             let mut calls = self.calls.lock().unwrap();
@@ -479,8 +498,12 @@ impl Worker {
                 }
             }
         }
+        let changed = live != self.live;
         self.live = live;
         self.camera_reported = live && self.engine.camera_on();
+        if changed {
+            self.report_slack();
+        }
 
         let url = self.engine.config().on_air_url.trim().to_string();
         if url.is_empty() {
@@ -520,7 +543,8 @@ impl Worker {
                 .clone()
                 .or_else(|| self.mic_error.clone())
                 .or_else(|| self.on_air_error.lock().unwrap().clone())
-                .or_else(|| self.calendar_error.clone()),
+                .or_else(|| self.calendar_error.clone())
+                .or_else(|| self.slack_error.lock().unwrap().clone()),
         }
     }
 }

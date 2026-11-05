@@ -15,6 +15,7 @@ MicLED sitzt in der macOS-Menüleiste und schaltet eine Luxafor-Lampe auf Rot, s
 - Kamera-Erkennung über CoreMediaIO: Kamera an zählt wie Mikro an und hat eine eigene Farbe (Standard Magenta).
 - Farbe je Programm, z. B. Orange für eine Aufnahme mit Plaud und Rot für Calls. Bei mehreren Programmen gilt der oberste Eintrag, die Kamerafarbe hat Vorrang.
 - „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
+- Slack-Status: Während du auf Sendung bist, steht z. B. 🔴 „Im Call“ in deinem Slack-Profil, danach kommt der vorherige Status zurück.
 - Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin (Vorlauf einstellbar, ab Werk aus). Termine kommen aus den Kalendern von macOS und auf Wunsch direkt aus Nextcloud.
 - Konzentrations-Timer: Die Lampe zeigt 15 bis 90 Minuten lang eine eigene Farbe und blinkt am Ende. Start im Menü, per Rechtsklick auf das Symbol, über `micled://timer/25` oder Kurzbefehle.
 - Fokus von macOS: Solange ein Fokus an ist, leuchtet die Lampe in der Fokusfarbe. Gibt macOS den Fokus nicht frei, meldet ihn eine Kurzbefehle-Automation („Fokus an MicLED melden“).
@@ -45,6 +46,15 @@ In den Einstellungen die Webhook-Adresse eintragen, z. B. `http://homeassistant.
 ```
 
 In einer Home-Assistant-Automation mit Webhook-Auslöser steht der Wert als `{{ trigger.json.on_air }}` bereit.
+
+## Slack-Status
+
+1. Unter <https://api.slack.com/apps> › „Create New App“ › „From scratch“ eine App im eigenen Workspace anlegen.
+2. „OAuth & Permissions“ › „User Token Scopes“: `users.profile:read` und `users.profile:write` hinzufügen.
+3. „Install to Workspace“ und den „User OAuth Token“ (`xoxp-…`) kopieren.
+4. In MicLED unter Einstellungen › Slack einfügen und „Verbindung prüfen“ drücken.
+
+MicLED setzt den Status nur, wenn gerade keiner gesetzt ist. Ändert sich der Status während des Calls, bleibt er danach stehen. Der eigene Status läuft nach vier Stunden von selbst ab, falls MicLED ihn nicht mehr zurücksetzen kann.
 
 ## Termine aus Nextcloud
 

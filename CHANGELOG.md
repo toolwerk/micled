@@ -18,6 +18,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Fenster „Statistik“ mit Balken je Tag und CSV-Export, Calls werden ein Jahr gespeichert.
 - Fokus von macOS als eigene Farbe, per `INFocusStatusCenter` oder Kurzbefehle-Automation.
 - „Auf Sendung“-Meldung per HTTP-POST, z. B. an Home Assistant.
+- Slack-Status während eines Calls, vorheriger Status wird wiederhergestellt.
 - Vorwarnung vor Kalenderterminen durch kurzes Blinken, Termine aus den Kalendern von macOS und optional direkt aus Nextcloud (CalDAV, App-Passwort im Schlüsselbund).
 - Tagessumme „auf Sendung“ im Menü, gespeichert in `~/Library/Application Support/net.staude.micled/calls.json`.
 - `micled://`-Adressen und Aktionen für die Kurzbefehle-App.
