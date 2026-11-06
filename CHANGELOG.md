@@ -4,6 +4,11 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Divoom Pixoo 64 als Display: zeigt „ON AIR“ mit Mikro- oder Kamerasymbol, die Restminuten des Timers oder „FOKUS“ und kehrt danach zum vorherigen Kanal zurück. Einstellungen mit „Verbindung prüfen“, Kommandozeile `micled pixoo <adresse>`.
+- „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack und am Webhook.
+
 ## [0.1.0] - 2026-11-05
 
 ### Hinzugefügt
