@@ -113,7 +113,13 @@ MicLED setzt den Status nur, wenn gerade keiner gesetzt ist. Ändert sich der St
 
 ## Pixoo 64
 
-Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr:
+Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr.
+
+<p align="center">
+  <img src="docs/images/pixoo.gif" alt="Pixoo 64 im Regal: zeigt die Uhr, beim Call ein rotes Mikrofon mit „ON AIR“, danach wieder die Uhr" width="300">
+</p>
+
+Es zeigt:
 
 - auf Sendung: Mikro- oder Kamerasymbol mit „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe,
 - Konzentrations-Timer: die restlichen Minuten mit „MIN“, jede Minute neu,
@@ -186,7 +192,7 @@ crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh, screenshots.sh
-docs/images/         Screenshots und Lampen-Video (lamp.gif) für diese README
+docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README
 ```
 
 Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und legt Bibliothek und Header unter `build/universal` und `build/include` ab. Generierte Dateien werden nicht eingecheckt.
