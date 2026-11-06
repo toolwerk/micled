@@ -13,7 +13,8 @@ use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
-use crate::{caldav, camera, dim, onair, shared, slack};
+use crate::display::Scene;
+use crate::{caldav, camera, dim, onair, pixoo, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -97,6 +98,7 @@ impl Monitor {
         let st = status.clone();
         let log = calls.clone();
         let slack_error = Arc::new(Mutex::new(None));
+        let pixoo_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
             .spawn(move || {
@@ -128,6 +130,9 @@ impl Monitor {
                     brightness: 100,
                     slack: slack::Updater::start(slack_error.clone()),
                     slack_error,
+                    pixoo: pixoo::Updater::start(pixoo_error.clone()),
+                    pixoo_error,
+                    last_scene: None,
                 };
                 // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
                 w.report_slack();
@@ -163,6 +168,7 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
+                w.pixoo.shutdown(Duration::from_secs(3));
                 w.slack.shutdown(Duration::from_secs(3));
             })
             .expect("Monitor-Thread");
@@ -268,6 +274,10 @@ struct Worker {
     brightness: u8,
     slack: slack::Updater,
     slack_error: Arc<Mutex<Option<String>>>,
+    pixoo: pixoo::Updater,
+    pixoo_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an das Display gegebene Adresse und Szene
+    last_scene: Option<(Option<String>, Scene)>,
 }
 
 impl Worker {
@@ -288,6 +298,9 @@ impl Worker {
         }
         let url_changed = cfg.on_air_url != self.engine.config().on_air_url;
         let slack_changed = cfg.slack != self.engine.config().slack;
+        if cfg.pixoo != self.engine.config().pixoo {
+            *self.pixoo_error.lock().unwrap() = None;
+        }
         if cfg.nextcloud != self.engine.config().nextcloud {
             self.round += 1;
             self.fetching = false;
@@ -480,6 +493,15 @@ impl Worker {
         if live != self.live || (live && self.engine.camera_on() != self.camera_reported) {
             self.set_live(live);
         }
+
+        // 7. Display: Bild nur bei einer Änderung (oder neuer Adresse) senden
+        let brightness = self.brightness;
+        let scene = self.engine.scene(now).map_color(|c| dim::apply(c, brightness));
+        let wanted = (self.engine.config().pixoo.clone(), scene);
+        if self.last_scene.as_ref() != Some(&wanted) {
+            self.pixoo.send(wanted.0.clone(), wanted.1.clone());
+            self.last_scene = Some(wanted);
+        }
     }
 
     /// Aktuellen Zustand „Auf Sendung“ an Slack melden (falls eingerichtet)
@@ -547,7 +569,8 @@ impl Worker {
                 .or_else(|| self.mic_error.clone())
                 .or_else(|| self.on_air_error.lock().unwrap().clone())
                 .or_else(|| self.calendar_error.clone())
-                .or_else(|| self.slack_error.lock().unwrap().clone()),
+                .or_else(|| self.slack_error.lock().unwrap().clone())
+                .or_else(|| self.pixoo_error.lock().unwrap().clone()),
         }
     }
 }

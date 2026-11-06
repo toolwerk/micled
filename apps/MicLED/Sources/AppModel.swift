@@ -14,7 +14,7 @@ final class AppModel {
     // MARK: Einstellungen
 
     var enabled: Bool { didSet { persist() } }
-    var useWebhook: Bool { didSet { persist() } }
+    var lampKind: LampKind { didSet { persist() } }
     var luxaforId: String { didSet { persist() } }
     var micOnHex: String { didSet { persist() } }
     var micOffHex: String { didSet { persist() } }
@@ -44,6 +44,9 @@ final class AppModel {
     var slackToken: String { didSet { Keychain.write(.slack, slackToken); persist() } }
     var slackText: String { didSet { persist() } }
     var slackEmoji: String { didSet { persist() } }
+    /// Status auf einem Pixoo 64 im eigenen Netz zeigen
+    var pixooEnabled: Bool { didSet { persist() } }
+    var pixooHost: String { didSet { persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     var appColors: [AppColor] { didSet { persist() } }
@@ -87,7 +90,6 @@ final class AppModel {
         defaults = d
         d.register(defaults: [
             Key.enabled: true,
-            Key.useWebhook: false,
             Key.luxaforId: "",
             Key.micOn: "ff0000",
             Key.micOff: "00ff00",
@@ -113,13 +115,17 @@ final class AppModel {
             Key.slackEnabled: false,
             Key.slackText: "Im Call",
             Key.slackEmoji: ":red_circle:",
+            Key.pixooEnabled: false,
+            Key.pixooHost: "",
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
             Key.dimTo: 7 * 60,
             Key.dimPercent: 50.0,
         ])
         enabled = d.bool(forKey: Key.enabled)
-        useWebhook = d.bool(forKey: Key.useWebhook)
+        // ältere Versionen kannten nur USB oder Webhook
+        lampKind = d.string(forKey: Key.lampKind).flatMap(LampKind.init(rawValue:))
+            ?? (d.bool(forKey: Key.useWebhook) ? .webhook : .usb)
         luxaforId = d.string(forKey: Key.luxaforId) ?? ""
         micOnHex = d.string(forKey: Key.micOn) ?? "ff0000"
         micOffHex = d.string(forKey: Key.micOff) ?? "00ff00"
@@ -142,6 +148,8 @@ final class AppModel {
         slackToken = ScreenshotMode.isActive ? "" : Keychain.read(.slack)
         slackText = d.string(forKey: Key.slackText) ?? "Im Call"
         slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
+        pixooEnabled = d.bool(forKey: Key.pixooEnabled)
+        pixooHost = d.string(forKey: Key.pixooHost) ?? ""
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -232,6 +240,13 @@ final class AppModel {
         return result.error ?? "Verbunden als \(result.name ?? "?")"
     }
 
+    /// Pixoo 64 prüfen, liefert eine Meldung für die Einstellungen
+    func checkPixoo() async -> String {
+        let host = pixooHost
+        let result = await Task.detached { pixooCheck(host: host) }.value
+        return result.error ?? "Pixoo erreichbar"
+    }
+
     /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
     func liveSecondsPerDay(bounds: [UInt64]) -> [UInt64] {
         if ScreenshotMode.isActive {
@@ -287,7 +302,7 @@ final class AppModel {
     private var config: MicLedConfig {
         MicLedConfig(
             enabled: enabled,
-            transport: useWebhook ? .webhook : .usb,
+            transport: lampKind.transport,
             luxaforId: luxaforId,
             micOnColor: micOnHex,
             micOffColor: micOffHex,
@@ -313,7 +328,8 @@ final class AppModel {
             dimPercent: UInt8(clamping: Int(dimPercent)),
             slackToken: slackEnabled ? slackToken : "",
             slackText: slackText,
-            slackEmoji: slackEmoji
+            slackEmoji: slackEmoji,
+            pixooHost: pixooEnabled ? pixooHost : ""
         )
     }
 
@@ -323,7 +339,7 @@ final class AppModel {
 
     private func persist(pushConfig: Bool = true) {
         defaults.set(enabled, forKey: Key.enabled)
-        defaults.set(useWebhook, forKey: Key.useWebhook)
+        defaults.set(lampKind.rawValue, forKey: Key.lampKind)
         defaults.set(luxaforId, forKey: Key.luxaforId)
         defaults.set(micOnHex, forKey: Key.micOn)
         defaults.set(micOffHex, forKey: Key.micOff)
@@ -348,6 +364,8 @@ final class AppModel {
         defaults.set(slackEnabled, forKey: Key.slackEnabled)
         defaults.set(slackText, forKey: Key.slackText)
         defaults.set(slackEmoji, forKey: Key.slackEmoji)
+        defaults.set(pixooEnabled, forKey: Key.pixooEnabled)
+        defaults.set(pixooHost, forKey: Key.pixooHost)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -426,6 +444,8 @@ final class AppModel {
 
     private enum Key {
         static let enabled = "enabled"
+        static let lampKind = "lampKind"
+        /// Nur noch zum Übernehmen alter Einstellungen
         static let useWebhook = "useWebhook"
         static let luxaforId = "luxaforId"
         static let micOn = "micOnColor"
@@ -452,10 +472,25 @@ final class AppModel {
         static let slackEnabled = "slackEnabled"
         static let slackText = "slackText"
         static let slackEmoji = "slackEmoji"
+        static let pixooEnabled = "pixooEnabled"
+        static let pixooHost = "pixooHost"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"
         static let dimPercent = "dimPercent"
+    }
+}
+
+/// Wie die Lampe angesteuert wird
+enum LampKind: String, CaseIterable {
+    case usb, webhook, noLamp
+
+    var transport: TransportKind {
+        switch self {
+        case .usb: .usb
+        case .webhook: .webhook
+        case .noLamp: .noLamp
+        }
     }
 }
 

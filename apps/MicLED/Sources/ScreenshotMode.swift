@@ -39,6 +39,8 @@ enum ScreenshotMode {
         d.set(true, forKey: "slackEnabled")
         d.set(true, forKey: "dimEnabled")
         d.set(true, forKey: "remindersEnabled")
+        d.set(true, forKey: "pixooEnabled")
+        d.set("192.168.1.50", forKey: "pixooHost")
         return d
     }
 

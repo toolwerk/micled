@@ -6,7 +6,7 @@ Menüleisten-App für macOS: schaltet eine Luxafor-Lampe bei aktivem Mikrofon um
 
 - Logik gehört in `crates/micled-core`, nicht in Swift. Die App zeigt nur an und reicht Einstellungen durch.
 - `engine.rs` ist seitenwirkungsfrei und vollständig getestet. Jede Verhaltensänderung bekommt dort zuerst einen Test.
-- `monitor.rs` ist der einzige Ort mit Thread, Zeit und Ein-/Ausgabe.
+- `monitor.rs` ist der einzige Ort mit Thread, Zeit und Ein-/Ausgabe, außerdem die Updater in `slack.rs` und `pixoo.rs`, die Netzwerkzugriffe im eigenen Thread abarbeiten.
 - USB: Gerät nach jedem Befehl schließen und `macos-shared-device` behalten. Sonst blockiert MicLED die Luxafor-App, das Stream-Deck-Plugin und `lux` (`DeviceNotFound`).
 - Vor jeder Farbe wird `00 4F` gesendet und die Farbe doppelt geschrieben. Ohne das ignoriert die Lampe Farbbefehle, solange ein Muster läuft.
 - Statusdatei `~/Library/Application Support/net.staude.luxafor/state.json` ist ein Vertrag mit dem Stream-Deck-Plugin (`staude/luxafor-streamdeck`). Felder `color` (rrggbb), `source`, `updated`. Änderungen mit beiden Seiten abstimmen.

@@ -30,6 +30,8 @@ pub enum LampError {
 pub enum Transport {
     Usb,
     Webhook { luxafor_id: String },
+    /// Keine Lampe: MicLED zeigt den Status nur auf Displays, in Slack und am Webhook
+    None,
 }
 
 pub trait Lamp: Send {
@@ -41,6 +43,16 @@ pub fn open(transport: &Transport) -> Box<dyn Lamp> {
     match transport {
         Transport::Usb => Box::new(UsbLamp),
         Transport::Webhook { luxafor_id } => Box::new(WebhookLamp { id: luxafor_id.trim().to_string() }),
+        Transport::None => Box::new(NoLamp),
+    }
+}
+
+/// Ohne Lampe: jede Farbe gilt sofort als gesetzt, es gibt nie einen Fehler
+pub struct NoLamp;
+
+impl Lamp for NoLamp {
+    fn set(&mut self, _: Rgb) -> Result<(), LampError> {
+        Ok(())
     }
 }
 
@@ -103,5 +115,15 @@ impl Lamp for WebhookLamp {
             .send_json(&body)
             .map(|_| ())
             .map_err(|e| LampError::Webhook(e.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_lamp_never_fails() {
+        assert!(open(&Transport::None).set(Rgb::RED).is_ok());
     }
 }

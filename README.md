@@ -25,6 +25,7 @@
 - 🌙 **Fokus und Abend**: eigene Farbe, solange ein Fokus von macOS an ist, abends gedimmt.
 - 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
+- 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
 - ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
@@ -110,6 +111,22 @@ In einer Home-Assistant-Automation mit Webhook-Auslöser steht der Wert als `{{ 
 
 MicLED setzt den Status nur, wenn gerade keiner gesetzt ist. Ändert sich der Status während des Calls, bleibt er danach stehen. Der eigene Status läuft nach vier Stunden von selbst ab, falls MicLED ihn nicht mehr zurücksetzen kann.
 
+## Pixoo 64
+
+Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr:
+
+- auf Sendung: Mikro- oder Kamerasymbol mit „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe,
+- Konzentrations-Timer: die restlichen Minuten mit „MIN“, jede Minute neu,
+- Fokus: „FOKUS“ in der Fokusfarbe.
+
+Danach, beim Ausschalten und beim Beenden von MicLED läuft auf dem Display wieder, was vorher lief, z. B. die Uhr. Abends gedimmt werden auch die Farben auf dem Display.
+
+1. In der Divoom-App die IP-Adresse des Pixoo nachsehen (Gerät › Einstellungen › WLAN) und ihm im Router eine **feste IP-Adresse** geben. Sonst findet MicLED das Display nach einem Neustart des Routers nicht mehr.
+2. In MicLED unter Einstellungen › Pixoo 64 „Status auf dem Pixoo 64 zeigen“ einschalten, die Adresse eintragen und „Verbindung prüfen“ drücken.
+3. macOS fragt beim ersten Mal nach dem Zugriff auf das **lokale Netzwerk**. Ohne diese Erlaubnis ist das Pixoo nicht erreichbar (ebenso ein Home Assistant im eigenen Netz). Nachträglich: Systemeinstellungen › Datenschutz & Sicherheit › Lokales Netzwerk › MicLED.
+
+Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Die Lampe schaltet trotzdem sofort.
+
 ## Termine aus Nextcloud
 
 Für die Vorwarnung gibt es zwei Wege:
@@ -143,6 +160,8 @@ open apps/MicLED/MicLED.xcodeproj
 
 Vor dem ersten signierten Build die Team-ID in `apps/MicLED/project.yml` unter `DEVELOPMENT_TEAM` eintragen.
 
+Unter Einstellungen › Verbindung zur Lampe wählst du „USB direkt“, „Webhook“ (über die Luxafor-App) oder **„Keine Lampe“**. Ohne Lampe zeigt MicLED den Status nur auf dem [Pixoo 64](#pixoo-64), in Slack und am Webhook, und im Menü steht kein Lampenfehler.
+
 ## Kommandozeile
 
 Der Rust-Kern lässt sich ohne Xcode testen:
@@ -156,12 +175,13 @@ cargo run -p micled-cli -- watch --on ff0000 --off 00ff00 --fixed --delay 5
 cargo run -p micled-cli -- watch --camera ff00ff --on-air-url http://…   # oder --no-camera
 cargo run -p micled-cli -- --webhook <ID> set gruen
 MICLED_NEXTCLOUD_PASSWORD=<app-passwort> cargo run -p micled-cli -- nextcloud https://cloud.example.org <benutzer>
+cargo run -p micled-cli -- pixoo 192.168.1.50  # Pixoo prüfen: 5 s „ON AIR“, dann zurück zum vorherigen Kanal
 ```
 
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen

@@ -13,6 +13,8 @@ uniffi::setup_scaffolding!();
 pub enum TransportKind {
     Usb,
     Webhook,
+    /// Keine Lampe: Status nur auf Displays, in Slack und am Webhook
+    NoLamp,
 }
 
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,6 +87,14 @@ pub struct MicLedConfig {
     pub slack_token: String,
     pub slack_text: String,
     pub slack_emoji: String,
+    /// Adresse eines Pixoo 64 im eigenen Netz; leer = aus
+    pub pixoo_host: String,
+}
+
+/// Ergebnis von [`pixoo_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct PixooCheck {
+    pub error: Option<String>,
 }
 
 /// Ergebnis von [`slack_check`]
@@ -174,7 +184,9 @@ impl From<MicLedConfig> for core::Config {
             transport: match c.transport {
                 TransportKind::Usb => core::Transport::Usb,
                 TransportKind::Webhook => core::Transport::Webhook { luxafor_id: c.luxafor_id },
+                TransportKind::NoLamp => core::Transport::None,
             },
+            pixoo: core::pixoo::normalize(&c.pixoo_host),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -348,6 +360,17 @@ pub fn slack_check(token: String) -> SlackCheck {
         Ok(name) => SlackCheck { name: Some(name), error: None },
         Err(e) => SlackCheck { name: None, error: Some(e) },
     }
+}
+
+/// Pixoo 64 unter `host` erreichbar? (blockiert bis zu drei Sekunden, nicht
+/// im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn pixoo_check(host: String) -> PixooCheck {
+    let result = match core::pixoo::normalize(&host) {
+        Some(h) => core::pixoo::check(&h),
+        None => Err("Adresse des Pixoo eintragen".into()),
+    };
+    PixooCheck { error: result.err() }
 }
 
 /// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)

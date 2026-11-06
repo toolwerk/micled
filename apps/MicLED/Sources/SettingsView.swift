@@ -5,23 +5,29 @@ struct SettingsView: View {
     @State private var current: [MicUser] = []
     @State private var nextcloudResult = ""
     @State private var slackResult = ""
+    @State private var pixooResult = ""
 
     var body: some View {
         @Bindable var model = model
 
         Form {
             Section("Verbindung zur Lampe") {
-                Picker("Ansteuerung", selection: $model.useWebhook) {
-                    Text("USB direkt").tag(false)
-                    Text("Webhook (Luxafor-App)").tag(true)
+                Picker("Ansteuerung", selection: $model.lampKind) {
+                    Text("USB direkt").tag(LampKind.usb)
+                    Text("Webhook").tag(LampKind.webhook)
+                    Text("Keine Lampe").tag(LampKind.noLamp)
                 }
                 .pickerStyle(.segmented)
-                if model.useWebhook {
+                switch model.lampKind {
+                case .webhook:
                     TextField("Luxafor-ID", text: $model.luxaforId, prompt: Text("Luxafor-App, Tab „Webhook“"))
                     Text("Die Luxafor-App muss laufen. Sie gibt die Befehle an die Lampe weiter.")
                         .font(.caption).foregroundStyle(.secondary)
-                } else {
+                case .usb:
                     Text("Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.")
+                        .font(.caption).foregroundStyle(.secondary)
+                case .noLamp:
+                    Text("MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -84,6 +90,26 @@ struct SettingsView: View {
                 Text("Slack")
             } footer: {
                 Text("Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf dem Pixoo 64 zeigen", isOn: $model.pixooEnabled)
+                if model.pixooEnabled {
+                    TextField("Adresse", text: $model.pixooHost, prompt: Text("192.168.1.50"))
+                        .autocorrectionDisabled()
+                    HStack {
+                        Button("Verbindung prüfen") {
+                            pixooResult = "Prüfe …"
+                            Task { pixooResult = await model.checkPixoo() }
+                        }
+                        Text(pixooResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Pixoo 64")
+            } footer: {
+                Text("Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
