@@ -138,6 +138,8 @@ pub struct Engine {
     camera: bool,
     /// Aktiv, einschließlich der Wartezeit nach dem Ende (unabhängig von der Automatik)
     on_air: bool,
+    /// Kamera und Farbe des Calls bei der letzten Aktivität; gilt auch in der Wartezeit
+    live_look: (bool, Rgb),
     /// Gesetzte `Away`-Bits
     away: u8,
     /// Ende des Konzentrations-Timers (Unix-Sekunden)
@@ -159,6 +161,7 @@ impl Engine {
             users: Vec::new(),
             camera: false,
             on_air: false,
+            live_look: (false, Rgb::RED),
             away: 0,
             timer: None,
             focus: false,
@@ -217,7 +220,8 @@ impl Engine {
     /// ausgeschalteter Automatik (wie in Slack), sonst wie bei [`Engine::resting`].
     pub fn scene(&self, now: u64) -> Scene {
         if self.live() {
-            Scene::Live { camera: self.camera_on(), color: self.override_color() }
+            let (camera, color) = self.live_look;
+            Scene::Live { camera, color }
         } else if self.dark() {
             Scene::Idle
         } else if let Some(until) = self.timer {
@@ -324,6 +328,7 @@ impl Engine {
 
         if active {
             self.last_active = Some(now);
+            self.live_look = (self.camera, self.override_color());
         }
         let since = self.last_active.map(|t| now.duration_since(t)).unwrap_or(Duration::MAX);
         self.on_air = active || since < self.cfg.release_delay;
@@ -863,6 +868,20 @@ mod tests {
         assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
         e.on_input(vec![user("zoom")], true, t);
         assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA });
+    }
+
+    #[test]
+    fn scene_keeps_look_during_release_delay() {
+        let (mut e, t) = with_app_colors();
+        e.on_input(vec![user("zoom")], true, t);
+        e.on_input(vec![], false, t + Duration::from_secs(1));
+        assert!(e.live());
+        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA }, "Kamera bleibt bis zum Ende");
+        e.on_mic(vec![user("plaud")], t + Duration::from_secs(2));
+        e.on_mic(vec![], t + Duration::from_secs(3));
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange() }, "Programmfarbe bleibt");
+        e.on_mic(vec![], t + Duration::from_secs(10));
+        assert_eq!(e.scene(NOW), Scene::Idle);
     }
 
     #[test]
