@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use crate::caldav::Nextcloud;
 use crate::color::Rgb;
 use crate::dim::Dim;
+use crate::display::Scene;
 use crate::slack::Slack;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
@@ -86,6 +87,8 @@ pub struct Config {
     pub dim: Option<Dim>,
     /// Slack-Status bei „Auf Sendung“ (`None` = aus)
     pub slack: Option<Slack>,
+    /// Adresse eines Pixoo 64 im eigenen Netz (`None` = aus)
+    pub pixoo: Option<String>,
 }
 
 impl Default for Config {
@@ -111,6 +114,7 @@ impl Default for Config {
             focus_color: Rgb { r: 0xff, g: 0x88, b: 0x00 },
             dim: None,
             slack: None,
+            pixoo: None,
         }
     }
 }
@@ -206,6 +210,22 @@ impl Engine {
             self.cfg.focus_color
         } else {
             self.base.unwrap_or(self.cfg.mic_off_color)
+        }
+    }
+
+    /// Bild für Displays zur Zeit `now` (Unix-Sekunden). Ein Call gilt auch bei
+    /// ausgeschalteter Automatik (wie in Slack), sonst wie bei [`Engine::resting`].
+    pub fn scene(&self, now: u64) -> Scene {
+        if self.live() {
+            Scene::Live { camera: self.camera_on(), color: self.override_color() }
+        } else if self.dark() {
+            Scene::Idle
+        } else if let Some(until) = self.timer {
+            Scene::Timer { minutes: until.saturating_sub(now).div_ceil(60).max(1) as u32, color: self.cfg.timer_color }
+        } else if self.focus_shown() {
+            Scene::Focus { color: self.cfg.focus_color }
+        } else {
+            Scene::Idle
         }
     }
 
@@ -824,5 +844,90 @@ mod tests {
         e.set_focus(true);
         assert_eq!(e.set_away(Away::Locked, true), Some(Rgb::OFF));
         assert_eq!(e.set_away(Away::Locked, false), Some(ORANGE));
+    }
+
+    // --- Bild für Displays ------------------------------------------------
+
+    const NOW: u64 = 1_000_000;
+
+    #[test]
+    fn scene_idle_when_nothing_happens() {
+        let (e, _) = engine(AfterMic::Restore);
+        assert_eq!(e.scene(NOW), Scene::Idle);
+    }
+
+    #[test]
+    fn scene_live_with_mic_and_camera() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+        e.on_input(vec![user("zoom")], true, t);
+        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA });
+    }
+
+    #[test]
+    fn scene_live_uses_app_color() {
+        let (mut e, t) = with_app_colors();
+        e.on_mic(vec![user("plaud")], t);
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange() });
+    }
+
+    #[test]
+    fn scene_live_even_without_automatic() {
+        let cfg = Config { enabled: false, ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        e.on_mic(vec![user("zoom")], Instant::now());
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+    }
+
+    #[test]
+    fn scene_timer_counts_whole_minutes() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        e.start_timer(NOW + 25 * 60);
+        assert_eq!(e.scene(NOW), Scene::Timer { minutes: 25, color: VIOLET });
+        assert_eq!(e.scene(NOW + 1), Scene::Timer { minutes: 25, color: VIOLET }, "angefangene Minute zählt");
+        assert_eq!(e.scene(NOW + 60), Scene::Timer { minutes: 24, color: VIOLET });
+        assert_eq!(e.scene(NOW + 25 * 60), Scene::Timer { minutes: 1, color: VIOLET }, "nie 0");
+    }
+
+    #[test]
+    fn scene_focus() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.scene(NOW), Scene::Focus { color: ORANGE });
+    }
+
+    #[test]
+    fn scene_timer_before_focus() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        e.start_timer(NOW + 600);
+        assert_eq!(e.scene(NOW), Scene::Timer { minutes: 10, color: VIOLET });
+    }
+
+    #[test]
+    fn scene_call_before_timer() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.start_timer(NOW + 600);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+    }
+
+    #[test]
+    fn scene_idle_while_locked_without_call() {
+        let (mut e, t) = focus_engine();
+        e.set_focus(true);
+        e.start_timer(NOW + 600);
+        e.set_away(Away::Locked, true);
+        assert_eq!(e.scene(NOW), Scene::Idle);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED }, "Call auch gesperrt");
+    }
+
+    #[test]
+    fn scene_idle_when_focus_not_shown() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        e.set_focus(true);
+        assert_eq!(e.scene(NOW), Scene::Idle);
     }
 }
