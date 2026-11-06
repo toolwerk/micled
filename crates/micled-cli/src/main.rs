@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use micled_core::{caldav, camera, lamp, mic, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::display::Scene;
+use micled_core::{caldav, camera, lamp, mic, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -31,6 +32,11 @@ enum Cmd {
         /// Adresse der Instanz, z. B. https://cloud.example.org
         server: String,
         user: String,
+    },
+    /// Pixoo 64 prüfen: zeigt fünf Sekunden „ON AIR“ und stellt dann den Kanal zurück
+    Pixoo {
+        /// Adresse im eigenen Netz, z. B. 192.168.1.50
+        host: String,
     },
     /// Automatik laufen lassen, bis Strg-C
     Watch {
@@ -134,6 +140,17 @@ fn main() {
                 Ok(())
             })
         }
+        Cmd::Pixoo { host } => match pixoo::normalize(host) {
+            None => Err("Adresse des Pixoo fehlt".to_string()),
+            Some(h) => pixoo::check(&h).and_then(|()| {
+                let mut session = pixoo::Session::default();
+                session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED })?;
+                std::thread::sleep(Duration::from_secs(5));
+                session.restore()?;
+                println!("Pixoo erreichbar");
+                Ok(())
+            }),
+        },
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,
