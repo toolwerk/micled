@@ -133,6 +133,7 @@ struct MenuView: View {
             return model.micUsers.map(model.displayName).joined(separator: ", ")
         }
         if model.cameraOn { return "Kamera in Benutzung" }
+        if model.lampKind == .none { return "Ohne Lampe" }
         guard let hex = model.shownHex else { return "Lampenfarbe noch unbekannt" }
         return isOff(hex) ? "Lampe aus" : "Lampe #\(hex)"
     }
