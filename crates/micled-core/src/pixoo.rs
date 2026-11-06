@@ -38,7 +38,7 @@ fn url(host: &str) -> String {
 fn check_reply(v: &Value) -> Result<(), String> {
     match v["error_code"].as_i64() {
         Some(0) => Ok(()),
-        Some(code) => Err(format!("Pixoo meldet Fehler {code}")),
+        Some(code) => Err(format!("Pixoo nicht erreichbar: Fehler {code}")),
         None => Err("Pixoo nicht erreichbar: unerwartete Antwort".into()),
     }
 }
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn reply_needs_error_code_zero() {
         assert!(check_reply(&json!({"error_code": 0})).is_ok());
-        assert_eq!(check_reply(&json!({"error_code": 1})).unwrap_err(), "Pixoo meldet Fehler 1");
+        assert_eq!(check_reply(&json!({"error_code": 1})).unwrap_err(), "Pixoo nicht erreichbar: Fehler 1");
         assert!(check_reply(&json!({"foo": 1})).is_err());
     }
 
