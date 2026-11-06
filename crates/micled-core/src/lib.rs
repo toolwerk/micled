@@ -6,6 +6,7 @@ pub mod camera;
 pub mod color;
 pub mod command;
 pub mod dim;
+pub mod display;
 pub mod engine;
 pub mod lamp;
 pub mod mic;
