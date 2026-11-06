@@ -144,9 +144,13 @@ fn main() {
             None => Err("Adresse des Pixoo fehlt".to_string()),
             Some(h) => pixoo::check(&h).and_then(|()| {
                 let mut session = pixoo::Session::default();
-                session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED })?;
-                std::thread::sleep(Duration::from_secs(5));
-                session.restore()?;
+                let shown = session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED });
+                if shown.is_ok() {
+                    std::thread::sleep(Duration::from_secs(5));
+                }
+                // auch nach einem Fehler zurückstellen, das Bild kann trotzdem angekommen sein
+                let restored = session.restore();
+                shown.and(restored)?;
                 println!("Pixoo erreichbar");
                 Ok(())
             }),

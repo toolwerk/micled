@@ -38,7 +38,7 @@ fn url(host: &str) -> String {
 fn check_reply(v: &Value) -> Result<(), String> {
     match v["error_code"].as_i64() {
         Some(0) => Ok(()),
-        Some(code) => Err(format!("Pixoo nicht erreichbar: Fehler {code}")),
+        Some(code) => Err(format!("Pixoo meldet Fehler {code}")),
         None => Err("Pixoo nicht erreichbar: unerwartete Antwort".into()),
     }
 }
@@ -83,8 +83,11 @@ pub struct Session {
     host: Option<String>,
     /// Kanal von vor dem ersten Bild
     saved_channel: Option<u64>,
-    /// Zuletzt gezeigtes Bild (`None` = Kanal des Geräts läuft)
+    /// Zuletzt sicher gezeigtes Bild
     shown: Option<Scene>,
+    /// Ein Bild von MicLED ist womöglich zu sehen (auch, wenn das Senden in
+    /// den Timeout lief); dann muss der Kanal zurückgestellt werden
+    dirty: bool,
     /// Nächste `PicID`, 0 = Zählung noch nicht zurückgesetzt
     pic_id: u32,
 }
@@ -124,7 +127,7 @@ impl Session {
         if self.shown.as_ref() == Some(scene) {
             return Ok(());
         }
-        if self.shown.is_none() {
+        if self.saved_channel.is_none() {
             let v = send(host, json!({ "Command": "Channel/GetIndex" }))?;
             self.saved_channel = Some(v["SelectIndex"].as_u64().unwrap_or(DEFAULT_CHANNEL));
         }
@@ -132,17 +135,22 @@ impl Session {
             send(host, json!({ "Command": "Draw/ResetHttpGifId" }))?;
             self.pic_id = 1;
         }
-        send(host, gif(scene, self.pic_id))?;
+        self.dirty = true;
+        self.shown = None;
+        let id = self.pic_id;
         self.pic_id += 1;
+        send(host, gif(scene, id))?;
         self.shown = Some(scene.clone());
         Ok(())
     }
 
     fn idle(&mut self, host: &str, send: &mut impl FnMut(&str, Value) -> Result<Value, String>) -> Result<(), String> {
-        if self.shown.is_some() {
+        if self.dirty {
             let channel = self.saved_channel.unwrap_or(DEFAULT_CHANNEL);
             send(host, json!({ "Command": "Channel/SetIndex", "SelectIndex": channel }))?;
+            self.dirty = false;
             self.shown = None;
+            self.saved_channel = None;
         }
         Ok(())
     }
@@ -256,7 +264,7 @@ mod tests {
     #[test]
     fn reply_needs_error_code_zero() {
         assert!(check_reply(&json!({"error_code": 0})).is_ok());
-        assert_eq!(check_reply(&json!({"error_code": 1})).unwrap_err(), "Pixoo nicht erreichbar: Fehler 1");
+        assert_eq!(check_reply(&json!({"error_code": 1})).unwrap_err(), "Pixoo meldet Fehler 1");
         assert!(check_reply(&json!({"foo": 1})).is_err());
     }
 
@@ -378,6 +386,37 @@ mod tests {
         assert_eq!(hosts[1..].iter().map(|(_, e)| e.as_str()).collect::<Vec<_>>(), ["get", "reset", "gif 1"]);
         s.apply_with(None, &LIVE, &mut f.send()).unwrap();
         assert_eq!(f.log, [("b".to_string(), "set 4".to_string())]);
+    }
+
+    #[test]
+    fn image_sent_without_reply_is_still_cleared() {
+        let mut f = Fake { channel: Some(5), ..Fake::default() };
+        let mut s = Session::default();
+        let mut calls = 0;
+        // GetIndex und Reset gehen durch, beim Bild kommt keine Antwort
+        let r = s.apply_with(Some("p"), &LIVE, &mut |h, b| {
+            calls += 1;
+            if calls == 3 {
+                return Err("Pixoo nicht erreichbar: timeout".into());
+            }
+            f.send()(h, b)
+        });
+        assert!(r.is_err());
+        f.take();
+        s.apply_with(Some("p"), &LIVE, &mut f.send()).unwrap();
+        assert_eq!(f.take(), ["gif 2"], "Kanal nicht erneut abfragen, ID nicht doppelt");
+        let mut s2 = Session::default();
+        let mut calls = 0;
+        let _ = s2.apply_with(Some("p"), &LIVE, &mut |h, b| {
+            calls += 1;
+            if calls == 3 {
+                return Err("timeout".into());
+            }
+            f.send()(h, b)
+        });
+        f.take();
+        s2.apply_with(Some("p"), &Scene::Idle, &mut f.send()).unwrap();
+        assert_eq!(f.take(), ["set 5"], "Bild könnte zu sehen sein, also zurückstellen");
     }
 
     #[test]
