@@ -14,7 +14,7 @@ pub enum TransportKind {
     Usb,
     Webhook,
     /// Keine Lampe: Status nur auf Displays, in Slack und am Webhook
-    None,
+    NoLamp,
 }
 
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -184,7 +184,7 @@ impl From<MicLedConfig> for core::Config {
             transport: match c.transport {
                 TransportKind::Usb => core::Transport::Usb,
                 TransportKind::Webhook => core::Transport::Webhook { luxafor_id: c.luxafor_id },
-                TransportKind::None => core::Transport::None,
+                TransportKind::NoLamp => core::Transport::None,
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),

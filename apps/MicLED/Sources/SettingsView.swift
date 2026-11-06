@@ -15,7 +15,7 @@ struct SettingsView: View {
                 Picker("Ansteuerung", selection: $model.lampKind) {
                     Text("USB direkt").tag(LampKind.usb)
                     Text("Webhook").tag(LampKind.webhook)
-                    Text("Keine Lampe").tag(LampKind.none)
+                    Text("Keine Lampe").tag(LampKind.noLamp)
                 }
                 .pickerStyle(.segmented)
                 switch model.lampKind {
@@ -26,7 +26,7 @@ struct SettingsView: View {
                 case .usb:
                     Text("Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.")
                         .font(.caption).foregroundStyle(.secondary)
-                case .none:
+                case .noLamp:
                     Text("MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook.")
                         .font(.caption).foregroundStyle(.secondary)
                 }

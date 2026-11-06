@@ -483,13 +483,13 @@ final class AppModel {
 
 /// Wie die Lampe angesteuert wird
 enum LampKind: String, CaseIterable {
-    case usb, webhook, none
+    case usb, webhook, noLamp
 
     var transport: TransportKind {
         switch self {
         case .usb: .usb
         case .webhook: .webhook
-        case .none: .none
+        case .noLamp: .noLamp
         }
     }
 }
