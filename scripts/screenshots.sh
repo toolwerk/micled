@@ -16,14 +16,16 @@ mkdir -p "$OUT"
 xcodebuild -project "$ROOT/apps/MicLED/MicLED.xcodeproj" -scheme MicLED -configuration Debug \
   -derivedDataPath "$DERIVED" build >/dev/null 2>&1 || { echo "Debug-Build fehlgeschlagen" >&2; exit 1; }
 
-# Fenstertitel → Dateiname
-WINDOWS=("MicLED-Menü:menu" "Statistik:stats" "MicLED:settings")
+# Fenstertitel → Dateiname (settings-network: Einstellungen bei Govee und Nanoleaf)
+WINDOWS=("MicLED-Menü:menu" "Statistik:stats" "MicLED:settings" "MicLED:settings-network")
 
 # je Fenster ein eigener Start, damit es das aktive Fenster ist
 for look in light dark; do
   for entry in "${WINDOWS[@]}"; do
     title="${entry%%:*}" name="${entry##*:}"
-    "$APP/Contents/MacOS/MicLED" --screenshots --appearance "$look" --window "$name" >/dev/null 2>&1 &
+    args=(--window "$name")
+    [[ "$name" == settings-network ]] && args=(--window settings --scroll network)
+    "$APP/Contents/MacOS/MicLED" --screenshots --appearance "$look" "${args[@]}" >/dev/null 2>&1 &
     pid=$!
     trap 'kill $pid 2>/dev/null || true' EXIT
     sleep 4
