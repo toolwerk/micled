@@ -152,6 +152,13 @@ Ist die Bridge nicht erreichbar, steht ein Fehler im Menü und MicLED versucht e
 
 ## Govee
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-network-dark.png">
+    <img src="docs/images/settings-network-light.png" alt="Einstellungen von MicLED: Abschnitte Govee und Nanoleaf mit gefundenen und gekoppelten Lampen" width="400">
+  </picture>
+</p>
+
 Govee-Lampen mit Steuerung im eigenen Netz, etwa das Monitor-Backlight Gaming Light Strip G1 (H6609), zeigen den Status ohne Govee-Konto und ohne Cloud. Welche Modelle das können, steht in der [Liste von Home Assistant](https://www.home-assistant.io/integrations/govee_light_local/). Mehrere Lampen sind möglich.
 
 Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten die Lampen in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und Farbe bzw. Weißton von vorher. Szenen und Bildschirm-Sync (DreamView) meldet eine Govee-Lampe im eigenen Netz nicht; lief so etwas, endet es mit dem Call, und die Lampe bekommt danach eine feste Farbe (die zuletzt gemeldete, sonst neutrales Weiß).
@@ -261,7 +268,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Release
 
