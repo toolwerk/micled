@@ -7,6 +7,10 @@ struct SettingsView: View {
     @State private var slackResult = ""
     @State private var pixooResult = ""
     @State private var hueResult = ""
+    @State private var goveeResult = ""
+    @State private var nanoleafResult = ""
+    /// Meldung vom Koppeln je Nanoleaf-Eintrag
+    @State private var nanoleafPairResults: [UUID: String] = [:]
 
     var body: some View {
         @Bindable var model = model
@@ -155,6 +159,72 @@ struct SettingsView: View {
             .onChange(of: model.hueHost) { hueResult = "" }
             .task(id: model.hueEnabled) {
                 if model.hueEnabled && model.hueChoices.isEmpty { await model.loadHueTargets() }
+            }
+
+            Section {
+                Toggle("Status auf Govee-Lampen zeigen", isOn: $model.goveeEnabled)
+                if model.goveeEnabled {
+                    ForEach($model.goveeDevices) { $light in
+                        HStack {
+                            lightAddress($light)
+                            Button("Entfernen") { model.goveeDevices.removeAll { $0.id == light.id } }
+                        }
+                    }
+                    HStack {
+                        Button("Suchen") {
+                            goveeResult = "Suche …"
+                            Task { goveeResult = await model.searchGovee() }
+                        }
+                        Button("Adresse hinzufügen") {
+                            model.goveeDevices.append(NetLight(id: UUID(), host: "", name: ""))
+                        }
+                        Text(goveeResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                    found(model.goveeFound, in: model.goveeDevices, nanoleaf: false)
+                }
+            } header: {
+                Text("Govee")
+            } footer: {
+                Text("„LAN Control“ in der Govee-App je Gerät einschalten. Danach haben die Lampen wieder An/Aus, Helligkeit und Farbe von vorher. Feste IP empfohlen.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf Nanoleaf-Lampen zeigen", isOn: $model.nanoleafEnabled)
+                if model.nanoleafEnabled {
+                    ForEach($model.nanoleafDevices) { $light in
+                        HStack {
+                            lightAddress($light)
+                            Text(nanoleafPairResults[light.id] ?? (model.nanoleafPaired(light.id) ? "Gekoppelt ✓" : "Nicht gekoppelt"))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .lineLimit(2)
+                            Button("Koppeln") {
+                                let id = light.id
+                                nanoleafPairResults[id] = "Kopple …"
+                                Task { nanoleafPairResults[id] = await model.pairNanoleaf(id) }
+                            }
+                            .disabled(light.host.trimmingCharacters(in: .whitespaces).isEmpty)
+                            Button("Entfernen") { model.nanoleafDevices.removeAll { $0.id == light.id } }
+                        }
+                        .onChange(of: light.host) { nanoleafPairResults[light.id] = nil }
+                    }
+                    HStack {
+                        Button("Suchen") {
+                            nanoleafResult = "Suche …"
+                            Task { nanoleafResult = await model.searchNanoleaf() }
+                        }
+                        Button("Adresse hinzufügen") {
+                            model.nanoleafDevices.append(NetLight(id: UUID(), host: "", name: ""))
+                        }
+                        Text(nanoleafResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                    found(model.nanoleafFound, in: model.nanoleafDevices, nanoleaf: true)
+                }
+            } header: {
+                Text("Nanoleaf")
+            } footer: {
+                Text("Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {
@@ -319,6 +389,32 @@ struct SettingsView: View {
         .frame(width: 480)
         .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
+    }
+
+    /// Gefundenes Gerät mit Namen und Adresse, von Hand eingetragenes als Eingabefeld
+    @ViewBuilder
+    private func lightAddress(_ light: Binding<NetLight>) -> some View {
+        if light.wrappedValue.name.isEmpty {
+            TextField("Adresse", text: light.host, prompt: Text("192.168.1.32"))
+                .labelsHidden()
+                .autocorrectionDisabled()
+        } else {
+            Text("\(light.wrappedValue.name) · \(light.wrappedValue.shownHost)")
+            Spacer()
+        }
+    }
+
+    /// Gefundene Geräte, die noch nicht eingetragen sind
+    @ViewBuilder
+    private func found(_ found: [FoundDevice], in lights: [NetLight], nanoleaf: Bool) -> some View {
+        ForEach(found.filter { f in !lights.contains { $0.host == f.host } }, id: \.host) { f in
+            HStack {
+                Text("Gefunden: \(f.name) · \(NetLight(id: UUID(), host: f.host, name: f.name).shownHost)")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Hinzufügen") { model.add(f, toNanoleaf: nanoleaf) }
+            }
+        }
     }
 
     /// Minuten nach Mitternacht als Uhrzeit für den `DatePicker`

@@ -70,6 +70,23 @@ final class AppModel {
     var hueFingerprint: String { didSet { persist() } }
     var hueTargetKind: HueTargetKind { didSet { persist() } }
     var hueTargetId: String { didSet { persist() } }
+    /// Status auf Govee-Lampen im eigenen Netz zeigen
+    var goveeEnabled: Bool { didSet { persist() } }
+    var goveeDevices: [NetLight] { didSet { persist() } }
+    /// Status auf gekoppelten Nanoleaf-Lampen zeigen
+    var nanoleafEnabled: Bool { didSet { persist() } }
+    /// Entfernen oder eine neue Adresse löscht den Schlüssel
+    var nanoleafDevices: [NetLight] {
+        didSet {
+            for old in oldValue where nanoleafDevices.first(where: { $0.id == old.id })?.host != old.host {
+                nanoleafKeys[old.id] = nil
+                if !ScreenshotMode.isActive { Keychain.setNanoleafKey(old.id, "") }
+            }
+            persist()
+        }
+    }
+    /// Schlüssel vom Koppeln je Eintrag, liegen im Schlüsselbund
+    private(set) var nanoleafKeys: [UUID: String] = [:]
     var favorites: [String] { didSet { persist(pushConfig: false) } }
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     var appColors: [AppColor] { didSet { persist() } }
@@ -100,6 +117,9 @@ final class AppModel {
     /// Räume und Lampen der gekoppelten Bridge (nur im Speicher)
     private(set) var hueChoices: [HueTarget] = []
     private(set) var hueChoicesError: String?
+    /// Ergebnis der letzten Suche (nur im Speicher)
+    private(set) var goveeFound: [FoundDevice] = []
+    private(set) var nanoleafFound: [FoundDevice] = []
 
     var micActive: Bool { !micUsers.isEmpty }
 
@@ -148,6 +168,10 @@ final class AppModel {
             Key.hueFingerprint: "",
             Key.hueTargetKind: "light",
             Key.hueTargetId: "",
+            Key.goveeEnabled: false,
+            Key.goveeDevices: [[String: String]](),
+            Key.nanoleafEnabled: false,
+            Key.nanoleafDevices: [[String: String]](),
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
             Key.dimTo: 7 * 60,
@@ -187,6 +211,10 @@ final class AppModel {
         hueFingerprint = d.string(forKey: Key.hueFingerprint) ?? ""
         hueTargetKind = d.string(forKey: Key.hueTargetKind) == "room" ? .room : .light
         hueTargetId = d.string(forKey: Key.hueTargetId) ?? ""
+        goveeEnabled = d.bool(forKey: Key.goveeEnabled)
+        goveeDevices = NetLight.list(d.array(forKey: Key.goveeDevices))
+        nanoleafEnabled = d.bool(forKey: Key.nanoleafEnabled)
+        nanoleafDevices = NetLight.list(d.array(forKey: Key.nanoleafDevices))
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -199,6 +227,9 @@ final class AppModel {
             guard let key = entry["key"], let hex = entry["hex"] else { return nil }
             return AppColor(key: key, hex: hex)
         }
+        nanoleafKeys = Dictionary(uniqueKeysWithValues: nanoleafDevices.map { light in
+            (light.id, ScreenshotMode.isActive ? "screenshot" : Keychain.nanoleafKey(light.id))
+        })
 
         if ScreenshotMode.isActive {
             micUsers = [MicUser(pid: 0, bundleId: "us.zoom.xos", name: "Zoom")]
@@ -207,6 +238,7 @@ final class AppModel {
             shownHex = "ff0000"
             baseHex = "0000ff"
             hueChoices = ScreenshotMode.hueChoices
+            goveeFound = ScreenshotMode.goveeFound
             return
         }
 
@@ -327,6 +359,52 @@ final class AppModel {
         hueChoicesError = result.error
     }
 
+    /// Govee-Lampen im eigenen Netz suchen, liefert eine Meldung für die Einstellungen
+    func searchGovee() async -> String {
+        let result = await Task.detached { goveeDiscover() }.value
+        goveeFound = result.items
+        if let error = result.error { return error }
+        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+    }
+
+    /// Nanoleaf-Lampen per Bonjour suchen, liefert eine Meldung für die Einstellungen
+    func searchNanoleaf() async -> String {
+        let result = await Task.detached { nanoleafDiscover() }.value
+        nanoleafFound = result.items
+        if let error = result.error { return error }
+        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+    }
+
+    /// Mit der Nanoleaf-Lampe koppeln (Einschaltknopf vorher 5–7 Sekunden
+    /// halten), liefert eine Meldung für die Einstellungen
+    func pairNanoleaf(_ id: UUID) async -> String {
+        guard let host = nanoleafDevices.first(where: { $0.id == id })?.host else { return "" }
+        let result = await Task.detached { nanoleafPair(host: host) }.value
+        if let error = result.error { return error }
+        // Adresse während des Koppelns geändert oder Eintrag entfernt
+        guard nanoleafDevices.first(where: { $0.id == id })?.host == host else {
+            return "Adresse geändert, bitte erneut koppeln"
+        }
+        nanoleafKeys[id] = result.key
+        Keychain.setNanoleafKey(id, result.key)
+        persist()
+        return "Gekoppelt ✓"
+    }
+
+    func nanoleafPaired(_ id: UUID) -> Bool {
+        !(nanoleafKeys[id] ?? "").isEmpty
+    }
+
+    /// Gefundenes Gerät übernehmen
+    func add(_ found: FoundDevice, toNanoleaf: Bool) {
+        let light = NetLight(id: UUID(), host: found.host, name: found.name)
+        if toNanoleaf {
+            if !nanoleafDevices.contains(where: { $0.host == found.host }) { nanoleafDevices.append(light) }
+        } else if !goveeDevices.contains(where: { $0.host == found.host }) {
+            goveeDevices.append(light)
+        }
+    }
+
     /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
     func liveSecondsPerDay(bounds: [UInt64]) -> [UInt64] {
         if ScreenshotMode.isActive {
@@ -414,7 +492,11 @@ final class AppModel {
             hueKey: hueKey,
             hueFingerprint: hueFingerprint,
             hueTargetKind: hueTargetKind,
-            hueTargetId: hueTargetId
+            hueTargetId: hueTargetId,
+            goveeHosts: goveeEnabled ? goveeDevices.map(\.host) : [],
+            nanoleaf: nanoleafEnabled
+                ? nanoleafDevices.map { NanoleafDevice(host: $0.host, key: nanoleafKeys[$0.id] ?? "") }
+                : []
         )
     }
 
@@ -469,6 +551,10 @@ final class AppModel {
         defaults.set(hueFingerprint, forKey: Key.hueFingerprint)
         defaults.set(hueTargetKind == .room ? "room" : "light", forKey: Key.hueTargetKind)
         defaults.set(hueTargetId, forKey: Key.hueTargetId)
+        defaults.set(goveeEnabled, forKey: Key.goveeEnabled)
+        defaults.set(goveeDevices.map(\.stored), forKey: Key.goveeDevices)
+        defaults.set(nanoleafEnabled, forKey: Key.nanoleafEnabled)
+        defaults.set(nanoleafDevices.map(\.stored), forKey: Key.nanoleafDevices)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -582,10 +668,39 @@ final class AppModel {
         static let hueFingerprint = "hueFingerprint"
         static let hueTargetKind = "hueTargetKind"
         static let hueTargetId = "hueTargetId"
+        static let goveeEnabled = "goveeEnabled"
+        static let goveeDevices = "goveeDevices"
+        static let nanoleafEnabled = "nanoleafEnabled"
+        static let nanoleafDevices = "nanoleafDevices"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"
         static let dimPercent = "dimPercent"
+    }
+}
+
+/// Govee- oder Nanoleaf-Lampe im eigenen Netz
+struct NetLight: Identifiable, Equatable {
+    let id: UUID
+    var host: String
+    /// Modell oder Name aus der Suche, leer bei einer Adresse von Hand
+    var name: String
+
+    /// Eintrag für die UserDefaults
+    var stored: [String: String] {
+        ["id": id.uuidString, "host": host, "name": name]
+    }
+
+    static func list(_ stored: [Any]?) -> [NetLight] {
+        (stored as? [[String: String]] ?? []).compactMap { entry in
+            guard let id = entry["id"].flatMap(UUID.init(uuidString:)), let host = entry["host"] else { return nil }
+            return NetLight(id: id, host: host, name: entry["name"] ?? "")
+        }
+    }
+
+    /// Adresse ohne den Standard-Port von Nanoleaf
+    var shownHost: String {
+        host.hasSuffix(":16021") ? String(host.dropLast(6)) : host
     }
 }
 
