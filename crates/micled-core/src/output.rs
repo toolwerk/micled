@@ -176,10 +176,40 @@ impl<S: Device> Fleet<S>
 where
     S::Cfg: Keyed,
 {
-    /// Entfernte Geräte zurückstellen; Fehler kommen nach `errors`
-    fn retry_leaving(&mut self, errors: &mut Vec<String>) {
-        for mut l in std::mem::take(&mut self.leaving) {
-            match l.device.apply(None, &Scene::Idle) {
+    /// Gewünschte Geräte (`Some`) zeigen `scene`, entfernte (`None`) werden
+    /// zurückgestellt, alle gleichzeitig: Ein nicht erreichbares Gerät hält
+    /// die anderen nicht auf. Liefert die Fehler der gewünschten Geräte.
+    fn run(&mut self, wanted: &[Option<S::Cfg>], scene: &Scene) -> Vec<String> {
+        let leaving: Vec<Result<(), String>>;
+        let shown: Vec<Result<(), String>>;
+        {
+            let devices = self.devices.iter_mut().map(|(_, d)| d).zip(wanted.iter().cloned());
+            let gone = self.leaving.iter_mut().map(|l| (&mut l.device, None));
+            let jobs: Vec<(&mut S, Option<S::Cfg>)> = devices.chain(gone).collect();
+            let results: Vec<Result<(), String>> = std::thread::scope(|s| {
+                let handles: Vec<_> = jobs
+                    .into_iter()
+                    .map(|(d, cfg)| {
+                        let scene = if cfg.is_some() { scene.clone() } else { Scene::Idle };
+                        s.spawn(move || d.apply(cfg.as_ref(), &scene))
+                    })
+                    .collect();
+                handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err("Ausgabe abgestürzt".into()))).collect()
+            });
+            let mut results = results;
+            leaving = results.split_off(wanted.len());
+            shown = results;
+        }
+        let mut errors: Vec<String> = shown.into_iter().filter_map(Result::err).collect();
+        self.settle_leaving(leaving, &mut errors);
+        errors
+    }
+
+    /// Ergebnisse der entfernten Geräte auswerten: zurückgestellte fallen
+    /// weg, die anderen werden bis zu fünfmal versucht; Fehler kommen nach `errors`
+    fn settle_leaving(&mut self, results: Vec<Result<(), String>>, errors: &mut Vec<String>) {
+        for (mut l, r) in std::mem::take(&mut self.leaving).into_iter().zip(results) {
+            match r {
                 Ok(()) => {}
                 Err(e) if l.tries + 1 >= MAX_LEAVING_TRIES => {
                     log::warn!("entferntes Gerät {} aufgegeben: {e}", l.key);
@@ -215,7 +245,7 @@ where
         for (key, device) in old.extract_if(.., |(k, _)| !wanted.iter().any(|w| w.address() == k)) {
             self.leaving.push(Leaving { key, device, tries: 0 });
         }
-        let mut errors = Vec::new();
+        let mut targets: Vec<Option<S::Cfg>> = Vec::new();
         for w in wanted {
             let key = w.address().to_string();
             if self.devices.iter().any(|(k, _)| *k == key) {
@@ -230,19 +260,16 @@ where
                 },
             };
             self.devices.push((key, device));
-            let (_, d) = self.devices.last_mut().expect("gerade eingefügt");
-            if let Err(e) = d.apply(Some(w), scene) {
-                errors.push(e);
-            }
+            targets.push(Some(w.clone()));
         }
         self.current = cfg.cloned();
-        self.retry_leaving(&mut errors);
+        let errors = self.run(&targets, scene);
         joined(errors)
     }
 
     fn restore(&mut self) -> Result<(), String> {
-        let mut errors: Vec<String> = self.devices.iter_mut().filter_map(|(_, d)| d.restore().err()).collect();
-        self.retry_leaving(&mut errors);
+        let targets: Vec<Option<S::Cfg>> = self.devices.iter().map(|(_, d)| d.current().cloned()).collect();
+        let errors = self.run(&targets, &Scene::Idle);
         joined(errors)
     }
 
@@ -254,7 +281,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Mutex, MutexGuard};
 
     #[derive(Clone, Debug, PartialEq)]
     struct Cfg(&'static str);
@@ -265,19 +292,29 @@ mod tests {
         }
     }
 
-    type Log = Arc<Mutex<Vec<String>>>;
+    /// Befehle aller Fake-Geräte (die Geräte laufen in eigenen Threads)
+    static LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
+    /// Adressen, die gerade scheitern
+    static FAILING: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
+    /// Die Tests teilen sich LOG und FAILING, deshalb nacheinander
+    static SERIAL: Mutex<()> = Mutex::new(());
 
-    thread_local! {
-        /// Befehle aller Fake-Geräte und Adressen, die gerade scheitern
-        static STATE: (Log, Arc<Mutex<Vec<&'static str>>>) = Default::default();
+    fn serial() -> MutexGuard<'static, ()> {
+        let g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        LOG.lock().unwrap().clear();
+        FAILING.lock().unwrap().clear();
+        g
     }
 
+    /// Befehle in fester Reihenfolge (die Threads laufen gleichzeitig)
     fn log() -> Vec<String> {
-        STATE.with(|s| std::mem::take(&mut *s.0.lock().unwrap()))
+        let mut l = std::mem::take(&mut *LOG.lock().unwrap());
+        l.sort();
+        l
     }
 
     fn fail(hosts: &[&'static str]) {
-        STATE.with(|s| *s.1.lock().unwrap() = hosts.to_vec());
+        *FAILING.lock().unwrap() = hosts.to_vec();
     }
 
     /// Gerät wie die echten: Fehler beim Zurückstellen behält den Zustand
@@ -292,12 +329,15 @@ mod tests {
 
         fn apply(&mut self, cfg: Option<&Cfg>, scene: &Scene) -> Result<(), String> {
             let target = cfg.or(self.cfg.as_ref()).cloned().expect("Ziel");
-            if STATE.with(|s| s.1.lock().unwrap().contains(&target.0)) {
+            if target.0.starts_with("langsam") {
+                std::thread::sleep(std::time::Duration::from_millis(300));
+            }
+            if FAILING.lock().unwrap().contains(&target.0) {
                 return Err(format!("{} antwortet nicht", target.0));
             }
             let show = cfg.is_some() && *scene != Scene::Idle;
             if show != self.shown {
-                STATE.with(|s| s.0.lock().unwrap().push(format!("{} {}", target.0, if show { "Farbe" } else { "zurück" })));
+                LOG.lock().unwrap().push(format!("{} {}", target.0, if show { "Farbe" } else { "zurück" }));
             }
             self.shown = show;
             self.cfg = cfg.cloned();
@@ -324,6 +364,7 @@ mod tests {
 
     #[test]
     fn one_failing_device_does_not_stop_the_others() {
+        let _s = serial();
         let mut f = Fleet::<Fake>::default();
         fail(&["b"]);
         let err = f.apply(Some(&cfg(&["a", "b", "c"])), &LIVE).unwrap_err();
@@ -341,6 +382,7 @@ mod tests {
 
     #[test]
     fn removed_device_is_restored() {
+        let _s = serial();
         let mut f = Fleet::<Fake>::default();
         f.apply(Some(&cfg(&["a", "b"])), &LIVE).unwrap();
         log();
@@ -354,6 +396,7 @@ mod tests {
 
     #[test]
     fn failed_restore_of_removed_device_is_retried_then_given_up() {
+        let _s = serial();
         let mut f = Fleet::<Fake>::default();
         f.apply(Some(&cfg(&["a", "b"])), &LIVE).unwrap();
         log();
@@ -376,6 +419,7 @@ mod tests {
 
     #[test]
     fn re_added_device_keeps_its_state() {
+        let _s = serial();
         let mut f = Fleet::<Fake>::default();
         f.apply(Some(&cfg(&["a"])), &LIVE).unwrap();
         log();
@@ -390,7 +434,19 @@ mod tests {
     }
 
     #[test]
+    fn unreachable_devices_do_not_delay_the_others() {
+        let _s = serial();
+        let mut f = Fleet::<Fake>::default();
+        fail(&["langsam1", "langsam2"]);
+        let start = std::time::Instant::now();
+        assert!(f.apply(Some(&cfg(&["langsam1", "langsam2", "langsam3"])), &LIVE).is_err());
+        assert!(start.elapsed() < std::time::Duration::from_millis(550), "gleichzeitig, nicht nacheinander");
+        assert_eq!(log(), ["langsam3 Farbe"]);
+    }
+
+    #[test]
     fn duplicate_addresses_count_once() {
+        let _s = serial();
         let mut f = Fleet::<Fake>::default();
         f.apply(Some(&cfg(&["a", "a"])), &LIVE).unwrap();
         assert_eq!(log(), ["a Farbe"]);
