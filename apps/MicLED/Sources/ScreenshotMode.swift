@@ -41,8 +41,21 @@ enum ScreenshotMode {
         d.set(true, forKey: "remindersEnabled")
         d.set(true, forKey: "pixooEnabled")
         d.set("192.168.1.50", forKey: "pixooHost")
+        d.set(true, forKey: "hueEnabled")
+        d.set("192.168.1.20", forKey: "hueHost")
+        d.set("screenshot", forKey: "hueFingerprint")
+        d.set("room", forKey: "hueTargetKind")
+        d.set("flur", forKey: "hueTargetId")
         return d
     }
+
+    /// Beispiel-Räume und -Lampen für die Hue-Auswahl
+    static let hueChoices = [
+        HueTarget(kind: .room, id: "buero", name: "Büro"),
+        HueTarget(kind: .room, id: "flur", name: "Flur"),
+        HueTarget(kind: .light, id: "tuer", name: "Flur – Tür"),
+        HueTarget(kind: .light, id: "steh", name: "Stehlampe"),
+    ]
 
     /// Feste Zeit auf Sendung: Wochenende frei, werktags 40–220 min
     static func seconds(forDay start: Date) -> UInt64 {

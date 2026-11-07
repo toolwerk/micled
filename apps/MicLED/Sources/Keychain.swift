@@ -2,16 +2,18 @@ import Foundation
 import Security
 
 /// Geheimnisse im Schlüsselbund statt in den UserDefaults
-/// (App-Passwort für Nextcloud, Slack-Token)
+/// (App-Passwort für Nextcloud, Slack-Token, App-Schlüssel der Hue Bridge)
 enum Keychain {
     enum Item: String {
         case nextcloud = "app-password"
         case slack = "slack-token"
+        case hue = "hue-app-key"
 
         var service: String {
             switch self {
             case .nextcloud: "net.staude.micled.nextcloud"
             case .slack: "net.staude.micled.slack"
+            case .hue: "net.staude.micled.hue"
             }
         }
     }
