@@ -27,6 +27,7 @@
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
 - 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
+- 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
 - ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
@@ -149,6 +150,39 @@ Beim Koppeln merkt sich MicLED das Zertifikat der Bridge und spricht danach nur 
 
 Ist die Bridge nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und Pixoo schalten trotzdem sofort. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
 
+## Govee
+
+Govee-Lampen mit Steuerung im eigenen Netz, etwa das Monitor-Backlight Gaming Light Strip G1 (H6609), zeigen den Status ohne Govee-Konto und ohne Cloud. Welche Modelle das können, steht in der [Liste von Home Assistant](https://www.home-assistant.io/integrations/govee_light_local/). Mehrere Lampen sind möglich.
+
+Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten die Lampen in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und Farbe bzw. Weißton von vorher. Szenen und Bildschirm-Sync (DreamView) meldet eine Govee-Lampe im eigenen Netz nicht; lief so etwas, endet es mit dem Call, und die Lampe bekommt danach eine feste Farbe (die zuletzt gemeldete, sonst neutrales Weiß).
+
+1. In der Govee-App je Gerät „LAN Control“ einschalten (Gerät › Einstellungen) und der Lampe im Router eine **feste IP-Adresse** geben.
+2. In MicLED unter Einstellungen › Govee „Status auf Govee-Lampen zeigen“ einschalten und „Suchen“ drücken. Gefundene Lampen mit „Hinzufügen“ übernehmen. Findet die Suche nichts, etwa in einem Mesh- oder Gastnetz, trägt „Adresse hinzufügen“ die IP von Hand ein.
+3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**; macOS fragt bei der ersten Suche danach.
+
+Govee-Lampen antworten immer an Port 4002 des Macs. Läuft auf demselben Mac schon eine andere Govee-Steuerung, etwa Home Assistant, steht im Menü „Port 4002 belegt, läuft hier eine andere Govee-Steuerung?“, und MicLED findet und schaltet die Lampen nicht.
+
+## Nanoleaf
+
+Light Panels, Canvas, Shapes, Elements, Lines und Skylight zeigen den Status über ihre Schnittstelle im eigenen Netz, ohne Konto und ohne Cloud. Mehrere Geräte sind möglich.
+
+Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten sie in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und Farbe von vorher; lief ein gespeicherter Effekt, läuft er danach wieder.
+
+1. In MicLED unter Einstellungen › Nanoleaf „Status auf Nanoleaf-Lampen zeigen“ einschalten und „Suchen“ drücken. Gefundene Geräte mit „Hinzufügen“ übernehmen oder mit „Adresse hinzufügen“ die IP von Hand eintragen (feste IP im Router empfohlen).
+2. Am Gerät den Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, und innerhalb von 30 Sekunden „Koppeln“ drücken. Es erscheint „Gekoppelt ✓“. Der Schlüssel liegt im Schlüsselbund unter „net.staude.micled.nanoleaf“.
+3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
+Eine neue Adresse oder „Entfernen“ löscht die Kopplung. Steht im Menü „Schlüssel ungültig, neu koppeln“, Schritt 2 wiederholen.
+
+Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
+
+### Nicht unterstützt
+
+- **Nanoleaf Essentials** (Glühbirnen und Lichtstreifen mit Matter oder HomeKit über Thread) haben keine Schnittstelle im eigenen Netz.
+- **Govee ohne Steuerung im eigenen Netz**, etwa die AI Sync Box H6603/H6604, und Govee-Geräte, die nur Bluetooth haben.
+
+Für diese Geräte: in Home Assistant einbinden und dort per Automation mit dem Webhook aus [„Auf Sendung“ an Home Assistant](#auf-sendung-an-home-assistant) schalten.
+
 ## Termine aus Nextcloud
 
 Für die Vorwarnung gibt es zwei Wege:
@@ -201,12 +235,17 @@ cargo run -p micled-cli -- pixoo 192.168.1.50  # Pixoo prüfen: 5 s „ON AIR“
 cargo run -p micled-cli -- hue pair 192.168.1.20  # nach dem Druck auf den Bridge-Knopf: Schlüssel und Fingerabdruck
 MICLED_HUE_KEY=<schlüssel> MICLED_HUE_FINGERPRINT=<fingerabdruck> \
   cargo run -p micled-cli -- hue test 192.168.1.20 <lampen-id> [--room]   # 5 s Rot, dann zurück
+cargo run -p micled-cli -- govee scan          # Govee-Lampen mit „LAN Control“ suchen
+cargo run -p micled-cli -- govee test 192.168.1.31   # 5 s Rot, dann zurück
+cargo run -p micled-cli -- nanoleaf scan       # Nanoleaf per Bonjour suchen
+cargo run -p micled-cli -- nanoleaf pair 192.168.1.40   # nach 5–7 s Einschaltknopf: Schlüssel
+MICLED_NANOLEAF_KEY=<schlüssel> cargo run -p micled-cli -- nanoleaf test 192.168.1.40   # 5 s Rot, dann zurück
 ```
 
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, Hue Bridge
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, Hue Bridge, Govee, Nanoleaf
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen

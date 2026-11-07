@@ -91,6 +91,10 @@ pub struct Config {
     pub pixoo: Option<String>,
     /// Hue-Lampe oder -Raum über die Hue Bridge (`None` = aus)
     pub hue: Option<crate::hue::Hue>,
+    /// Govee-Lampen im eigenen Netz (leer = aus)
+    pub govee: Vec<crate::govee::Govee>,
+    /// Gekoppelte Nanoleaf-Lampen (leer = aus)
+    pub nanoleaf: Vec<crate::nanoleaf::Nanoleaf>,
 }
 
 impl Default for Config {
@@ -118,6 +122,8 @@ impl Default for Config {
             slack: None,
             pixoo: None,
             hue: None,
+            govee: Vec::new(),
+            nanoleaf: Vec::new(),
         }
     }
 }

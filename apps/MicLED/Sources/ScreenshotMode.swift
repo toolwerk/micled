@@ -46,6 +46,13 @@ enum ScreenshotMode {
         d.set("screenshot", forKey: "hueFingerprint")
         d.set("room", forKey: "hueTargetKind")
         d.set("flur", forKey: "hueTargetId")
+        d.set(true, forKey: "goveeEnabled")
+        d.set([
+            ["id": UUID().uuidString, "host": "192.168.1.31", "name": "H6609"],
+            ["id": UUID().uuidString, "host": "192.168.1.32", "name": ""],
+        ], forKey: "goveeDevices")
+        d.set(true, forKey: "nanoleafEnabled")
+        d.set([["id": UUID().uuidString, "host": "192.168.1.40:16021", "name": "Canvas 5B3C"]], forKey: "nanoleafDevices")
         return d
     }
 
@@ -55,6 +62,12 @@ enum ScreenshotMode {
         HueTarget(kind: .room, id: "flur", name: "Flur"),
         HueTarget(kind: .light, id: "tuer", name: "Flur – Tür"),
         HueTarget(kind: .light, id: "steh", name: "Stehlampe"),
+    ]
+
+    /// Beispiel-Ergebnis der Govee-Suche (eines schon eingetragen)
+    static let goveeFound = [
+        FoundDevice(host: "192.168.1.31", name: "H6609"),
+        FoundDevice(host: "192.168.1.33", name: "H6008"),
     ]
 
     /// Feste Zeit auf Sendung: Wochenende frei, werktags 40–220 min

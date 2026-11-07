@@ -44,7 +44,7 @@
 	<key>NSFocusStatusUsageDescription</key>
 	<string>MicLED zeigt auf der Lampe eine eigene Farbe, solange ein Fokus an ist.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>MicLED zeigt den Status auf Geräten im eigenen Netz, etwa einem Pixoo 64, einer Hue Bridge oder Home Assistant.</string>
+	<string>MicLED zeigt den Status auf Geräten im eigenen Netz, etwa einem Pixoo 64, einer Hue Bridge, Govee- und Nanoleaf-Lampen oder Home Assistant, und sucht dort nach Govee- und Nanoleaf-Lampen.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Frank Neumann-Staude</string>
 </dict>
