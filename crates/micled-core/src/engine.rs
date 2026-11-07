@@ -89,6 +89,8 @@ pub struct Config {
     pub slack: Option<Slack>,
     /// Adresse eines Pixoo 64 im eigenen Netz (`None` = aus)
     pub pixoo: Option<String>,
+    /// Hue-Lampe oder -Raum über die Hue Bridge (`None` = aus)
+    pub hue: Option<crate::hue::Hue>,
 }
 
 impl Default for Config {
@@ -115,6 +117,7 @@ impl Default for Config {
             dim: None,
             slack: None,
             pixoo: None,
+            hue: None,
         }
     }
 }
