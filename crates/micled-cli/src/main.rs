@@ -6,7 +6,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
 use micled_core::output::Device;
-use micled_core::{caldav, camera, hue, lamp, mic, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -43,6 +43,16 @@ enum Cmd {
     Hue {
         #[command(subcommand)]
         cmd: HueCmd,
+    },
+    /// Govee-Lampen mit „LAN Control“ im eigenen Netz
+    Govee {
+        #[command(subcommand)]
+        cmd: GoveeCmd,
+    },
+    /// Nanoleaf-Lampen über die lokale OpenAPI
+    Nanoleaf {
+        #[command(subcommand)]
+        cmd: NanoleafCmd,
     },
     /// Automatik laufen lassen, bis Strg-C
     Watch {
@@ -92,6 +102,83 @@ enum HueCmd {
         #[arg(long)]
         room: bool,
     },
+}
+
+#[derive(Subcommand)]
+enum GoveeCmd {
+    /// Geräte im eigenen Netz suchen
+    Scan,
+    /// Zeigt fünf Sekunden Rot und stellt den Zustand von vorher wieder her
+    Test {
+        /// Adresse im eigenen Netz, z. B. 192.168.1.31
+        host: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NanoleafCmd {
+    /// Geräte im eigenen Netz per Bonjour suchen
+    Scan,
+    /// Koppeln: erst den Einschaltknopf 5–7 Sekunden halten. Gibt den Schlüssel aus.
+    Pair {
+        /// Adresse im eigenen Netz, z. B. 192.168.1.40
+        host: String,
+    },
+    /// Zeigt fünf Sekunden Rot und stellt den Zustand von vorher wieder her.
+    /// Der Schlüssel kommt aus MICLED_NANOLEAF_KEY.
+    Test { host: String },
+}
+
+/// Fünf Sekunden Rot, dann zurückstellen (auch nach einem Fehler, die Farbe
+/// kann trotzdem angekommen sein)
+fn show_red<D: Device>(device: &mut D, cfg: &D::Cfg) -> Result<(), String> {
+    let shown = device.apply(Some(cfg), &Scene::Live { camera: false, color: Rgb::RED });
+    if shown.is_ok() {
+        std::thread::sleep(Duration::from_secs(5));
+    }
+    let restored = device.restore();
+    shown.and(restored)
+}
+
+fn print_found(list: Vec<(String, String)>) {
+    if list.is_empty() {
+        println!("Keine Geräte gefunden.");
+    }
+    for (host, name) in list {
+        println!("{host:<22} {name}");
+    }
+}
+
+fn govee_cmd(cmd: &GoveeCmd) -> Result<(), String> {
+    match cmd {
+        GoveeCmd::Scan => govee::discover().map(print_found),
+        GoveeCmd::Test { host } => {
+            let cfg = govee::Govee { host: pixoo::normalize(host).ok_or("Adresse fehlt")? };
+            show_red(&mut govee::Session::default(), &cfg)?;
+            println!("Govee-Lampe geschaltet und zurückgestellt");
+            Ok(())
+        }
+    }
+}
+
+fn nanoleaf_cmd(cmd: &NanoleafCmd) -> Result<(), String> {
+    let host = |h: &str| nanoleaf::normalize(h).ok_or("Adresse fehlt".to_string());
+    match cmd {
+        NanoleafCmd::Scan => nanoleaf::discover().map(print_found),
+        NanoleafCmd::Pair { host: h } => {
+            println!("Schlüssel: {}", nanoleaf::pair(&host(h)?)?);
+            Ok(())
+        }
+        NanoleafCmd::Test { host: h } => {
+            let cfg = nanoleaf::Nanoleaf {
+                host: host(h)?,
+                key: std::env::var("MICLED_NANOLEAF_KEY").map_err(|_| "MICLED_NANOLEAF_KEY fehlt")?,
+            };
+            show_red(&mut nanoleaf::Session::default(), &cfg)?;
+            println!("Nanoleaf-Lampe geschaltet und zurückgestellt");
+            Ok(())
+        }
+    }
 }
 
 fn hue_cmd(cmd: &HueCmd) -> Result<(), String> {
@@ -211,6 +298,8 @@ fn main() {
             }),
         },
         Cmd::Hue { cmd } => hue_cmd(cmd),
+        Cmd::Govee { cmd } => govee_cmd(cmd),
+        Cmd::Nanoleaf { cmd } => nanoleaf_cmd(cmd),
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,

@@ -103,6 +103,41 @@ pub struct MicLedConfig {
     pub hue_fingerprint: String,
     pub hue_target_kind: HueTargetKind,
     pub hue_target_id: String,
+    /// Adressen von Govee-Lampen; leere fallen weg, doppelte zählen einmal
+    pub govee_hosts: Vec<String>,
+    /// Gekoppelte Nanoleaf-Lampen; ohne Adresse oder Schlüssel fallen sie weg
+    pub nanoleaf: Vec<NanoleafDevice>,
+}
+
+/// Nanoleaf-Lampe mit Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct NanoleafDevice {
+    pub host: String,
+    pub key: String,
+}
+
+/// Gerät aus einer Suche im eigenen Netz
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FoundDevice {
+    /// Adresse zum Eintragen (bei Nanoleaf mit Port)
+    pub host: String,
+    /// Modell oder Name des Geräts
+    pub name: String,
+}
+
+/// Ergebnis von [`govee_discover`] und [`nanoleaf_discover`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct FoundDevices {
+    pub items: Vec<FoundDevice>,
+    pub error: Option<String>,
+}
+
+/// Ergebnis von [`nanoleaf_pair`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct NanoleafPair {
+    /// Schlüssel, leer bei Fehler
+    pub key: String,
+    pub error: Option<String>,
 }
 
 /// Ergebnis von [`hue_pair`]
@@ -214,6 +249,34 @@ fn hue(host: &str, key: String, fingerprint: String, kind: HueTargetKind, id: St
     })
 }
 
+fn govee(hosts: &[String]) -> Vec<core::govee::Govee> {
+    let mut out: Vec<core::govee::Govee> = Vec::new();
+    for host in hosts.iter().filter_map(|h| core::pixoo::normalize(h)) {
+        if !out.iter().any(|g| g.host == host) {
+            out.push(core::govee::Govee { host });
+        }
+    }
+    out
+}
+
+fn nanoleaf(devices: &[NanoleafDevice]) -> Vec<core::nanoleaf::Nanoleaf> {
+    let mut out: Vec<core::nanoleaf::Nanoleaf> = Vec::new();
+    for d in devices {
+        let (Some(host), key) = (core::nanoleaf::normalize(&d.host), d.key.trim()) else { continue };
+        if !key.is_empty() && !out.iter().any(|n| n.host == host) {
+            out.push(core::nanoleaf::Nanoleaf { host, key: key.to_string() });
+        }
+    }
+    out
+}
+
+fn found(result: Result<Vec<(String, String)>, String>) -> FoundDevices {
+    match result {
+        Ok(list) => FoundDevices { items: list.into_iter().map(|(host, name)| FoundDevice { host, name }).collect(), error: None },
+        Err(e) => FoundDevices { items: vec![], error: Some(e) },
+    }
+}
+
 fn nextcloud(server: String, user: String, password: String) -> Option<core::Nextcloud> {
     let filled = [&server, &user, &password].iter().all(|s| !s.trim().is_empty());
     filled.then_some(core::Nextcloud { server, user, password })
@@ -245,6 +308,8 @@ impl From<MicLedConfig> for core::Config {
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
             hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
+            govee: govee(&c.govee_hosts),
+            nanoleaf: nanoleaf(&c.nanoleaf),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -473,8 +538,57 @@ pub fn hue_targets(host: String, key: String, fingerprint: String) -> HueTargets
     }
 }
 
+/// Govee-Lampen mit „LAN Control“ im eigenen Netz suchen (blockiert etwa zwei
+/// Sekunden, nicht im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn govee_discover() -> FoundDevices {
+    found(core::govee::discover())
+}
+
+/// Nanoleaf-Lampen per Bonjour suchen (blockiert etwa drei Sekunden, nicht im
+/// Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn nanoleaf_discover() -> FoundDevices {
+    found(core::nanoleaf::discover())
+}
+
+/// Mit der Nanoleaf-Lampe unter `host` koppeln; vorher den Einschaltknopf
+/// 5–7 Sekunden halten (blockiert bis zu drei Sekunden, nicht im Haupt-Thread
+/// aufrufen)
+#[uniffi::export]
+pub fn nanoleaf_pair(host: String) -> NanoleafPair {
+    let result = match core::nanoleaf::normalize(&host) {
+        Some(h) => core::nanoleaf::pair(&h),
+        None => Err("Adresse der Nanoleaf-Lampe eintragen".into()),
+    };
+    match result {
+        Ok(key) => NanoleafPair { key, error: None },
+        Err(e) => NanoleafPair { key: String::new(), error: Some(e) },
+    }
+}
+
 /// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)
 #[uniffi::export]
 pub fn current_mic_users() -> Vec<MicUser> {
     core::mic::users().unwrap_or_default().into_iter().map(Into::into).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn govee_hosts_are_cleaned_and_deduplicated() {
+        let hosts = ["192.168.1.31", " ", "http://192.168.1.31/", "192.168.1.32"].map(String::from);
+        let list: Vec<String> = govee(&hosts).into_iter().map(|g| g.host).collect();
+        assert_eq!(list, ["192.168.1.31", "192.168.1.32"]);
+    }
+
+    #[test]
+    fn nanoleaf_without_address_or_key_is_dropped() {
+        let d = |host: &str, key: &str| NanoleafDevice { host: host.into(), key: key.into() };
+        let list = nanoleaf(&[d("10.0.0.4", "k1"), d("10.0.0.4:16021", "k2"), d("10.0.0.5", " "), d("", "k3")]);
+        assert_eq!(list.len(), 1);
+        assert_eq!((list[0].host.as_str(), list[0].key.as_str()), ("10.0.0.4:16021", "k1"));
+    }
 }
