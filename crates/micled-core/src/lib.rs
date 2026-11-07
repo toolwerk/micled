@@ -8,6 +8,8 @@ pub mod command;
 pub mod dim;
 pub mod display;
 pub mod engine;
+pub mod hue;
+pub mod hue_net;
 pub mod lamp;
 pub mod mic;
 pub mod monitor;
