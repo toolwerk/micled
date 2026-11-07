@@ -6,7 +6,8 @@ Menüleisten-App für macOS: schaltet eine Luxafor-Lampe bei aktivem Mikrofon um
 
 - Logik gehört in `crates/micled-core`, nicht in Swift. Die App zeigt nur an und reicht Einstellungen durch.
 - `engine.rs` ist seitenwirkungsfrei und vollständig getestet. Jede Verhaltensänderung bekommt dort zuerst einen Test.
-- `monitor.rs` ist der einzige Ort mit Thread, Zeit und Ein-/Ausgabe, außerdem die Updater in `slack.rs` und `output.rs`, die Netzwerkzugriffe im eigenen Thread abarbeiten. Die Geräte dafür (`pixoo.rs`, `hue.rs` mit `hue_net.rs`) halten ihre Logik testbar, das Senden wird in den Tests ersetzt.
+- `monitor.rs` ist der einzige Ort mit Thread, Zeit und Ein-/Ausgabe, außerdem die Updater in `slack.rs` und `output.rs`, die Netzwerkzugriffe im eigenen Thread abarbeiten. Die Geräte dafür (`pixoo.rs`, `hue.rs` mit `hue_net.rs`, `govee.rs`, `nanoleaf.rs`) halten ihre Logik testbar, das Senden wird in den Tests ersetzt. Mehrere Geräte einer Art laufen als `Fleet` aus `output.rs` in einem Updater; ein Gerät darin meldet ein gescheitertes Zurückstellen mit `Err` und behält seinen Zustand, damit `Fleet` es wiederholt.
+- Govee antwortet immer an Port 4002 des Macs. `govee.rs` belegt ihn nur für einen Vorgang und nie zweimal gleichzeitig (`REPLY_LOCK`). Die Nanoleaf-Suche (`mdns-sd`) startet einen eigenen Thread, nie aus einem Ausgabe-Thread aufrufen.
 - USB: Gerät nach jedem Befehl schließen und `macos-shared-device` behalten. Sonst blockiert MicLED die Luxafor-App, das Stream-Deck-Plugin und `lux` (`DeviceNotFound`).
 - Vor jeder Farbe wird `00 4F` gesendet und die Farbe doppelt geschrieben. Ohne das ignoriert die Lampe Farbbefehle, solange ein Muster läuft.
 - Statusdatei `~/Library/Application Support/net.staude.luxafor/state.json` ist ein Vertrag mit dem Stream-Deck-Plugin (`staude/luxafor-streamdeck`). Felder `color` (rrggbb), `source`, `updated`. Änderungen mit beiden Seiten abstimmen.
