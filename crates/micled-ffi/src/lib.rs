@@ -17,6 +17,13 @@ pub enum TransportKind {
     NoLamp,
 }
 
+/// Lampe oder Raum auf der Hue Bridge
+#[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum HueTargetKind {
+    Light,
+    Room,
+}
+
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AfterMic {
     /// Zur Farbe von vor dem Mikrofon zurück
@@ -89,6 +96,39 @@ pub struct MicLedConfig {
     pub slack_emoji: String,
     /// Adresse eines Pixoo 64 im eigenen Netz; leer = aus
     pub pixoo_host: String,
+    /// Hue Bridge; ist Adresse, Schlüssel, Fingerabdruck oder Ziel leer, ist es aus
+    pub hue_host: String,
+    /// App-Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
+    pub hue_key: String,
+    pub hue_fingerprint: String,
+    pub hue_target_kind: HueTargetKind,
+    pub hue_target_id: String,
+}
+
+/// Ergebnis von [`hue_pair`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct HuePair {
+    /// App-Schlüssel, leer bei Fehler
+    pub key: String,
+    /// SHA-256 des Zertifikats der Bridge, leer bei Fehler
+    pub fingerprint: String,
+    pub error: Option<String>,
+}
+
+/// Lampe oder Raum zur Auswahl
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct HueTarget {
+    pub kind: HueTargetKind,
+    pub id: String,
+    pub name: String,
+}
+
+/// Ergebnis von [`hue_targets`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct HueTargets {
+    /// Erst die Räume, dann die Lampen, jeweils nach Namen
+    pub items: Vec<HueTarget>,
+    pub error: Option<String>,
 }
 
 /// Ergebnis von [`pixoo_check`]
@@ -157,6 +197,23 @@ fn color(s: &str, fallback: Rgb) -> Rgb {
     Rgb::parse(s).unwrap_or(fallback)
 }
 
+fn hue(host: &str, key: String, fingerprint: String, kind: HueTargetKind, id: String) -> Option<core::hue::Hue> {
+    let host = core::pixoo::normalize(host)?;
+    let filled = [&key, &fingerprint, &id].iter().all(|s| !s.trim().is_empty());
+    filled.then_some(core::hue::Hue {
+        host,
+        key,
+        fingerprint,
+        target: core::hue::Target {
+            kind: match kind {
+                HueTargetKind::Light => core::hue::Kind::Light,
+                HueTargetKind::Room => core::hue::Kind::Room,
+            },
+            id,
+        },
+    })
+}
+
 fn nextcloud(server: String, user: String, password: String) -> Option<core::Nextcloud> {
     let filled = [&server, &user, &password].iter().all(|s| !s.trim().is_empty());
     filled.then_some(core::Nextcloud { server, user, password })
@@ -187,6 +244,7 @@ impl From<MicLedConfig> for core::Config {
                 TransportKind::NoLamp => core::Transport::None,
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
+            hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -371,6 +429,48 @@ pub fn pixoo_check(host: String) -> PixooCheck {
         None => Err("Adresse des Pixoo eintragen".into()),
     };
     PixooCheck { error: result.err() }
+}
+
+/// Mit der Hue Bridge unter `host` koppeln; vorher den Knopf an der Bridge
+/// drücken (blockiert bis zu einigen Sekunden, nicht im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn hue_pair(host: String) -> HuePair {
+    let result = match core::pixoo::normalize(&host) {
+        Some(h) => core::hue::pair(&h),
+        None => Err("Adresse der Bridge eintragen".into()),
+    };
+    match result {
+        Ok((key, fingerprint)) => HuePair { key, fingerprint, error: None },
+        Err(e) => HuePair { key: String::new(), fingerprint: String::new(), error: Some(e) },
+    }
+}
+
+/// Räume und Lampen der gekoppelten Bridge (blockiert, nicht im Haupt-Thread
+/// aufrufen)
+#[uniffi::export]
+pub fn hue_targets(host: String, key: String, fingerprint: String) -> HueTargets {
+    // Das Ziel zählt hier nicht, nur der Zugang
+    let result = match hue(&host, key, fingerprint, HueTargetKind::Light, "-".into()) {
+        Some(h) => core::hue::targets(&h),
+        None => Err("Erst mit der Bridge koppeln".into()),
+    };
+    match result {
+        Ok(list) => HueTargets {
+            items: list
+                .into_iter()
+                .map(|(t, name)| HueTarget {
+                    kind: match t.kind {
+                        core::hue::Kind::Light => HueTargetKind::Light,
+                        core::hue::Kind::Room => HueTargetKind::Room,
+                    },
+                    id: t.id,
+                    name,
+                })
+                .collect(),
+            error: None,
+        },
+        Err(e) => HueTargets { items: vec![], error: Some(e) },
+    }
 }
 
 /// Aktuelle Mikrofon-Nutzer (für die Ignorieren-Liste in den Einstellungen)
