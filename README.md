@@ -154,7 +154,7 @@ Ist die Bridge nicht erreichbar, steht ein Fehler im Menü und MicLED versucht e
 
 Govee-Lampen mit Steuerung im eigenen Netz, etwa das Monitor-Backlight Gaming Light Strip G1 (H6609), zeigen den Status ohne Govee-Konto und ohne Cloud. Welche Modelle das können, steht in der [Liste von Home Assistant](https://www.home-assistant.io/integrations/govee_light_local/). Mehrere Lampen sind möglich.
 
-Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten die Lampen in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und Farbe bzw. Weißton von vorher. Szenen und Bildschirm-Sync (DreamView) meldet eine Govee-Lampe im eigenen Netz nicht; lief so etwas, endet es mit dem Call, und die Lampe bekommt danach eine feste Farbe.
+Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten die Lampen in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und Farbe bzw. Weißton von vorher. Szenen und Bildschirm-Sync (DreamView) meldet eine Govee-Lampe im eigenen Netz nicht; lief so etwas, endet es mit dem Call, und die Lampe bekommt danach eine feste Farbe (die zuletzt gemeldete, sonst neutrales Weiß).
 
 1. In der Govee-App je Gerät „LAN Control“ einschalten (Gerät › Einstellungen) und der Lampe im Router eine **feste IP-Adresse** geben.
 2. In MicLED unter Einstellungen › Govee „Status auf Govee-Lampen zeigen“ einschalten und „Suchen“ drücken. Gefundene Lampen mit „Hinzufügen“ übernehmen. Findet die Suche nichts, etwa in einem Mesh- oder Gastnetz, trägt „Adresse hinzufügen“ die IP von Hand ein.
@@ -174,7 +174,7 @@ Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten sie in deren Farbe
 
 Eine neue Adresse oder „Entfernen“ löscht die Kopplung. Steht im Menü „Schlüssel ungültig, neu koppeln“, Schritt 2 wiederholen.
 
-Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort.
+Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
 
 ### Nicht unterstützt
 
