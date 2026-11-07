@@ -138,7 +138,7 @@ Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht 
 
 Eine Hue-Lampe, etwa vor der Tür, oder alle Lampen eines Raums zeigen den Status zusätzlich zur Lampe oder statt ihr. MicLED spricht dafür direkt mit der Hue Bridge im eigenen Netz, ohne Cloud und ohne Hue-Konto.
 
-Die Lampe leuchtet auf Sendung in der Mikro-, Kamera- oder Programmfarbe, beim Konzentrations-Timer und bei Fokus in deren Farbe, abends entsprechend gedimmt. Danach, beim Ausschalten und beim Beenden von MicLED hat jede Lampe wieder An/Aus, Farbe und Helligkeit von vorher. Was du während eines Calls in der Hue-App änderst, überschreibt MicLED danach mit dem Zustand von vor dem Call.
+Die Lampe leuchtet auf Sendung in der Mikro-, Kamera- oder Programmfarbe, beim Konzentrations-Timer und bei Fokus in deren Farbe, abends entsprechend gedimmt. Danach, beim Ausschalten und beim Beenden von MicLED hat jede Lampe wieder An/Aus, Farbe und Helligkeit von vorher. Eine vorher ausgeschaltete Lampe leuchtet dabei kurz in ihrer alten Farbe auf, bevor sie ausgeht; so hat sie beim nächsten Einschalten nicht die Call-Farbe. Was du während eines Calls in der Hue-App änderst, überschreibt MicLED danach mit dem Zustand von vor dem Call.
 
 1. In der Hue-App die IP-Adresse der Bridge nachsehen (Einstellungen › Bridges › Bridge › IP-Adresse) und ihr im Router eine **feste IP-Adresse** geben.
 2. In MicLED unter Einstellungen › Philips Hue „Status auf einer Hue-Lampe zeigen“ einschalten und die Adresse eintragen.
