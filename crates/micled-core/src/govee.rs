@@ -31,6 +31,10 @@ const SCAN_WAIT: Duration = Duration::from_secs(2);
 /// Abstand zwischen zwei Befehlen an dasselbe Gerät
 const SPACING: Duration = Duration::from_millis(50);
 
+/// Weißton nach dem Call, wenn das Gerät weder Farbe noch Weißton meldet
+/// (lief eine Szene oder DreamView), damit die Call-Farbe nicht bleibt
+const FALLBACK_KELVIN: u64 = 4000;
+
 pub const PORT_BUSY: &str = "Port 4002 belegt, läuft hier eine andere Govee-Steuerung?";
 
 /// Port 4002 gehört immer nur einem Vorgang
@@ -47,6 +51,17 @@ impl Keyed for Govee {
     fn address(&self) -> &str {
         &self.host
     }
+}
+
+/// Adresse aus den Einstellungen bereinigen wie [`crate::pixoo::normalize`],
+/// ein Port fällt weg (Govee nutzt feste Ports). Leer = aus.
+pub fn normalize(host: &str) -> Option<String> {
+    let h = crate::pixoo::normalize(host)?;
+    let h = match h.rsplit_once(':') {
+        Some((ip, port)) if !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()) => ip.to_string(),
+        _ => h,
+    };
+    (!h.is_empty()).then_some(h)
 }
 
 fn msg(cmd: &str, data: Value) -> Value {
@@ -127,10 +142,10 @@ impl Saved {
         if self.on {
             out.push(turn(true));
         }
-        if self.kelvin > 0 {
-            out.push(colorwc(Rgb::OFF, self.kelvin));
-        } else if let Some(c) = self.color {
-            out.push(colorwc(c, 0));
+        match (self.kelvin, self.color) {
+            (k, _) if k > 0 => out.push(colorwc(Rgb::OFF, k)),
+            (_, Some(c)) => out.push(colorwc(c, 0)),
+            _ => out.push(colorwc(Rgb::OFF, FALLBACK_KELVIN)),
         }
         if let Some(b) = self.brightness {
             out.push(brightness(b));
@@ -333,6 +348,13 @@ mod tests {
     const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
 
     #[test]
+    fn address_without_port() {
+        assert_eq!(normalize(" http://192.168.1.31:4003/ ").as_deref(), Some("192.168.1.31"));
+        assert_eq!(normalize("lampe.local").as_deref(), Some("lampe.local"));
+        assert_eq!(normalize(" "), None);
+    }
+
+    #[test]
     fn messages() {
         assert_eq!(turn(true), json!({"msg": {"cmd": "turn", "data": {"value": 1}}}));
         assert_eq!(brightness(0), json!({"msg": {"cmd": "brightness", "data": {"value": 1}}}));
@@ -375,7 +397,7 @@ mod tests {
         let off = Saved { on: false, brightness: Some(20), color: Some(Rgb::GREEN), kelvin: 0 };
         assert_eq!(off.commands(), [colorwc(Rgb::GREEN, 0), brightness(20), turn(false)], "erst Farbe, dann aus");
         let unknown = Saved { on: false, brightness: None, color: None, kelvin: 0 };
-        assert_eq!(unknown.commands(), [turn(false)]);
+        assert_eq!(unknown.commands(), [colorwc(Rgb::OFF, FALLBACK_KELVIN), turn(false)], "Szene oder DreamView: feste Farbe statt Call-Farbe");
     }
 
     #[test]

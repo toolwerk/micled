@@ -153,7 +153,7 @@ fn govee_cmd(cmd: &GoveeCmd) -> Result<(), String> {
     match cmd {
         GoveeCmd::Scan => govee::discover().map(print_found),
         GoveeCmd::Test { host } => {
-            let cfg = govee::Govee { host: pixoo::normalize(host).ok_or("Adresse fehlt")? };
+            let cfg = govee::Govee { host: govee::normalize(host).ok_or("Adresse fehlt")? };
             show_red(&mut govee::Session::default(), &cfg)?;
             println!("Govee-Lampe geschaltet und zurückgestellt");
             Ok(())

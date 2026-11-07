@@ -251,7 +251,7 @@ fn hue(host: &str, key: String, fingerprint: String, kind: HueTargetKind, id: St
 
 fn govee(hosts: &[String]) -> Vec<core::govee::Govee> {
     let mut out: Vec<core::govee::Govee> = Vec::new();
-    for host in hosts.iter().filter_map(|h| core::pixoo::normalize(h)) {
+    for host in hosts.iter().filter_map(|h| core::govee::normalize(h)) {
         if !out.iter().any(|g| g.host == host) {
             out.push(core::govee::Govee { host });
         }
