@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
+use micled_core::output::Device;
 use micled_core::{caldav, camera, lamp, mic, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]

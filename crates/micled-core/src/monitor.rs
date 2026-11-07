@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{caldav, camera, dim, onair, pixoo, shared, slack};
+use crate::{caldav, camera, dim, onair, output, pixoo, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -130,7 +130,7 @@ impl Monitor {
                     brightness: 100,
                     slack: slack::Updater::start(slack_error.clone()),
                     slack_error,
-                    pixoo: pixoo::Updater::start(pixoo_error.clone()),
+                    pixoo: output::Updater::start("pixoo", pixoo_error.clone()),
                     pixoo_error,
                     last_scene: None,
                 };
@@ -274,7 +274,7 @@ struct Worker {
     brightness: u8,
     slack: slack::Updater,
     slack_error: Arc<Mutex<Option<String>>>,
-    pixoo: pixoo::Updater,
+    pixoo: output::Updater<pixoo::Session>,
     pixoo_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an das Display gegebene Adresse und Szene
     last_scene: Option<(Option<String>, Scene)>,

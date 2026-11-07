@@ -12,6 +12,7 @@ pub mod lamp;
 pub mod mic;
 pub mod monitor;
 pub mod onair;
+pub mod output;
 pub mod pixoo;
 pub mod reminder;
 pub mod shared;
