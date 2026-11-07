@@ -178,7 +178,8 @@ where
 {
     /// Gewünschte Geräte (`Some`) zeigen `scene`, entfernte (`None`) werden
     /// zurückgestellt, alle gleichzeitig: Ein nicht erreichbares Gerät hält
-    /// die anderen nicht auf. Liefert die Fehler der gewünschten Geräte.
+    /// die anderen nicht auf. Liefert die Fehler aller Geräte, entfernte
+    /// eingeschlossen, solange sie noch versucht werden.
     fn run(&mut self, wanted: &[Option<S::Cfg>], scene: &Scene) -> Vec<String> {
         let leaving: Vec<Result<(), String>>;
         let shown: Vec<Result<(), String>>;
@@ -224,7 +225,10 @@ where
     }
 }
 
-fn joined(errors: Vec<String>) -> Result<(), String> {
+/// Fehler zu einer Meldung, gleiche nur einmal (z. B. belegter Port)
+fn joined(mut errors: Vec<String>) -> Result<(), String> {
+    let mut seen = std::collections::HashSet::new();
+    errors.retain(|e| seen.insert(e.clone()));
     if errors.is_empty() {
         Ok(())
     } else {
@@ -442,6 +446,12 @@ mod tests {
         assert!(f.apply(Some(&cfg(&["langsam1", "langsam2", "langsam3"])), &LIVE).is_err());
         assert!(start.elapsed() < std::time::Duration::from_millis(550), "gleichzeitig, nicht nacheinander");
         assert_eq!(log(), ["langsam3 Farbe"]);
+    }
+
+    #[test]
+    fn same_error_is_shown_once() {
+        assert_eq!(joined(vec!["Port belegt".into(), "x".into(), "Port belegt".into()]).unwrap_err(), "Port belegt; x");
+        assert_eq!(joined(vec![]), Ok(()));
     }
 
     #[test]
