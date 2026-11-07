@@ -701,11 +701,15 @@ struct NetLight: Identifiable, Equatable {
     /// Adresse wie im Kern bereinigt (ohne `http://` und `/`, Nanoleaf mit
     /// Port 16021, Govee ohne Port), zum Vergleichen
     static func normalized(_ host: String, nanoleaf: Bool) -> String {
-        var h = host.trimmingCharacters(in: .whitespaces).lowercased()
+        var h = host.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in ["http://", "https://"] where h.hasPrefix(prefix) { h.removeFirst(prefix.count) }
         while h.hasSuffix("/") { h.removeLast() }
+        h = h.trimmingCharacters(in: .whitespacesAndNewlines)
         if let colon = h.lastIndex(of: ":") {
-            if !nanoleaf { h = String(h[..<colon]) }
+            let port = h[h.index(after: colon)...]
+            if !nanoleaf, !port.isEmpty, port.allSatisfy(\.isASCII), port.allSatisfy(\.isNumber) {
+                h = String(h[..<colon])
+            }
         } else if nanoleaf, !h.isEmpty {
             h += ":16021"
         }
