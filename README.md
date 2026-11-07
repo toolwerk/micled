@@ -143,7 +143,7 @@ Die Lampe leuchtet auf Sendung in der Mikro-, Kamera- oder Programmfarbe, beim K
 1. In der Hue-App die IP-Adresse der Bridge nachsehen (Einstellungen › Bridges › Bridge › IP-Adresse) und ihr im Router eine **feste IP-Adresse** geben.
 2. In MicLED unter Einstellungen › Philips Hue „Status auf einer Hue-Lampe zeigen“ einschalten und die Adresse eintragen.
 3. Den runden Knopf auf der Bridge drücken und innerhalb von 30 Sekunden „Koppeln“ wählen. Es erscheint „Gekoppelt ✓“. Der App-Schlüssel liegt im Schlüsselbund.
-4. Unter „Lampe“ einen Raum („Raum: …“) oder eine einzelne Lampe wählen. Bei einem Raum werden alle Lampen darin geschaltet; das Zurückstellen dauert bei vielen Lampen ein bis zwei Sekunden.
+4. Unter „Lampe“ einen Raum („Raum: …“) oder eine einzelne Lampe wählen. Bei einem Raum werden alle Lampen darin geschaltet; das Zurückstellen dauert bei vielen Lampen einige Sekunden.
 
 Beim Koppeln merkt sich MicLED das Zertifikat der Bridge und spricht danach nur mit genau dieser. Wird die Bridge ausgetauscht oder zurückgesetzt, steht im Menü „Zertifikat der Bridge hat sich geändert, bitte neu koppeln“; dann Schritt 3 wiederholen. Eine neue Adresse löscht die Kopplung ebenfalls.
 
