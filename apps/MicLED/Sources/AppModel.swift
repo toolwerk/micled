@@ -53,9 +53,11 @@ final class AppModel {
     var hueHost: String {
         didSet {
             if hueHost != oldValue {
-                hueKey = ""
-                hueFingerprint = ""
-                hueTargetId = ""
+                batch {
+                    hueKey = ""
+                    hueFingerprint = ""
+                    hueTargetId = ""
+                }
                 hueChoices = []
                 hueChoicesError = nil
             }
@@ -292,8 +294,10 @@ final class AppModel {
         set {
             let parts = newValue.split(separator: ":", maxSplits: 1).map(String.init)
             guard parts.count == 2 else { hueTargetId = ""; return }
-            hueTargetKind = parts[0] == "room" ? .room : .light
-            hueTargetId = parts[1]
+            batch {
+                hueTargetKind = parts[0] == "room" ? .room : .light
+                hueTargetId = parts[1]
+            }
         }
     }
 
@@ -305,8 +309,10 @@ final class AppModel {
         if let error = result.error { return error }
         // Adresse während des Koppelns geändert: Ergebnis gehört zur alten Bridge
         guard host == hueHost else { return "Adresse geändert, bitte erneut koppeln" }
-        hueKey = result.key
-        hueFingerprint = result.fingerprint
+        batch {
+            hueKey = result.key
+            hueFingerprint = result.fingerprint
+        }
         await loadHueTargets()
         return "Gekoppelt ✓"
     }
@@ -416,7 +422,20 @@ final class AppModel {
         remindersEnabled && nextcloudEnabled
     }
 
+    /// Unterdrückt `persist()` während `batch`, damit der Kern keine halb
+    /// geänderte Kombination (z. B. neuer Schlüssel, alter Fingerabdruck) sieht
+    private var batching = false
+
+    /// Mehrere Einstellungen ändern und einmal speichern
+    private func batch(_ change: () -> Void) {
+        batching = true
+        change()
+        batching = false
+        persist()
+    }
+
     private func persist(pushConfig: Bool = true) {
+        if batching { return }
         defaults.set(enabled, forKey: Key.enabled)
         defaults.set(lampKind.rawValue, forKey: Key.lampKind)
         defaults.set(luxaforId, forKey: Key.luxaforId)

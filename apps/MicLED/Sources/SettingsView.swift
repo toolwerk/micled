@@ -152,6 +152,7 @@ struct SettingsView: View {
                 Text("Knopf an der Bridge drücken, dann „Koppeln“. Die IP-Adresse steht in der Hue-App unter Einstellungen › Bridges. Bei einem Raum werden alle Lampen darin geschaltet. Danach haben die Lampen wieder Farbe, Helligkeit und An/Aus von vorher. Der Schlüssel liegt im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            .onChange(of: model.hueHost) { hueResult = "" }
             .task(id: model.hueEnabled) {
                 if model.hueEnabled && model.hueChoices.isEmpty { await model.loadHueTargets() }
             }
