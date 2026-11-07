@@ -407,7 +407,7 @@ struct SettingsView: View {
     /// Gefundene Geräte, die noch nicht eingetragen sind
     @ViewBuilder
     private func found(_ found: [FoundDevice], in lights: [NetLight], nanoleaf: Bool) -> some View {
-        ForEach(found.filter { f in !lights.contains { $0.host == f.host } }, id: \.host) { f in
+        ForEach(found.filter { !NetLight.contains(lights, $0.host, nanoleaf: nanoleaf) }, id: \.host) { f in
             HStack {
                 Text("Gefunden: \(f.name) · \(NetLight(id: UUID(), host: f.host, name: f.name).shownHost)")
                     .foregroundStyle(.secondary)

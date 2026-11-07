@@ -399,8 +399,8 @@ final class AppModel {
     func add(_ found: FoundDevice, toNanoleaf: Bool) {
         let light = NetLight(id: UUID(), host: found.host, name: found.name)
         if toNanoleaf {
-            if !nanoleafDevices.contains(where: { $0.host == found.host }) { nanoleafDevices.append(light) }
-        } else if !goveeDevices.contains(where: { $0.host == found.host }) {
+            if !NetLight.contains(nanoleafDevices, found.host, nanoleaf: true) { nanoleafDevices.append(light) }
+        } else if !NetLight.contains(goveeDevices, found.host, nanoleaf: false) {
             goveeDevices.append(light)
         }
     }
@@ -696,6 +696,26 @@ struct NetLight: Identifiable, Equatable {
             guard let id = entry["id"].flatMap(UUID.init(uuidString:)), let host = entry["host"] else { return nil }
             return NetLight(id: id, host: host, name: entry["name"] ?? "")
         }
+    }
+
+    /// Adresse wie im Kern bereinigt (ohne `http://` und `/`, Nanoleaf mit
+    /// Port 16021, Govee ohne Port), zum Vergleichen
+    static func normalized(_ host: String, nanoleaf: Bool) -> String {
+        var h = host.trimmingCharacters(in: .whitespaces).lowercased()
+        for prefix in ["http://", "https://"] where h.hasPrefix(prefix) { h.removeFirst(prefix.count) }
+        while h.hasSuffix("/") { h.removeLast() }
+        if let colon = h.lastIndex(of: ":") {
+            if !nanoleaf { h = String(h[..<colon]) }
+        } else if nanoleaf, !h.isEmpty {
+            h += ":16021"
+        }
+        return h
+    }
+
+    /// Steht die Adresse schon in der Liste?
+    static func contains(_ lights: [NetLight], _ host: String, nanoleaf: Bool) -> Bool {
+        let h = normalized(host, nanoleaf: nanoleaf)
+        return lights.contains { normalized($0.host, nanoleaf: nanoleaf) == h }
     }
 
     /// Adresse ohne den Standard-Port von Nanoleaf
