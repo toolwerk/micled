@@ -79,6 +79,17 @@ impl ServerCertVerifier for Pinned {
     }
 }
 
+/// `host` oder `host:port` (ohne Port 443)
+fn split_port(host: &str) -> (&str, u16) {
+    match host.rsplit_once(':') {
+        Some((h, p)) if !h.contains(':') => match p.parse() {
+            Ok(port) => (h, port),
+            Err(_) => (host, 443),
+        },
+        _ => (host, 443),
+    }
+}
+
 /// Text der Anfrage
 fn request_bytes(host: &str, method: &str, path: &str, key: Option<&str>, body: Option<&Value>) -> Vec<u8> {
     let mut head = format!("{method} {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\nAccept: application/json\r\n");
@@ -95,7 +106,7 @@ fn request_bytes(host: &str, method: &str, path: &str, key: Option<&str>, body: 
     out
 }
 
-/// Eine Anfrage an die Bridge `host` (Port 443). Mit `fingerprint` nur an
+/// Eine Anfrage an die Bridge `host` (ohne Angabe Port 443). Mit `fingerprint` nur an
 /// genau dieses Zertifikat, ohne (Koppeln) an jedes. Liefert die Antwort und
 /// den Fingerabdruck des gesehenen Zertifikats.
 pub fn request(
@@ -119,10 +130,11 @@ pub fn request(
         .dangerous()
         .with_custom_certificate_verifier(verifier.clone())
         .with_no_client_auth();
-    let name = ServerName::try_from(host.to_string()).map_err(|_| format!("Ungültige Adresse der Bridge: {host}"))?;
+    let (name, port) = split_port(host);
+    let name = ServerName::try_from(name.to_string()).map_err(|_| format!("Ungültige Adresse der Bridge: {host}"))?;
     let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
 
-    let addr = (host, 443)
+    let addr = (split_port(host).0, port)
         .to_socket_addrs()
         .map_err(|e| unreachable(&e))?
         .next()
@@ -180,7 +192,7 @@ fn dechunk(mut rest: &[u8]) -> Result<Vec<u8>, String> {
         if size == 0 {
             return Ok(out);
         }
-        if rest.len() < size + 2 {
+        if size.checked_add(2).is_none_or(|need| rest.len() < need) {
             return Err(incomplete());
         }
         out.extend_from_slice(&rest[..size]);
@@ -257,6 +269,14 @@ mod tests {
     }
 
     #[test]
+    fn port_is_optional() {
+        assert_eq!(split_port("192.168.1.20"), ("192.168.1.20", 443));
+        assert_eq!(split_port("127.0.0.1:8443"), ("127.0.0.1", 8443));
+        assert_eq!(split_port("bridge.local:x"), ("bridge.local:x", 443));
+        assert_eq!(split_port("fe80::1"), ("fe80::1", 443));
+    }
+
+    #[test]
     fn request_has_key_and_length() {
         let r = String::from_utf8(request_bytes("10.0.0.2", "PUT", "/clip/v2/resource/light/a", Some("k"), Some(&json!({"on": {"on": true}})))).unwrap();
         assert!(r.starts_with("PUT /clip/v2/resource/light/a HTTP/1.1\r\nHost: 10.0.0.2\r\nConnection: close\r\n"));
@@ -281,6 +301,8 @@ mod tests {
         assert_eq!(parse_response(raw).unwrap(), json!({"a": 1}));
         let cut = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\n{\"a\":\r\n";
         assert!(parse_response(cut).is_err());
+        let huge = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nffffffffffffffff\r\nx\r\n";
+        assert!(parse_response(huge).is_err(), "riesige Blocklänge ohne Überlauf");
     }
 
     #[test]
