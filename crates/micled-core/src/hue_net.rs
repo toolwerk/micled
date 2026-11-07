@@ -79,8 +79,14 @@ impl ServerCertVerifier for Pinned {
     }
 }
 
-/// `host` oder `host:port` (ohne Port 443)
+/// `host`, `host:port`, `[v6]` oder `[v6]:port` (ohne Port 443)
 fn split_port(host: &str) -> (&str, u16) {
+    if let Some(rest) = host.strip_prefix('[') {
+        if let Some((h, tail)) = rest.split_once(']') {
+            let port = tail.strip_prefix(':').and_then(|p| p.parse().ok()).unwrap_or(443);
+            return (h, port);
+        }
+    }
     match host.rsplit_once(':') {
         Some((h, p)) if !h.contains(':') => match p.parse() {
             Ok(port) => (h, port),
@@ -134,12 +140,23 @@ pub fn request(
     let name = ServerName::try_from(name.to_string()).map_err(|_| format!("Ungültige Adresse der Bridge: {host}"))?;
     let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
 
-    let addr = (split_port(host).0, port)
-        .to_socket_addrs()
-        .map_err(|e| unreachable(&e))?
-        .next()
-        .ok_or_else(|| unreachable(&"Adresse unbekannt"))?;
-    let tcp = TcpStream::connect_timeout(&addr, TIMEOUT).map_err(|e| unreachable(&e))?;
+    // jede aufgelöste Adresse versuchen (z. B. erst IPv6, dann IPv4)
+    let mut last_error: Option<std::io::Error> = None;
+    let mut tcp = None;
+    for addr in (split_port(host).0, port).to_socket_addrs().map_err(|e| unreachable(&e))? {
+        match TcpStream::connect_timeout(&addr, TIMEOUT) {
+            Ok(t) => {
+                tcp = Some(t);
+                break;
+            }
+            Err(e) => last_error = Some(e),
+        }
+    }
+    let tcp = match (tcp, last_error) {
+        (Some(t), _) => t,
+        (None, Some(e)) => return Err(unreachable(&e)),
+        (None, None) => return Err(unreachable(&"Adresse unbekannt")),
+    };
     tcp.set_read_timeout(Some(TIMEOUT)).map_err(|e| unreachable(&e))?;
     tcp.set_write_timeout(Some(TIMEOUT)).map_err(|e| unreachable(&e))?;
     let mut tls = StreamOwned::new(conn, tcp);
@@ -165,6 +182,10 @@ pub fn request(
                 if buf.len() > MAX_RESPONSE {
                     return Err("Antwort der Hue-Bridge ist zu groß".into());
                 }
+                // nicht auf das Schließen warten, falls die Bridge die Verbindung offen hält
+                if is_complete(&buf) {
+                    break;
+                }
             }
             // Die Bridge schließt ohne close_notify; ob die Antwort vollständig
             // ist, prüft parse_response
@@ -178,6 +199,23 @@ pub fn request(
 
 fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
     hay.windows(needle.len()).position(|w| w == needle)
+}
+
+/// Liegt die Antwort vollständig vor (nach `Content-Length` oder dem letzten
+/// Block bei `chunked`)? Ohne beides zählt erst das Schließen.
+fn is_complete(raw: &[u8]) -> bool {
+    let Some(split) = find(raw, b"\r\n\r\n") else { return false };
+    let head = String::from_utf8_lossy(&raw[..split]).to_ascii_lowercase();
+    let body = &raw[split + 4..];
+    for l in head.split("\r\n").skip(1) {
+        let Some((name, value)) = l.split_once(':') else { continue };
+        match name.trim() {
+            "transfer-encoding" if value.contains("chunked") => return dechunk(body).is_ok(),
+            "content-length" => return value.trim().parse::<usize>().is_ok_and(|n| body.len() >= n),
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Rumpf mit `Transfer-Encoding: chunked` zusammensetzen
@@ -274,6 +312,8 @@ mod tests {
         assert_eq!(split_port("127.0.0.1:8443"), ("127.0.0.1", 8443));
         assert_eq!(split_port("bridge.local:x"), ("bridge.local:x", 443));
         assert_eq!(split_port("fe80::1"), ("fe80::1", 443));
+        assert_eq!(split_port("[fe80::1]"), ("fe80::1", 443));
+        assert_eq!(split_port("[fe80::1]:8443"), ("fe80::1", 8443));
     }
 
     #[test]
@@ -293,6 +333,15 @@ mod tests {
         assert_eq!(parse_response(raw).unwrap(), json!({"data": [1]}));
         let short = b"HTTP/1.1 200 OK\r\nContent-Length: 20\r\n\r\n{\"data\": [1]}";
         assert!(parse_response(short).unwrap_err().contains("unvollständig"));
+    }
+
+    #[test]
+    fn completeness_without_close() {
+        assert!(is_complete(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}"));
+        assert!(!is_complete(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\n{}"));
+        assert!(is_complete(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n"));
+        assert!(!is_complete(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n"));
+        assert!(!is_complete(b"HTTP/1.1 200 OK\r\n\r\n{}"), "ohne Länge bis zum Schließen lesen");
     }
 
     #[test]
