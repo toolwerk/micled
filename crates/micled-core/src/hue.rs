@@ -19,6 +19,9 @@ use crate::output::Device;
 /// Abstand zwischen zwei Befehlen an Lampen (die Bridge verarbeitet etwa
 /// zehn pro Sekunde)
 const SPACING: Duration = Duration::from_millis(100);
+/// Abstand zwischen zwei Befehlen an einen Raum (`grouped_light`, etwa einer
+/// pro Sekunde)
+const GROUP_SPACING: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -113,6 +116,8 @@ struct Saved {
     on: bool,
     brightness: Option<f64>,
     color: SavedColor,
+    /// Lampe kann Farben (hat `color`); sonst nur An/Aus, Helligkeit, Weißton
+    supports_color: bool,
 }
 
 impl Saved {
@@ -128,13 +133,34 @@ impl Saved {
                 _ => SavedColor::Unknown,
             },
         };
-        Some(Saved { id, on: l["on"]["on"].as_bool().unwrap_or(false), brightness: l["dimming"]["brightness"].as_f64(), color })
+        Some(Saved {
+            id,
+            on: l["on"]["on"].as_bool().unwrap_or(false),
+            brightness: l["dimming"]["brightness"].as_f64(),
+            color,
+            supports_color: l["color"].is_object(),
+        })
     }
 
-    /// Befehl, der den gemerkten Zustand wiederherstellt
-    fn body(&self) -> Value {
-        if !self.on {
-            return json!({ "on": { "on": false } });
+    /// Befehle, die den gemerkten Zustand wiederherstellen. Eine vorher
+    /// ausgeschaltete Lampe bekommt erst Farbe und Helligkeit (die Lampe nimmt
+    /// sie nur eingeschaltet an) und wird dann ausgeschaltet, damit sie beim
+    /// nächsten Einschalten nicht in der Call-Farbe leuchtet.
+    fn bodies(&self) -> Vec<Value> {
+        let off = json!({ "on": { "on": false } });
+        let lit = self.lit_body();
+        match (self.on, lit) {
+            (true, Some(b)) => vec![b],
+            (true, None) => vec![json!({ "on": { "on": true } })],
+            (false, Some(b)) => vec![b, off],
+            (false, None) => vec![off],
+        }
+    }
+
+    /// Eingeschaltet mit gemerkter Farbe und Helligkeit, `None` wenn nichts bekannt ist
+    fn lit_body(&self) -> Option<Value> {
+        if self.brightness.is_none() && self.color == SavedColor::Unknown {
+            return None;
         }
         let mut b = json!({ "on": { "on": true } });
         if let Some(bri) = self.brightness {
@@ -144,6 +170,17 @@ impl Saved {
             SavedColor::Xy(x, y) => b["color"] = json!({ "xy": { "x": x, "y": y } }),
             SavedColor::Mirek(m) => b["color_temperature"] = json!({ "mirek": m }),
             SavedColor::Unknown => {}
+        }
+        Some(b)
+    }
+
+    /// Farbbefehl passend zur Lampe: ohne `color`, wenn sie keine Farben kann
+    fn adapt(&self, body: &Value) -> Value {
+        let mut b = body.clone();
+        if !self.supports_color {
+            if let Some(o) = b.as_object_mut() {
+                o.remove("color");
+            }
         }
         b
     }
@@ -182,25 +219,35 @@ pub struct Session {
     shown: Option<Scene>,
     /// Eine Farbe von MicLED ist womöglich zu sehen (auch nach einem Timeout)
     dirty: bool,
-    /// Zeit des letzten Befehls an eine Lampe (für [`SPACING`])
+    /// Zeit des letzten Befehls an eine Lampe bzw. einen Raum (für die Abstände)
     last_put: Option<Instant>,
+    last_group: Option<Instant>,
+    /// Lampen eines früheren Ziels, die beim Wechsel nicht zurückgestellt
+    /// werden konnten; wird bei jedem Durchgang erneut versucht
+    orphan: Option<(Hue, Vec<Saved>)>,
 }
 
 impl Device for Session {
     type Cfg = Hue;
 
     fn apply(&mut self, cfg: Option<&Hue>, scene: &Scene) -> Result<(), String> {
-        let mut last = self.last_put;
+        let (mut last, mut last_group) = (self.last_put, self.last_group);
         let r = self.apply_with(cfg, scene, &mut |h, method, path, body| {
             if method == "PUT" {
-                if let Some(wait) = last.and_then(|t| SPACING.checked_sub(t.elapsed())) {
+                let (slot, spacing) = if path.contains("/grouped_light/") {
+                    (&mut last_group, GROUP_SPACING)
+                } else {
+                    (&mut last, SPACING)
+                };
+                if let Some(wait) = slot.and_then(|t| spacing.checked_sub(t.elapsed())) {
                     std::thread::sleep(wait);
                 }
-                last = Some(Instant::now());
+                *slot = Some(Instant::now());
             }
             send_real(h, method, path, body)
         });
         self.last_put = last;
+        self.last_group = last_group;
         r
     }
 
@@ -217,14 +264,19 @@ impl Device for Session {
 impl Session {
     fn apply_with(&mut self, cfg: Option<&Hue>, scene: &Scene, send: &mut SendFn<'_>) -> Result<(), String> {
         if self.cfg.is_some() && self.cfg.as_ref() != cfg {
+            let mut orphan = self.orphan.take();
             if let Some(old) = self.cfg.clone() {
                 if let Err(e) = self.idle(&old, send) {
                     log::warn!("alte Hue-Lampe nicht zurückgestellt: {e}");
+                    if orphan.is_some() {
+                        log::warn!("ältere nicht zurückgestellte Hue-Lampen aufgegeben");
+                    }
+                    orphan = self.saved.take().map(|s| (old, s));
                 }
             }
-            let last_put = self.last_put;
-            *self = Session { last_put, ..Session::default() };
+            *self = Session { last_put: self.last_put, last_group: self.last_group, orphan, ..Session::default() };
         }
+        self.retry_orphan(send);
         let Some(h) = cfg else { return Ok(()) };
         self.cfg = Some(h.clone());
         let Some(color) = scene_color(scene) else { return self.idle(h, send) };
@@ -242,9 +294,9 @@ impl Session {
                 send(h, "PUT", &format!("/clip/v2/resource/grouped_light/{gid}"), Some(body))?;
             }
             _ => {
-                let ids: Vec<String> = self.saved.iter().flatten().map(|s| s.id.clone()).collect();
-                for id in ids {
-                    send(h, "PUT", &format!("/clip/v2/resource/light/{id}"), Some(body.clone()))?;
+                let lights: Vec<(String, Value)> = self.saved.iter().flatten().map(|s| (s.id.clone(), s.adapt(&body))).collect();
+                for (id, b) in lights {
+                    send(h, "PUT", &format!("/clip/v2/resource/light/{id}"), Some(b))?;
                 }
             }
         }
@@ -273,6 +325,21 @@ impl Session {
                 (lights, grouped)
             }
         };
+        let mut lights = lights;
+        // Lampen, die noch vom früheren Ziel in der Call-Farbe leuchten:
+        // deren Zustand von vorher gilt, und das alte Ziel lässt sie in Ruhe
+        if let Some((old, saved)) = &mut self.orphan {
+            if old.host == h.host {
+                for l in &mut lights {
+                    if let Some(i) = saved.iter().position(|s| s.id == l.id) {
+                        *l = saved.remove(i);
+                    }
+                }
+            }
+        }
+        if self.orphan.as_ref().is_some_and(|(_, s)| s.is_empty()) {
+            self.orphan = None;
+        }
         if lights.is_empty() {
             return Err(match h.target.kind {
                 Kind::Light => "Lampe auf der Hue-Bridge nicht gefunden".into(),
@@ -289,15 +356,34 @@ impl Session {
             return Ok(());
         }
         let saved = self.saved.clone().unwrap_or_default();
-        for s in &saved {
-            send(h, "PUT", &format!("/clip/v2/resource/light/{}", s.id), Some(s.body()))?;
-        }
+        restore_all(h, &saved, send)?;
         self.dirty = false;
         self.shown = None;
         self.saved = None;
         self.grouped = None;
         Ok(())
     }
+}
+
+impl Session {
+    /// Lampen eines früheren Ziels zurückstellen, falls das beim Wechsel scheiterte
+    fn retry_orphan(&mut self, send: &mut SendFn<'_>) {
+        let Some((old, saved)) = self.orphan.take() else { return };
+        if let Err(e) = restore_all(&old, &saved, send) {
+            log::warn!("alte Hue-Lampe weiter nicht zurückgestellt: {e}");
+            self.orphan = Some((old, saved));
+        }
+    }
+}
+
+/// Jede Lampe auf ihren gemerkten Zustand
+fn restore_all(h: &Hue, saved: &[Saved], send: &mut SendFn<'_>) -> Result<(), String> {
+    for s in saved {
+        for b in s.bodies() {
+            send(h, "PUT", &format!("/clip/v2/resource/light/{}", s.id), Some(b))?;
+        }
+    }
+    Ok(())
 }
 
 /// Antwort auf `POST /api` auswerten: Schlüssel oder Fehlermeldung
@@ -500,14 +586,20 @@ mod tests {
         let mut f = Fake::new();
         let mut s = Session::default();
         for (id, want) in [
-            ("l2", json!({"on": {"on": false}})),
-            ("l3", json!({"on": {"on": true}, "dimming": {"brightness": 20.0}, "color": {"xy": {"x": 0.6, "y": 0.3}}})),
+            (
+                "l2",
+                vec![
+                    json!({"on": {"on": true}, "dimming": {"brightness": 80.0}, "color": {"xy": {"x": 0.2, "y": 0.3}}}),
+                    json!({"on": {"on": false}}),
+                ],
+            ),
+            ("l3", vec![json!({"on": {"on": true}, "dimming": {"brightness": 20.0}, "color": {"xy": {"x": 0.6, "y": 0.3}}})]),
         ] {
             let h = hue(Kind::Light, id);
             s.apply_with(Some(&h), &LIVE, &mut f.send()).unwrap();
             f.log.clear();
             s.apply_with(Some(&h), &Scene::Idle, &mut f.send()).unwrap();
-            assert_eq!(f.bodies(), [want], "{id}");
+            assert_eq!(f.bodies(), want, "{id}: erst Farbe und Helligkeit, dann aus");
             f.log.clear();
         }
     }
@@ -521,8 +613,8 @@ mod tests {
         assert_eq!(f.take(), ["GET room/r1", "GET light", "PUT grouped_light/g1"]);
         s.apply_with(Some(&h), &Scene::Idle, &mut f.send()).unwrap();
         let bodies = f.bodies();
-        assert_eq!(f.take(), ["PUT light/l1", "PUT light/l2"], "nur Lampen der Geräte im Raum");
-        assert_eq!(bodies[1], json!({"on": {"on": false}}));
+        assert_eq!(f.take(), ["PUT light/l1", "PUT light/l2", "PUT light/l2"], "nur Lampen der Geräte im Raum");
+        assert_eq!(bodies[2], json!({"on": {"on": false}}));
     }
 
     #[test]
@@ -576,6 +668,55 @@ mod tests {
         s.apply_with(None, &LIVE, &mut f.send()).unwrap();
         assert_eq!(f.take(), ["PUT light/l3"]);
         assert_eq!(s.current(), None);
+    }
+
+    #[test]
+    fn off_light_without_known_state_only_goes_off() {
+        let l = Saved { id: "x".into(), on: false, brightness: None, color: SavedColor::Unknown, supports_color: false };
+        assert_eq!(l.bodies(), [json!({"on": {"on": false}})]);
+    }
+
+    #[test]
+    fn white_light_gets_no_color() {
+        let mut f = Fake::new();
+        f.lights.push(json!({"id": "w1", "owner": {"rid": "d9"}, "on": {"on": true}, "dimming": {"brightness": 60.0},
+            "color_temperature": {"mirek": 250, "mirek_valid": true}}));
+        let mut s = Session::default();
+        let h = hue(Kind::Light, "w1");
+        s.apply_with(Some(&h), &LIVE, &mut f.send()).unwrap();
+        let b = f.bodies();
+        assert_eq!(b[0], json!({"on": {"on": true}, "dimming": {"brightness": 100.0}}));
+    }
+
+    #[test]
+    fn failed_restore_on_target_change_is_retried_and_not_lost() {
+        let mut f = Fake::new();
+        let mut s = Session::default();
+        let room = hue(Kind::Room, "r1");
+        s.apply_with(Some(&room), &LIVE, &mut f.send()).unwrap();
+        f.log.clear();
+        // Wechsel im Call auf eine Lampe des Raums, das Zurückstellen scheitert
+        let mut calls = 0;
+        let lamp = hue(Kind::Light, "l1");
+        let r = s.apply_with(Some(&lamp), &LIVE, &mut |h, m, p, b| {
+            calls += 1;
+            // Zurückstellen und sofortiger zweiter Versuch scheitern
+            if calls <= 2 {
+                return Err("Hue-Bridge nicht erreichbar: timeout".into());
+            }
+            f.send()(h, m, p, b)
+        });
+        r.unwrap();
+        assert_eq!(s.orphan.as_ref().map(|(_, l)| l.len()), Some(1), "l1 gehört jetzt zum neuen Ziel, l2 bleibt offen");
+        f.log.clear();
+        // nach dem Call: l1 bekommt den Zustand von vor dem Call (nicht Rot),
+        // l2 aus dem alten Raum wird beim nächsten Durchgang nachgeholt
+        s.apply_with(Some(&lamp), &Scene::Idle, &mut f.send()).unwrap();
+        let log: Vec<(String, Value)> = f.log.drain(..).map(|(_, _, p, b)| (p, b.unwrap())).collect();
+        let l1: Vec<&Value> = log.iter().filter(|(p, _)| p.ends_with("/l1")).map(|(_, b)| b).collect();
+        assert_eq!(l1, [&json!({"on": {"on": true}, "dimming": {"brightness": 50.0}, "color_temperature": {"mirek": 366}})]);
+        assert!(log.iter().any(|(p, _)| p.ends_with("/l2")), "alte Lampe l2 nachgeholt");
+        assert!(s.orphan.is_none());
     }
 
     #[test]
