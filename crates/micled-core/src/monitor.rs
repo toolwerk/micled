@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{caldav, camera, dim, onair, pixoo, shared, slack};
+use crate::{caldav, camera, dim, hue, onair, output, pixoo, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -24,6 +24,9 @@ const FLASH_STEPS: u8 = 10;
 const NEXTCLOUD_EVERY: Duration = Duration::from_secs(120);
 /// Wartezeit nach einer Änderung der Zugangsdaten (Tippen nicht abrufen)
 const NEXTCLOUD_SETTLE: Duration = Duration::from_secs(3);
+/// Höchstens so lange beim Beenden auf die Hue-Lampen warten (ein Raum wird
+/// Lampe für Lampe zurückgestellt)
+const HUE_SHUTDOWN: Duration = Duration::from_secs(5);
 
 /// Ergebnis eines Abrufs aus Nextcloud, gekennzeichnet mit der Runde
 type Fetched = Arc<Mutex<Option<(u64, Result<Vec<u64>, String>)>>>;
@@ -99,6 +102,7 @@ impl Monitor {
         let log = calls.clone();
         let slack_error = Arc::new(Mutex::new(None));
         let pixoo_error = Arc::new(Mutex::new(None));
+        let hue_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
             .spawn(move || {
@@ -130,9 +134,12 @@ impl Monitor {
                     brightness: 100,
                     slack: slack::Updater::start(slack_error.clone()),
                     slack_error,
-                    pixoo: pixoo::Updater::start(pixoo_error.clone()),
+                    pixoo: output::Updater::start("pixoo", pixoo_error.clone()),
                     pixoo_error,
                     last_scene: None,
+                    hue: output::Updater::start("hue", hue_error.clone()),
+                    hue_error,
+                    last_hue: None,
                 };
                 // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
                 w.report_slack();
@@ -168,7 +175,15 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                w.pixoo.shutdown(Duration::from_secs(3));
+                // Pixoo und Hue gleichzeitig zurückstellen, nicht nacheinander
+                let started = Instant::now();
+                let pixoo = w.pixoo.begin_shutdown();
+                let hue = w.hue.begin_shutdown();
+                for (done, limit) in [(pixoo, Duration::from_secs(3)), (hue, HUE_SHUTDOWN)] {
+                    if let Some(done) = done {
+                        let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
+                    }
+                }
                 w.slack.shutdown(Duration::from_secs(3));
             })
             .expect("Monitor-Thread");
@@ -274,10 +289,14 @@ struct Worker {
     brightness: u8,
     slack: slack::Updater,
     slack_error: Arc<Mutex<Option<String>>>,
-    pixoo: pixoo::Updater,
+    pixoo: output::Updater<pixoo::Session>,
     pixoo_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an das Display gegebene Adresse und Szene
     last_scene: Option<(Option<String>, Scene)>,
+    hue: output::Updater<hue::Session>,
+    hue_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an die Hue-Lampe gegebenes Ziel und Szene
+    last_hue: Option<(Option<hue::Hue>, Scene)>,
 }
 
 impl Worker {
@@ -300,6 +319,9 @@ impl Worker {
         let slack_changed = cfg.slack != self.engine.config().slack;
         if cfg.pixoo != self.engine.config().pixoo {
             *self.pixoo_error.lock().unwrap() = None;
+        }
+        if cfg.hue != self.engine.config().hue {
+            *self.hue_error.lock().unwrap() = None;
         }
         if cfg.nextcloud != self.engine.config().nextcloud {
             self.round += 1;
@@ -494,9 +516,14 @@ impl Worker {
             self.set_live(live);
         }
 
-        // 7. Display: Bild nur bei einer Änderung (oder neuer Adresse) senden
+        // 7. Display und Hue: nur bei einer Änderung (oder neuem Ziel) senden
         let brightness = self.brightness;
         let scene = self.engine.scene(now).map_color(|c| dim::apply(c, brightness));
+        let wanted = (self.engine.config().hue.clone(), scene.clone());
+        if self.last_hue.as_ref() != Some(&wanted) {
+            self.hue.send(wanted.0.clone(), wanted.1.clone());
+            self.last_hue = Some(wanted);
+        }
         let wanted = (self.engine.config().pixoo.clone(), scene);
         if self.last_scene.as_ref() != Some(&wanted) {
             self.pixoo.send(wanted.0.clone(), wanted.1.clone());
@@ -570,7 +597,8 @@ impl Worker {
                 .or_else(|| self.on_air_error.lock().unwrap().clone())
                 .or_else(|| self.calendar_error.clone())
                 .or_else(|| self.slack_error.lock().unwrap().clone())
-                .or_else(|| self.pixoo_error.lock().unwrap().clone()),
+                .or_else(|| self.pixoo_error.lock().unwrap().clone())
+                .or_else(|| self.hue_error.lock().unwrap().clone()),
         }
     }
 }

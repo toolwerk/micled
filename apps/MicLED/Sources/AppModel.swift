@@ -47,6 +47,29 @@ final class AppModel {
     /// Status auf einem Pixoo 64 im eigenen Netz zeigen
     var pixooEnabled: Bool { didSet { persist() } }
     var pixooHost: String { didSet { persist() } }
+    /// Status auf einer Hue-Lampe oder in einem Raum über die Hue Bridge zeigen
+    var hueEnabled: Bool { didSet { persist() } }
+    /// Eine neue Adresse löscht Kopplung und Auswahl
+    var hueHost: String {
+        didSet {
+            if hueHost != oldValue {
+                batch {
+                    hueKey = ""
+                    hueFingerprint = ""
+                    hueTargetId = ""
+                }
+                hueChoices = []
+                hueChoicesError = nil
+            }
+            persist()
+        }
+    }
+    /// App-Schlüssel vom Koppeln, liegt im Schlüsselbund
+    var hueKey: String { didSet { Keychain.write(.hue, hueKey); persist() } }
+    /// SHA-256 des Zertifikats der Bridge vom Koppeln
+    var hueFingerprint: String { didSet { persist() } }
+    var hueTargetKind: HueTargetKind { didSet { persist() } }
+    var hueTargetId: String { didSet { persist() } }
     var favorites: [String] { didSet { persist(pushConfig: false) } }
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     var appColors: [AppColor] { didSet { persist() } }
@@ -74,6 +97,9 @@ final class AppModel {
     private(set) var shownHex: String?
     private(set) var baseHex: String?
     private(set) var error: String?
+    /// Räume und Lampen der gekoppelten Bridge (nur im Speicher)
+    private(set) var hueChoices: [HueTarget] = []
+    private(set) var hueChoicesError: String?
 
     var micActive: Bool { !micUsers.isEmpty }
 
@@ -117,6 +143,11 @@ final class AppModel {
             Key.slackEmoji: ":red_circle:",
             Key.pixooEnabled: false,
             Key.pixooHost: "",
+            Key.hueEnabled: false,
+            Key.hueHost: "",
+            Key.hueFingerprint: "",
+            Key.hueTargetKind: "light",
+            Key.hueTargetId: "",
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
             Key.dimTo: 7 * 60,
@@ -150,6 +181,12 @@ final class AppModel {
         slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
         pixooEnabled = d.bool(forKey: Key.pixooEnabled)
         pixooHost = d.string(forKey: Key.pixooHost) ?? ""
+        hueEnabled = d.bool(forKey: Key.hueEnabled)
+        hueHost = d.string(forKey: Key.hueHost) ?? ""
+        hueKey = ScreenshotMode.isActive ? "screenshot" : Keychain.read(.hue)
+        hueFingerprint = d.string(forKey: Key.hueFingerprint) ?? ""
+        hueTargetKind = d.string(forKey: Key.hueTargetKind) == "room" ? .room : .light
+        hueTargetId = d.string(forKey: Key.hueTargetId) ?? ""
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -169,6 +206,7 @@ final class AppModel {
             live = true
             shownHex = "ff0000"
             baseHex = "0000ff"
+            hueChoices = ScreenshotMode.hueChoices
             return
         }
 
@@ -245,6 +283,48 @@ final class AppModel {
         let host = pixooHost
         let result = await Task.detached { pixooCheck(host: host) }.value
         return result.error ?? "Pixoo erreichbar"
+    }
+
+    /// Mit der Bridge gekoppelt (Schlüssel und Zertifikat bekannt)
+    var huePaired: Bool { !hueKey.isEmpty && !hueFingerprint.isEmpty }
+
+    /// Gewählte Lampe bzw. gewählter Raum für die Auswahl, leer = keine Auswahl
+    var hueSelection: String {
+        get { hueTargetId.isEmpty ? "" : "\(hueTargetKind == .room ? "room" : "light"):\(hueTargetId)" }
+        set {
+            let parts = newValue.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { hueTargetId = ""; return }
+            batch {
+                hueTargetKind = parts[0] == "room" ? .room : .light
+                hueTargetId = parts[1]
+            }
+        }
+    }
+
+    /// Mit der Hue Bridge koppeln (Knopf vorher drücken), liefert eine Meldung
+    /// für die Einstellungen
+    func pairHue() async -> String {
+        let host = hueHost
+        let result = await Task.detached { huePair(host: host) }.value
+        if let error = result.error { return error }
+        // Adresse während des Koppelns geändert: Ergebnis gehört zur alten Bridge
+        guard host == hueHost else { return "Adresse geändert, bitte erneut koppeln" }
+        batch {
+            hueKey = result.key
+            hueFingerprint = result.fingerprint
+        }
+        await loadHueTargets()
+        return "Gekoppelt ✓"
+    }
+
+    /// Räume und Lampen der gekoppelten Bridge laden
+    func loadHueTargets() async {
+        guard huePaired, !ScreenshotMode.isActive else { return }
+        let (host, key, fingerprint) = (hueHost, hueKey, hueFingerprint)
+        let result = await Task.detached { hueTargets(host: host, key: key, fingerprint: fingerprint) }.value
+        guard host == hueHost else { return }
+        hueChoices = result.items
+        hueChoicesError = result.error
     }
 
     /// Sekunden auf Sendung je Tag zwischen aufsteigenden Tagesgrenzen
@@ -329,7 +409,12 @@ final class AppModel {
             slackToken: slackEnabled ? slackToken : "",
             slackText: slackText,
             slackEmoji: slackEmoji,
-            pixooHost: pixooEnabled ? pixooHost : ""
+            pixooHost: pixooEnabled ? pixooHost : "",
+            hueHost: hueEnabled ? hueHost : "",
+            hueKey: hueKey,
+            hueFingerprint: hueFingerprint,
+            hueTargetKind: hueTargetKind,
+            hueTargetId: hueTargetId
         )
     }
 
@@ -337,7 +422,20 @@ final class AppModel {
         remindersEnabled && nextcloudEnabled
     }
 
+    /// Unterdrückt `persist()` während `batch`, damit der Kern keine halb
+    /// geänderte Kombination (z. B. neuer Schlüssel, alter Fingerabdruck) sieht
+    private var batching = false
+
+    /// Mehrere Einstellungen ändern und einmal speichern
+    private func batch(_ change: () -> Void) {
+        batching = true
+        change()
+        batching = false
+        persist()
+    }
+
     private func persist(pushConfig: Bool = true) {
+        if batching { return }
         defaults.set(enabled, forKey: Key.enabled)
         defaults.set(lampKind.rawValue, forKey: Key.lampKind)
         defaults.set(luxaforId, forKey: Key.luxaforId)
@@ -366,6 +464,11 @@ final class AppModel {
         defaults.set(slackEmoji, forKey: Key.slackEmoji)
         defaults.set(pixooEnabled, forKey: Key.pixooEnabled)
         defaults.set(pixooHost, forKey: Key.pixooHost)
+        defaults.set(hueEnabled, forKey: Key.hueEnabled)
+        defaults.set(hueHost, forKey: Key.hueHost)
+        defaults.set(hueFingerprint, forKey: Key.hueFingerprint)
+        defaults.set(hueTargetKind == .room ? "room" : "light", forKey: Key.hueTargetKind)
+        defaults.set(hueTargetId, forKey: Key.hueTargetId)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -474,6 +577,11 @@ final class AppModel {
         static let slackEmoji = "slackEmoji"
         static let pixooEnabled = "pixooEnabled"
         static let pixooHost = "pixooHost"
+        static let hueEnabled = "hueEnabled"
+        static let hueHost = "hueHost"
+        static let hueFingerprint = "hueFingerprint"
+        static let hueTargetKind = "hueTargetKind"
+        static let hueTargetId = "hueTargetId"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"

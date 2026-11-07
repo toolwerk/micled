@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var nextcloudResult = ""
     @State private var slackResult = ""
     @State private var pixooResult = ""
+    @State private var hueResult = ""
 
     var body: some View {
         @Bindable var model = model
@@ -111,6 +112,49 @@ struct SettingsView: View {
             } footer: {
                 Text("Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf einer Hue-Lampe zeigen", isOn: $model.hueEnabled)
+                if model.hueEnabled {
+                    HStack {
+                        TextField("Bridge", text: $model.hueHost, prompt: Text("192.168.1.20"))
+                            .autocorrectionDisabled()
+                        Button("Koppeln") {
+                            hueResult = "Kopple …"
+                            Task { hueResult = await model.pairHue() }
+                        }
+                        .disabled(model.hueHost.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    Text(hueResult.isEmpty ? (model.huePaired ? "Gekoppelt ✓" : "Nicht gekoppelt") : hueResult)
+                        .font(.caption).foregroundStyle(.secondary)
+                    if model.huePaired {
+                        Picker("Lampe", selection: $model.hueSelection) {
+                            Text("Bitte wählen").tag("")
+                            ForEach(model.hueChoices, id: \.self) { t in
+                                Text(t.kind == .room ? "Raum: \(t.name)" : t.name)
+                                    .tag("\(t.kind == .room ? "room" : "light"):\(t.id)")
+                            }
+                            // gespeicherte Auswahl, solange die Liste noch nicht geladen ist
+                            if !model.hueSelection.isEmpty,
+                               !model.hueChoices.contains(where: { $0.id == model.hueTargetId }) {
+                                Text(model.hueTargetId).tag(model.hueSelection)
+                            }
+                        }
+                        if let error = model.hueChoicesError {
+                            Text(error).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("Philips Hue")
+            } footer: {
+                Text("Knopf an der Bridge drücken, dann „Koppeln“. Die IP-Adresse steht in der Hue-App unter Einstellungen › Bridges. Bei einem Raum werden alle Lampen darin geschaltet. Danach haben die Lampen wieder Farbe, Helligkeit und An/Aus von vorher. Der Schlüssel liegt im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .onChange(of: model.hueHost) { hueResult = "" }
+            .task(id: model.hueEnabled) {
+                if model.hueEnabled && model.hueChoices.isEmpty { await model.loadHueTargets() }
             }
 
             Section {

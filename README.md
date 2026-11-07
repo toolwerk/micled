@@ -26,6 +26,7 @@
 - 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
 - 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
+- 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
 - ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
@@ -133,6 +134,21 @@ Danach, beim Ausschalten und beim Beenden von MicLED läuft auf dem Display wied
 
 Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Die Lampe schaltet trotzdem sofort.
 
+## Philips Hue
+
+Eine Hue-Lampe, etwa vor der Tür, oder alle Lampen eines Raums zeigen den Status zusätzlich zur Lampe oder statt ihr. MicLED spricht dafür direkt mit der Hue Bridge im eigenen Netz, ohne Cloud und ohne Hue-Konto.
+
+Die Lampe leuchtet auf Sendung in der Mikro-, Kamera- oder Programmfarbe, beim Konzentrations-Timer und bei Fokus in deren Farbe, abends entsprechend gedimmt. Danach, beim Ausschalten und beim Beenden von MicLED hat jede Lampe wieder An/Aus, Farbe und Helligkeit von vorher. Eine vorher ausgeschaltete Lampe leuchtet dabei kurz in ihrer alten Farbe auf, bevor sie ausgeht; so hat sie beim nächsten Einschalten nicht die Call-Farbe. Was du während eines Calls in der Hue-App änderst, überschreibt MicLED danach mit dem Zustand von vor dem Call.
+
+1. In der Hue-App die IP-Adresse der Bridge nachsehen (Einstellungen › Bridges › Bridge › IP-Adresse) und ihr im Router eine **feste IP-Adresse** geben.
+2. In MicLED unter Einstellungen › Philips Hue „Status auf einer Hue-Lampe zeigen“ einschalten und die Adresse eintragen.
+3. Den runden Knopf auf der Bridge drücken und innerhalb von 30 Sekunden „Koppeln“ wählen. Es erscheint „Gekoppelt ✓“. Der App-Schlüssel liegt im Schlüsselbund.
+4. Unter „Lampe“ einen Raum („Raum: …“) oder eine einzelne Lampe wählen. Bei einem Raum werden alle Lampen darin geschaltet; das Zurückstellen dauert bei vielen Lampen einige Sekunden.
+
+Beim Koppeln merkt sich MicLED das Zertifikat der Bridge und spricht danach nur mit genau dieser. Wird die Bridge ausgetauscht oder zurückgesetzt, steht im Menü „Zertifikat der Bridge hat sich geändert, bitte neu koppeln“; dann Schritt 3 wiederholen. Eine neue Adresse löscht die Kopplung ebenfalls.
+
+Ist die Bridge nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und Pixoo schalten trotzdem sofort. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
 ## Termine aus Nextcloud
 
 Für die Vorwarnung gibt es zwei Wege:
@@ -182,12 +198,15 @@ cargo run -p micled-cli -- watch --camera ff00ff --on-air-url http://…   # ode
 cargo run -p micled-cli -- --webhook <ID> set gruen
 MICLED_NEXTCLOUD_PASSWORD=<app-passwort> cargo run -p micled-cli -- nextcloud https://cloud.example.org <benutzer>
 cargo run -p micled-cli -- pixoo 192.168.1.50  # Pixoo prüfen: 5 s „ON AIR“, dann zurück zum vorherigen Kanal
+cargo run -p micled-cli -- hue pair 192.168.1.20  # nach dem Druck auf den Bridge-Knopf: Schlüssel und Fingerabdruck
+MICLED_HUE_KEY=<schlüssel> MICLED_HUE_FINGERPRINT=<fingerabdruck> \
+  cargo run -p micled-cli -- hue test 192.168.1.20 <lampen-id> [--room]   # 5 s Rot, dann zurück
 ```
 
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, Hue Bridge
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen

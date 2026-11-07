@@ -5,7 +5,8 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
-use micled_core::{caldav, camera, lamp, mic, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::output::Device;
+use micled_core::{caldav, camera, hue, lamp, mic, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -38,6 +39,11 @@ enum Cmd {
         /// Adresse im eigenen Netz, z. B. 192.168.1.50
         host: String,
     },
+    /// Philips Hue über die Hue Bridge
+    Hue {
+        #[command(subcommand)]
+        cmd: HueCmd,
+    },
     /// Automatik laufen lassen, bis Strg-C
     Watch {
         /// Farbe bei aktivem Mikrofon
@@ -66,6 +72,55 @@ enum Cmd {
         #[arg(long)]
         ignore: Vec<String>,
     },
+}
+
+#[derive(Subcommand)]
+enum HueCmd {
+    /// Koppeln: erst den Knopf an der Bridge drücken. Gibt App-Schlüssel und
+    /// Fingerabdruck des Zertifikats aus.
+    Pair {
+        /// Adresse der Bridge im eigenen Netz, z. B. 192.168.1.20
+        host: String,
+    },
+    /// Zeigt fünf Sekunden Rot und stellt den Zustand von vorher wieder her.
+    /// Schlüssel und Fingerabdruck kommen aus MICLED_HUE_KEY und MICLED_HUE_FINGERPRINT.
+    Test {
+        host: String,
+        /// ID der Lampe (oder mit --room des Raums) aus der CLIP-v2-API
+        id: String,
+        /// `id` ist ein Raum
+        #[arg(long)]
+        room: bool,
+    },
+}
+
+fn hue_cmd(cmd: &HueCmd) -> Result<(), String> {
+    match cmd {
+        HueCmd::Pair { host } => {
+            let h = pixoo::normalize(host).ok_or("Adresse der Bridge fehlt")?;
+            let (key, fingerprint) = hue::pair(&h)?;
+            println!("Schlüssel:      {key}\nFingerabdruck:  {fingerprint}");
+            Ok(())
+        }
+        HueCmd::Test { host, id, room } => {
+            let cfg = hue::Hue {
+                host: pixoo::normalize(host).ok_or("Adresse der Bridge fehlt")?,
+                key: std::env::var("MICLED_HUE_KEY").map_err(|_| "MICLED_HUE_KEY fehlt")?,
+                fingerprint: std::env::var("MICLED_HUE_FINGERPRINT").map_err(|_| "MICLED_HUE_FINGERPRINT fehlt")?,
+                target: hue::Target { kind: if *room { hue::Kind::Room } else { hue::Kind::Light }, id: id.clone() },
+            };
+            let mut session = hue::Session::default();
+            let shown = session.apply(Some(&cfg), &Scene::Live { camera: false, color: Rgb::RED });
+            if shown.is_ok() {
+                std::thread::sleep(Duration::from_secs(5));
+            }
+            // auch nach einem Fehler zurückstellen, die Farbe kann trotzdem angekommen sein
+            let restored = session.restore();
+            shown.and(restored)?;
+            println!("Hue-Lampe geschaltet und zurückgestellt");
+            Ok(())
+        }
+    }
 }
 
 fn transport(cli: &Cli) -> Transport {
@@ -155,6 +210,7 @@ fn main() {
                 Ok(())
             }),
         },
+        Cmd::Hue { cmd } => hue_cmd(cmd),
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,

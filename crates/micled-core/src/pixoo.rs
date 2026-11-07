@@ -6,14 +6,13 @@
 //! mit fortlaufender `PicID`. Wird sie zu groß, hängt das Gerät, deshalb wird
 //! die Zählung vorher mit `Draw/ResetHttpGifId` zurückgesetzt.
 
-use std::sync::mpsc::{channel, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use base64::Engine as _;
 use serde_json::{json, Value};
 
 use crate::display::{self, Scene};
+use crate::output::Device;
 
 const TIMEOUT: Duration = Duration::from_secs(3);
 /// Ab dieser `PicID` wird die Zählung zurückgesetzt
@@ -92,19 +91,24 @@ pub struct Session {
     pic_id: u32,
 }
 
-impl Session {
-    /// Zeigt `scene` auf `host` (`None` = aus). Wechselt die Adresse, wird das
-    /// alte Gerät vorher auf seinen Kanal zurückgestellt, so gut es geht.
-    pub fn apply(&mut self, host: Option<&str>, scene: &Scene) -> Result<(), String> {
-        self.apply_with(host, scene, &mut post)
+impl Device for Session {
+    type Cfg = String;
+
+    fn apply(&mut self, host: Option<&String>, scene: &Scene) -> Result<(), String> {
+        self.apply_with(host.map(String::as_str), scene, &mut post)
     }
 
-    /// Stellt den vorherigen Kanal wieder her, falls ein Bild zu sehen ist
-    pub fn restore(&mut self) -> Result<(), String> {
+    fn restore(&mut self) -> Result<(), String> {
         let host = self.host.clone();
-        self.apply(host.as_deref(), &Scene::Idle)
+        self.apply(host.as_ref(), &Scene::Idle)
     }
 
+    fn current(&self) -> Option<&String> {
+        self.host.as_ref()
+    }
+}
+
+impl Session {
     fn apply_with(
         &mut self,
         host: Option<&str>,
@@ -153,96 +157,6 @@ impl Session {
             self.saved_channel = None;
         }
         Ok(())
-    }
-}
-
-enum Msg {
-    Update(Option<String>, Scene),
-    /// Kanal zurückstellen und bestätigen (beim Beenden der App)
-    Shutdown(Sender<()>),
-}
-
-/// Schickt Bilder in einem eigenen Thread, damit ein fehlendes Display die
-/// Lampe nicht aufhält. Fehler landen im gemeinsamen Fehler-Slot und werden
-/// nach einer Pause wiederholt; ein Erfolg leert den Slot.
-pub struct Updater {
-    tx: Sender<Msg>,
-}
-
-/// Wartezeit nach einer Änderung der Adresse (Tippen nicht senden)
-const SETTLE: Duration = Duration::from_secs(2);
-const RETRY: Duration = Duration::from_secs(30);
-
-impl Updater {
-    pub fn start(error: Arc<Mutex<Option<String>>>) -> Updater {
-        let (tx, rx) = channel::<Msg>();
-        std::thread::Builder::new()
-            .name("micled-pixoo".into())
-            .spawn(move || {
-                let mut session = Session::default();
-                let mut wanted: (Option<String>, Scene) = (None, Scene::Idle);
-                let mut dirty = false;
-                let shutdown = |session: &mut Session, ack: Sender<()>| {
-                    if let Err(e) = session.restore() {
-                        log::warn!("{e}");
-                    }
-                    let _ = ack.send(());
-                };
-                loop {
-                    let wait = match (dirty, wanted.0 != session.host) {
-                        (false, _) => Duration::from_secs(3600),
-                        (true, true) => SETTLE,
-                        (true, false) => Duration::ZERO,
-                    };
-                    match rx.recv_timeout(wait) {
-                        Ok(Msg::Update(host, scene)) => {
-                            wanted = (host, scene);
-                            dirty = true;
-                            continue;
-                        }
-                        Ok(Msg::Shutdown(ack)) => {
-                            shutdown(&mut session, ack);
-                            break;
-                        }
-                        Err(RecvTimeoutError::Disconnected) => break,
-                        Err(RecvTimeoutError::Timeout) if !dirty => continue,
-                        Err(RecvTimeoutError::Timeout) => {}
-                    }
-                    let r = session.apply(wanted.0.as_deref(), &wanted.1);
-                    if let Err(e) = &r {
-                        log::warn!("{e}");
-                    }
-                    dirty = r.is_err();
-                    *error.lock().unwrap() = r.err();
-                    if dirty {
-                        // nach einer Pause erneut versuchen, neue Wechsel kommen vorher an
-                        match rx.recv_timeout(RETRY) {
-                            Ok(Msg::Update(host, scene)) => wanted = (host, scene),
-                            Ok(Msg::Shutdown(ack)) => {
-                                shutdown(&mut session, ack);
-                                break;
-                            }
-                            Err(RecvTimeoutError::Disconnected) => break,
-                            Err(RecvTimeoutError::Timeout) => {}
-                        }
-                    }
-                }
-            })
-            .expect("Pixoo-Thread");
-        Updater { tx }
-    }
-
-    /// Gewünschter Zustand: Adresse (`None` = aus) und Szene
-    pub fn send(&self, host: Option<String>, scene: Scene) {
-        let _ = self.tx.send(Msg::Update(host, scene));
-    }
-
-    /// Kanal zurückstellen und höchstens `timeout` darauf warten
-    pub fn shutdown(&self, timeout: Duration) {
-        let (ack, done) = channel();
-        if self.tx.send(Msg::Shutdown(ack)).is_ok() {
-            let _ = done.recv_timeout(timeout);
-        }
     }
 }
 
