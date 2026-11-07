@@ -28,6 +28,9 @@ enum ScreenshotMode {
     /// (und nicht ausgegraut) aufgenommen wird
     static var window: String { argument("--window") ?? "menu" }
 
+    /// `--scroll network`: Einstellungen bis zu Govee und Nanoleaf scrollen
+    static var scroll: String? { isActive ? argument("--scroll") : nil }
+
     static let suiteName = "net.staude.micled.screenshots"
 
     /// Eigene, beim Start geleerte Einstellungen

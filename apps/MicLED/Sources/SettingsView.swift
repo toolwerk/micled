@@ -15,6 +15,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
 
+        ScrollViewReader { proxy in
         Form {
             Section("Verbindung zur Lampe") {
                 Picker("Ansteuerung", selection: $model.lampKind) {
@@ -183,7 +184,7 @@ struct SettingsView: View {
                     found(model.goveeFound, in: model.goveeDevices, nanoleaf: false)
                 }
             } header: {
-                Text("Govee")
+                Text("Govee").id("network")
             } footer: {
                 Text("„LAN Control“ in der Govee-App je Gerät einschalten. Danach haben die Lampen wieder An/Aus, Helligkeit und Farbe von vorher. Feste IP empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -386,6 +387,13 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear {
+            // Screenshot der Abschnitte Govee und Nanoleaf
+            if let target = ScreenshotMode.scroll {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { proxy.scrollTo(target, anchor: .top) }
+            }
+        }
+        }
         .frame(width: 480)
         .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
