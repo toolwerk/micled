@@ -175,8 +175,15 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                w.pixoo.shutdown(Duration::from_secs(3));
-                w.hue.shutdown(HUE_SHUTDOWN);
+                // Pixoo und Hue gleichzeitig zurückstellen, nicht nacheinander
+                let started = Instant::now();
+                let pixoo = w.pixoo.begin_shutdown();
+                let hue = w.hue.begin_shutdown();
+                for (done, limit) in [(pixoo, Duration::from_secs(3)), (hue, HUE_SHUTDOWN)] {
+                    if let Some(done) = done {
+                        let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
+                    }
+                }
                 w.slack.shutdown(Duration::from_secs(3));
             })
             .expect("Monitor-Thread");

@@ -3,7 +3,7 @@
 //! im Fehler-Slot und werden nach einer Pause wiederholt.
 
 use std::marker::PhantomData;
-use std::sync::mpsc::{channel, RecvTimeoutError, Sender};
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -107,10 +107,16 @@ impl<D: Device> Updater<D> {
         let _ = self.tx.send(Msg::Update(cfg, scene));
     }
 
+    /// Zurückstellen anstoßen, ohne zu warten. Die Rückgabe meldet das Ende
+    /// (`None`, wenn der Thread schon beendet ist).
+    pub fn begin_shutdown(&self) -> Option<Receiver<()>> {
+        let (ack, done) = channel();
+        self.tx.send(Msg::Shutdown(ack)).ok().map(|()| done)
+    }
+
     /// Zustand zurückstellen und höchstens `timeout` darauf warten
     pub fn shutdown(&self, timeout: Duration) {
-        let (ack, done) = channel();
-        if self.tx.send(Msg::Shutdown(ack)).is_ok() {
+        if let Some(done) = self.begin_shutdown() {
             let _ = done.recv_timeout(timeout);
         }
     }
