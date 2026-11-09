@@ -26,6 +26,7 @@
 - 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
 - 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
+- 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
 - 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
@@ -135,6 +136,30 @@ Danach, beim Ausschalten und beim Beenden von MicLED läuft auf dem Display wied
 
 Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Die Lampe schaltet trotzdem sofort.
 
+## AWTRIX-Uhr
+
+Eine Ulanzi-Pixeluhr (TC001) mit der Firmware [AWTRIX 3](https://blueforcer.github.io/awtrix3/) im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr. Die Firmware muss schon auf der Uhr sein; MicLED spricht über deren lokale HTTP-API, ein MQTT-Broker ist nicht nötig.
+
+Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen:
+
+- auf Sendung: „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe,
+- Konzentrations-Timer: die restlichen Minuten, z. B. „25 MIN“, jede Minute neu,
+- Fokus: „FOKUS“ in der Fokusfarbe.
+
+Sonst läuft die normale Anzeige der Uhr, auch bei Ruhezustand und Bildschirmsperre, außer du bist gerade in einem Call. Abends gedimmt werden auch die Farben auf der Uhr.
+
+1. Die IP-Adresse steht beim Start auf der Uhr und im Menü der Uhr. Gib ihr im Router eine **feste IP-Adresse**, sonst findet MicLED sie nach einem Neustart des Routers nicht mehr.
+2. In MicLED unter Einstellungen › AWTRIX „Status auf der AWTRIX-Uhr zeigen“ einschalten, die Adresse eintragen und „Verbindung prüfen“ drücken. Neben dem Knopf steht dann „AWTRIX erreichbar“.
+3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
+Gut zu wissen:
+
+- Die mittlere Taste der Uhr entfernt die Anzeige auch während eines Calls. MicLED bemerkt das nicht, sie kommt beim nächsten Wechsel zurück.
+- Beim Start räumt MicLED einmal die oberste Benachrichtigung der Uhr ab, damit nach einem Absturz kein altes „ON AIR“ stehen bleibt. Eine gerade sichtbare Benachrichtigung eines anderen Dienstes verschwindet dabei ebenfalls.
+- Benachrichtigungen anderer Dienste, etwa aus Home Assistant, warten bis zum Ende. Sendet ein Dienst mit sofortigem Ersetzen, verdrängt er die Anzeige bis zum nächsten Wechsel.
+
+Ist die Uhr nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Die Lampe schaltet trotzdem sofort.
+
 ## Philips Hue
 
 Eine Hue-Lampe, etwa vor der Tür, oder alle Lampen eines Raums zeigen den Status zusätzlich zur Lampe oder statt ihr. MicLED spricht dafür direkt mit der Hue Bridge im eigenen Netz, ohne Cloud und ohne Hue-Konto.
@@ -223,7 +248,7 @@ open apps/MicLED/MicLED.xcodeproj
 
 Vor dem ersten signierten Build die Team-ID in `apps/MicLED/project.yml` unter `DEVELOPMENT_TEAM` eintragen.
 
-Unter Einstellungen › Verbindung zur Lampe wählst du „USB direkt“, „Webhook“ (über die Luxafor-App) oder **„Keine Lampe“**. Ohne Lampe zeigt MicLED den Status nur auf dem [Pixoo 64](#pixoo-64), in Slack und am Webhook, und im Menü steht kein Lampenfehler.
+Unter Einstellungen › Verbindung zur Lampe wählst du „USB direkt“, „Webhook“ (über die Luxafor-App) oder **„Keine Lampe“**. Ohne Lampe zeigt MicLED den Status nur auf dem [Pixoo 64](#pixoo-64), der [AWTRIX-Uhr](#awtrix-uhr), in Slack und am Webhook, und im Menü steht kein Lampenfehler.
 
 ## Kommandozeile
 
@@ -239,6 +264,7 @@ cargo run -p micled-cli -- watch --camera ff00ff --on-air-url http://…   # ode
 cargo run -p micled-cli -- --webhook <ID> set gruen
 MICLED_NEXTCLOUD_PASSWORD=<app-passwort> cargo run -p micled-cli -- nextcloud https://cloud.example.org <benutzer>
 cargo run -p micled-cli -- pixoo 192.168.1.50  # Pixoo prüfen: 5 s „ON AIR“, dann zurück zum vorherigen Kanal
+cargo run -p micled-cli -- awtrix 192.168.1.60 # AWTRIX-Uhr prüfen: 5 s „ON AIR“, dann wieder die normale Anzeige
 cargo run -p micled-cli -- hue pair 192.168.1.20  # nach dem Druck auf den Bridge-Knopf: Schlüssel und Fingerabdruck
 MICLED_HUE_KEY=<schlüssel> MICLED_HUE_FINGERPRINT=<fingerabdruck> \
   cargo run -p micled-cli -- hue test 192.168.1.20 <lampen-id> [--room]   # 5 s Rot, dann zurück
@@ -252,7 +278,7 @@ MICLED_NANOLEAF_KEY=<schlüssel> cargo run -p micled-cli -- nanoleaf test 192.16
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, Hue Bridge, Govee, Nanoleaf
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
