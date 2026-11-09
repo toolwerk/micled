@@ -18,7 +18,7 @@ settings:
 packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
-    from: "2.10.1"
+    exactVersion: "2.10.1"
 
 # Eigenes Target statt Pre-Build-Skript: Als Abhängigkeit ist der Rust-Build
 # fertig, bevor die App kompiliert. Bibliothek und Header werden direkt
