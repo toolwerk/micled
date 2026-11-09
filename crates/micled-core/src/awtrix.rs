@@ -90,6 +90,9 @@ pub struct Session {
     /// Eine Benachrichtigung von MicLED ist womöglich zu sehen (auch nach einem
     /// Absturz oder wenn das Senden in den Timeout lief)
     dirty: bool,
+    /// Ein Call hat die Uhr geweckt: Die Firmware schaltet eine vorher
+    /// ausgeschaltete Anzeige nur aus, wenn die abgeräumte Meldung `wakeup` hat
+    woken: bool,
 }
 
 impl Device for Session {
@@ -130,9 +133,13 @@ impl Session {
             self.dirty = true;
             self.host = Some(host.to_string());
         }
-        let Some(body) = notification(scene) else { return self.clear(host, send) };
+        let Some(mut body) = notification(scene) else { return self.clear(host, send) };
         if self.shown.as_ref() == Some(scene) {
             return Ok(());
+        }
+        self.woken |= body.get("wakeup").is_some();
+        if self.woken {
+            body["wakeup"] = json!(true);
         }
         self.dirty = true;
         self.shown = None;
@@ -147,6 +154,7 @@ impl Session {
             self.shown = None;
             send(host, Call::Dismiss)?;
             self.dirty = false;
+            self.woken = false;
         }
         Ok(())
     }
@@ -315,6 +323,23 @@ mod tests {
     }
 
     #[test]
+    fn a_scene_after_a_call_keeps_the_wakeup_until_cleared() {
+        let mut f = Fake::default();
+        let mut s = settled(&mut f);
+        let mut seen = vec![];
+        let mut send = |_: &str, call: Call| {
+            seen.push(matches!(call, Call::Notify(v) if v.get("wakeup").is_some()));
+            Ok(())
+        };
+        s.apply_with(Some("u"), &timer(25), &mut send).unwrap();
+        s.apply_with(Some("u"), &LIVE, &mut send).unwrap();
+        s.apply_with(Some("u"), &timer(24), &mut send).unwrap();
+        s.apply_with(Some("u"), &Scene::Idle, &mut send).unwrap();
+        s.apply_with(Some("u"), &timer(23), &mut send).unwrap();
+        assert_eq!(seen, [false, true, true, false, false]);
+    }
+
+    #[test]
     fn changing_or_clearing_the_address_clears_the_old_clock() {
         let mut f = Fake::default();
         let mut s = Session::default();
@@ -338,7 +363,7 @@ mod tests {
 
     #[test]
     fn restore_without_address_sends_nothing() {
-        let mut s = Session { host: None, shown: None, dirty: true };
+        let mut s = Session { dirty: true, ..Session::default() };
         assert!(s.restore().is_ok());
     }
 
