@@ -47,6 +47,9 @@ final class AppModel {
     /// Status auf einem Pixoo 64 im eigenen Netz zeigen
     var pixooEnabled: Bool { didSet { persist() } }
     var pixooHost: String { didSet { persist() } }
+    /// Status auf einer Pixeluhr mit AWTRIX 3 im eigenen Netz zeigen
+    var awtrixEnabled: Bool { didSet { persist() } }
+    var awtrixHost: String { didSet { persist() } }
     /// Status auf einer Hue-Lampe oder in einem Raum über die Hue Bridge zeigen
     var hueEnabled: Bool { didSet { persist() } }
     /// Eine neue Adresse löscht Kopplung und Auswahl
@@ -163,6 +166,8 @@ final class AppModel {
             Key.slackEmoji: ":red_circle:",
             Key.pixooEnabled: false,
             Key.pixooHost: "",
+            Key.awtrixEnabled: false,
+            Key.awtrixHost: "",
             Key.hueEnabled: false,
             Key.hueHost: "",
             Key.hueFingerprint: "",
@@ -205,6 +210,8 @@ final class AppModel {
         slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
         pixooEnabled = d.bool(forKey: Key.pixooEnabled)
         pixooHost = d.string(forKey: Key.pixooHost) ?? ""
+        awtrixEnabled = d.bool(forKey: Key.awtrixEnabled)
+        awtrixHost = d.string(forKey: Key.awtrixHost) ?? ""
         hueEnabled = d.bool(forKey: Key.hueEnabled)
         hueHost = d.string(forKey: Key.hueHost) ?? ""
         hueKey = ScreenshotMode.isActive ? "screenshot" : Keychain.read(.hue)
@@ -315,6 +322,13 @@ final class AppModel {
         let host = pixooHost
         let result = await Task.detached { pixooCheck(host: host) }.value
         return result.error ?? "Pixoo erreichbar"
+    }
+
+    /// AWTRIX-Uhr prüfen, liefert eine Meldung für die Einstellungen
+    func checkAwtrix() async -> String {
+        let host = awtrixHost
+        let result = await Task.detached { awtrixCheck(host: host) }.value
+        return result.error ?? "AWTRIX erreichbar"
     }
 
     /// Mit der Bridge gekoppelt (Schlüssel und Zertifikat bekannt)
@@ -488,6 +502,7 @@ final class AppModel {
             slackText: slackText,
             slackEmoji: slackEmoji,
             pixooHost: pixooEnabled ? pixooHost : "",
+            awtrixHost: awtrixEnabled ? awtrixHost : "",
             hueHost: hueEnabled ? hueHost : "",
             hueKey: hueKey,
             hueFingerprint: hueFingerprint,
@@ -546,6 +561,8 @@ final class AppModel {
         defaults.set(slackEmoji, forKey: Key.slackEmoji)
         defaults.set(pixooEnabled, forKey: Key.pixooEnabled)
         defaults.set(pixooHost, forKey: Key.pixooHost)
+        defaults.set(awtrixEnabled, forKey: Key.awtrixEnabled)
+        defaults.set(awtrixHost, forKey: Key.awtrixHost)
         defaults.set(hueEnabled, forKey: Key.hueEnabled)
         defaults.set(hueHost, forKey: Key.hueHost)
         defaults.set(hueFingerprint, forKey: Key.hueFingerprint)
@@ -663,6 +680,8 @@ final class AppModel {
         static let slackEmoji = "slackEmoji"
         static let pixooEnabled = "pixooEnabled"
         static let pixooHost = "pixooHost"
+        static let awtrixEnabled = "awtrixEnabled"
+        static let awtrixHost = "awtrixHost"
         static let hueEnabled = "hueEnabled"
         static let hueHost = "hueHost"
         static let hueFingerprint = "hueFingerprint"

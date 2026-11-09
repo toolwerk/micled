@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var nextcloudResult = ""
     @State private var slackResult = ""
     @State private var pixooResult = ""
+    @State private var awtrixResult = ""
     @State private var hueResult = ""
     @State private var goveeResult = ""
     @State private var nanoleafResult = ""
@@ -116,6 +117,26 @@ struct SettingsView: View {
                 Text("Pixoo 64")
             } footer: {
                 Text("Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf der AWTRIX-Uhr zeigen", isOn: $model.awtrixEnabled)
+                if model.awtrixEnabled {
+                    TextField("Adresse", text: $model.awtrixHost, prompt: Text("192.168.1.60"))
+                        .autocorrectionDisabled()
+                    HStack {
+                        Button("Verbindung prüfen") {
+                            awtrixResult = "Prüfe …"
+                            Task { awtrixResult = await model.checkAwtrix() }
+                        }
+                        Text(awtrixResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("AWTRIX")
+            } footer: {
+                Text("Auf Sendung zeigt die Uhr „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
