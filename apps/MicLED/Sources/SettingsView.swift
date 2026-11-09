@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @State private var updater = UpdaterController.shared
     @State private var current: [MicUser] = []
     @State private var nextcloudResult = ""
     @State private var slackResult = ""
@@ -405,6 +406,18 @@ struct SettingsView: View {
                     get: { model.launchAtLogin },
                     set: { model.launchAtLogin = $0 }
                 ))
+            }
+
+            Section {
+                Toggle("Automatisch nach Updates suchen", isOn: $updater.automaticallyChecksForUpdates)
+                    .disabled(!updater.isAvailable)
+            } header: {
+                Text("Updates")
+            } footer: {
+                Text(updater.isAvailable
+                    ? "Einmal am Tag. Vor der Installation fragt MicLED nach.\nInstalliert: MicLED \(updater.versionText)"
+                    : "Entwickler-Builds suchen nicht nach Updates.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
