@@ -105,6 +105,42 @@ In den Einstellungen die Webhook-Adresse eintragen, z. B. `http://homeassistant.
 
 In einer Home-Assistant-Automation mit Webhook-Auslöser steht der Wert als `{{ trigger.json.on_air }}` bereit.
 
+### Beispiel: Lampe auf Sendung rot schalten
+
+Die Automation merkt sich den Zustand der Lampe als Szene, schaltet sie rot und stellt sie am Ende des Calls wieder her. So lässt sich jede in Home Assistant eingebundene Lampe schalten, auch eine Hue-Lampe, die MicLED nicht direkt ansteuert. `light.tuerschild` und `webhook_id` an die eigene Lampe und die eigene Webhook-Adresse anpassen:
+
+```yaml
+alias: MicLED – Auf Sendung
+mode: restart
+triggers:
+  - trigger: webhook
+    webhook_id: micled
+    allowed_methods: [POST]
+    local_only: true
+actions:
+  - choose:
+      - conditions: "{{ trigger.json.on_air }}"
+        sequence:
+          - condition: template
+            value_template: "{{ state_attr('light.tuerschild', 'rgb_color') != (255, 0, 0) }}"
+          - action: scene.create
+            data:
+              scene_id: vor_dem_call
+              snapshot_entities: light.tuerschild
+          - action: light.turn_on
+            target:
+              entity_id: light.tuerschild
+            data:
+              rgb_color: [255, 0, 0]
+              brightness_pct: 100
+    default:
+      - action: scene.turn_on
+        target:
+          entity_id: scene.vor_dem_call
+```
+
+Die Szene `vor_dem_call` entsteht zur Laufzeit und braucht keine eigene Konfiguration. MicLED sendet den Webhook auch dann erneut mit `on_air: true`, wenn während des Calls die Kamera an- oder ausgeht. Die Bedingung `rgb_color` verhindert, dass der Snapshot dann die rote Lampe festhält. Startet Home Assistant während eines Calls neu, ist die Szene weg; die Lampe bleibt dann rot, bis du sie von Hand zurückstellst.
+
 ## Slack-Status
 
 1. Unter <https://api.slack.com/apps> › „Create New App“ › „From scratch“ eine App im eigenen Workspace anlegen.
@@ -175,6 +211,8 @@ Die Lampe leuchtet auf Sendung in der Mikro-, Kamera- oder Programmfarbe, beim K
 Beim Koppeln merkt sich MicLED das Zertifikat der Bridge und spricht danach nur mit genau dieser. Wird die Bridge ausgetauscht oder zurückgesetzt, steht im Menü „Zertifikat der Bridge hat sich geändert, bitte neu koppeln“; dann Schritt 3 wiederholen. Eine neue Adresse löscht die Kopplung ebenfalls.
 
 Ist die Bridge nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und Pixoo schalten trotzdem sofort. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
+Hue-Lampen, die du lieber über Home Assistant steuerst (oder die du dort ohnehin eingebunden hast), schaltet eine Automation per Webhook, ohne dass MicLED die Bridge kennt: [Beispiel unter „Auf Sendung“ an Home Assistant](#beispiel-lampe-auf-sendung-rot-schalten).
 
 ## Govee
 
