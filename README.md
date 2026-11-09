@@ -157,6 +157,7 @@ Gut zu wissen:
 - Die mittlere Taste der Uhr entfernt die Anzeige auch während eines Calls. MicLED bemerkt das nicht, sie kommt beim nächsten Wechsel zurück.
 - Beim Start, beim Einschalten in den Einstellungen und nach einer neuen Adresse räumt MicLED einmal die oberste Benachrichtigung der Uhr ab, damit nach einem Absturz kein altes „ON AIR“ stehen bleibt. Eine gerade sichtbare Benachrichtigung eines anderen Dienstes verschwindet dabei ebenfalls.
 - Benachrichtigungen anderer Dienste, etwa aus Home Assistant, die während der Anzeige eintreffen, warten bis zum Ende. Steht eine schon an erster Stelle, wenn die Anzeige beginnt, wird sie ersetzt und kommt nicht zurück. Sendet ein Dienst mit sofortigem Ersetzen, verdrängt er die Anzeige bis zum nächsten Wechsel.
+- Am Ende einer Anzeige entfernt MicLED immer die oberste Benachrichtigung. Hat ein anderer Dienst die Anzeige verdrängt oder ist seine Meldung nach der mittleren Taste nachgerückt, verschwindet sie dabei.
 
 Ist die Uhr nicht erreichbar, steht ein Fehler im Menü und MicLED versucht es alle 30 Sekunden erneut. Die Lampe schaltet trotzdem sofort.
 
