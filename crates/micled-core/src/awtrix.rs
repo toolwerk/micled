@@ -143,9 +143,10 @@ impl Session {
 
     fn clear(&mut self, host: &str, send: &mut impl FnMut(&str, Call) -> Result<(), String>) -> Result<(), String> {
         if self.dirty {
+            // das Abräumen kann auch ohne Antwort angekommen sein
+            self.shown = None;
             send(host, Call::Dismiss)?;
             self.dirty = false;
-            self.shown = None;
         }
         Ok(())
     }
@@ -298,6 +299,19 @@ mod tests {
         f.fail = false;
         s.apply_with(Some("u"), &Scene::Idle, &mut f.send()).unwrap();
         assert_eq!(f.take(), ["dismiss"], "kann angekommen sein");
+    }
+
+    #[test]
+    fn the_same_scene_is_sent_again_after_a_dismiss_without_reply() {
+        let mut f = Fake::default();
+        let mut s = settled(&mut f);
+        s.apply_with(Some("u"), &LIVE, &mut f.send()).unwrap();
+        f.take();
+        f.fail = true;
+        assert!(s.apply_with(Some("u"), &Scene::Idle, &mut f.send()).is_err());
+        f.fail = false;
+        s.apply_with(Some("u"), &LIVE, &mut f.send()).unwrap();
+        assert_eq!(f.take(), ["ON AIR"], "die Uhr kann schon leer sein");
     }
 
     #[test]
