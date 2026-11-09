@@ -14,6 +14,12 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: "7N2W4T6UPV"
 
+# Updates der App außerhalb des App Stores (Sources/UpdaterController.swift)
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.10.1"
+
 # Eigenes Target statt Pre-Build-Skript: Als Abhängigkeit ist der Rust-Build
 # fertig, bevor die App kompiliert. Bibliothek und Header werden direkt
 # eingebunden, nicht als XCFramework: Xcode kopiert ein XCFramework nach einem
@@ -39,6 +45,7 @@ targets:
       - path: Resources/Assets.xcassets
     dependencies:
       - target: RustCore
+      - package: Sparkle
       - framework: ../../build/universal/libmicled_ffi.a   # als Eingabe des Linkers verfolgt
         embed: false
       - sdk: CoreAudio.framework
