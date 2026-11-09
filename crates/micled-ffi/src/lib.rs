@@ -96,6 +96,8 @@ pub struct MicLedConfig {
     pub slack_emoji: String,
     /// Adresse eines Pixoo 64 im eigenen Netz; leer = aus
     pub pixoo_host: String,
+    /// Adresse einer Pixeluhr mit AWTRIX 3 im eigenen Netz; leer = aus
+    pub awtrix_host: String,
     /// Hue Bridge; ist Adresse, Schlüssel, Fingerabdruck oder Ziel leer, ist es aus
     pub hue_host: String,
     /// App-Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
@@ -169,6 +171,12 @@ pub struct HueTargets {
 /// Ergebnis von [`pixoo_check`]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct PixooCheck {
+    pub error: Option<String>,
+}
+
+/// Ergebnis von [`awtrix_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct AwtrixCheck {
     pub error: Option<String>,
 }
 
@@ -307,6 +315,7 @@ impl From<MicLedConfig> for core::Config {
                 TransportKind::NoLamp => core::Transport::None,
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
+            awtrix: core::pixoo::normalize(&c.awtrix_host),
             hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
             govee: govee(&c.govee_hosts),
             nanoleaf: nanoleaf(&c.nanoleaf),
@@ -494,6 +503,17 @@ pub fn pixoo_check(host: String) -> PixooCheck {
         None => Err("Adresse des Pixoo eintragen".into()),
     };
     PixooCheck { error: result.err() }
+}
+
+/// AWTRIX-Uhr unter `host` erreichbar? (blockiert bis zu drei Sekunden, nicht
+/// im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn awtrix_check(host: String) -> AwtrixCheck {
+    let result = match core::pixoo::normalize(&host) {
+        Some(h) => core::awtrix::check(&h),
+        None => Err("Adresse der Uhr eintragen".into()),
+    };
+    AwtrixCheck { error: result.err() }
 }
 
 /// Mit der Hue Bridge unter `host` koppeln; vorher den Knopf an der Bridge
