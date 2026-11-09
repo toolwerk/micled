@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, shared, slack};
+use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -107,6 +107,7 @@ impl Monitor {
         let log = calls.clone();
         let slack_error = Arc::new(Mutex::new(None));
         let pixoo_error = Arc::new(Mutex::new(None));
+        let awtrix_error = Arc::new(Mutex::new(None));
         let hue_error = Arc::new(Mutex::new(None));
         let govee_error = Arc::new(Mutex::new(None));
         let nanoleaf_error = Arc::new(Mutex::new(None));
@@ -144,6 +145,9 @@ impl Monitor {
                     pixoo: output::Updater::start("pixoo", pixoo_error.clone()),
                     pixoo_error,
                     last_scene: None,
+                    awtrix: output::Updater::start("awtrix", awtrix_error.clone()),
+                    awtrix_error,
+                    last_awtrix: None,
                     hue: output::Updater::start("hue", hue_error.clone()),
                     hue_error,
                     last_hue: None,
@@ -188,14 +192,16 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                // Pixoo, Hue, Govee und Nanoleaf gleichzeitig zurückstellen, nicht nacheinander
+                // Pixoo, AWTRIX, Hue, Govee und Nanoleaf gleichzeitig zurückstellen, nicht nacheinander
                 let started = Instant::now();
                 let pixoo = w.pixoo.begin_shutdown();
+                let awtrix = w.awtrix.begin_shutdown();
                 let hue = w.hue.begin_shutdown();
                 let govee = w.govee.begin_shutdown();
                 let nanoleaf = w.nanoleaf.begin_shutdown();
                 for (done, limit) in [
                     (pixoo, Duration::from_secs(3)),
+                    (awtrix, Duration::from_secs(3)),
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
                     (nanoleaf, HUE_SHUTDOWN),
@@ -313,6 +319,10 @@ struct Worker {
     pixoo_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an das Display gegebene Adresse und Szene
     last_scene: Option<(Option<String>, Scene)>,
+    awtrix: output::Updater<awtrix::Session>,
+    awtrix_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an die AWTRIX-Uhr gegebene Adresse und Szene
+    last_awtrix: Option<(Option<String>, Scene)>,
     hue: output::Updater<hue::Session>,
     hue_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an die Hue-Lampe gegebenes Ziel und Szene
@@ -347,6 +357,9 @@ impl Worker {
         let slack_changed = cfg.slack != self.engine.config().slack;
         if cfg.pixoo != self.engine.config().pixoo {
             *self.pixoo_error.lock().unwrap() = None;
+        }
+        if cfg.awtrix != self.engine.config().awtrix {
+            *self.awtrix_error.lock().unwrap() = None;
         }
         if cfg.hue != self.engine.config().hue {
             *self.hue_error.lock().unwrap() = None;
@@ -550,7 +563,7 @@ impl Worker {
             self.set_live(live);
         }
 
-        // 7. Display, Hue, Govee und Nanoleaf: nur bei einer Änderung (oder neuem Ziel) senden
+        // 7. Display, AWTRIX, Hue, Govee und Nanoleaf: nur bei einer Änderung (oder neuem Ziel) senden
         let brightness = self.brightness;
         let scene = self.engine.scene(now).map_color(|c| dim::apply(c, brightness));
         let wanted = (self.engine.config().hue.clone(), scene.clone());
@@ -569,6 +582,11 @@ impl Worker {
         if self.last_nanoleaf.as_ref() != Some(&wanted) {
             self.nanoleaf.send(wanted.0.clone(), wanted.1.clone());
             self.last_nanoleaf = Some(wanted);
+        }
+        let wanted = (self.engine.config().awtrix.clone(), scene.clone());
+        if self.last_awtrix.as_ref() != Some(&wanted) {
+            self.awtrix.send(wanted.0.clone(), wanted.1.clone());
+            self.last_awtrix = Some(wanted);
         }
         let wanted = (self.engine.config().pixoo.clone(), scene);
         if self.last_scene.as_ref() != Some(&wanted) {
@@ -646,7 +664,8 @@ impl Worker {
                 .or_else(|| self.pixoo_error.lock().unwrap().clone())
                 .or_else(|| self.hue_error.lock().unwrap().clone())
                 .or_else(|| self.govee_error.lock().unwrap().clone())
-                .or_else(|| self.nanoleaf_error.lock().unwrap().clone()),
+                .or_else(|| self.nanoleaf_error.lock().unwrap().clone())
+                .or_else(|| self.awtrix_error.lock().unwrap().clone()),
         }
     }
 }

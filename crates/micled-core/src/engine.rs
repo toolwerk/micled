@@ -89,6 +89,8 @@ pub struct Config {
     pub slack: Option<Slack>,
     /// Adresse eines Pixoo 64 im eigenen Netz (`None` = aus)
     pub pixoo: Option<String>,
+    /// Adresse einer Pixeluhr mit AWTRIX 3 im eigenen Netz (`None` = aus)
+    pub awtrix: Option<String>,
     /// Hue-Lampe oder -Raum über die Hue Bridge (`None` = aus)
     pub hue: Option<crate::hue::Hue>,
     /// Govee-Lampen im eigenen Netz (leer = aus)
@@ -121,6 +123,7 @@ impl Default for Config {
             dim: None,
             slack: None,
             pixoo: None,
+            awtrix: None,
             hue: None,
             govee: Vec::new(),
             nanoleaf: Vec::new(),
