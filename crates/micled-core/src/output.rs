@@ -1,5 +1,5 @@
 //! Gemeinsamer Hintergrund-Thread für Ausgaben im eigenen Netz (Pixoo 64,
-//! Philips Hue, Govee, Nanoleaf): Ein fehlendes Gerät hält die Lampe nicht
+//! AWTRIX, Philips Hue, Govee, Nanoleaf): Ein fehlendes Gerät hält die Lampe nicht
 //! auf, Fehler landen im Fehler-Slot und werden nach einer Pause wiederholt.
 //! [`Fleet`] steuert mehrere Geräte derselben Art als ein [`Device`].
 

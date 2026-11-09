@@ -1,6 +1,7 @@
 //! MicLED-Kern: schaltet eine Luxafor-Lampe auf eine Mikrofarbe, solange ein
 //! Programm das Mikrofon nutzt, und springt danach zur vorherigen Farbe zurück.
 
+pub mod awtrix;
 pub mod caldav;
 pub mod camera;
 pub mod color;

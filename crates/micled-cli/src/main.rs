@@ -6,7 +6,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
 use micled_core::output::Device;
-use micled_core::{caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -37,6 +37,11 @@ enum Cmd {
     /// Pixoo 64 prüfen: zeigt fünf Sekunden „ON AIR“ und stellt dann den Kanal zurück
     Pixoo {
         /// Adresse im eigenen Netz, z. B. 192.168.1.50
+        host: String,
+    },
+    /// AWTRIX-Uhr prüfen: zeigt fünf Sekunden „ON AIR“ und räumt es dann wieder ab
+    Awtrix {
+        /// Adresse im eigenen Netz, z. B. 192.168.1.60
         host: String,
     },
     /// Philips Hue über die Hue Bridge
@@ -294,6 +299,21 @@ fn main() {
                 let restored = session.restore();
                 shown.and(restored)?;
                 println!("Pixoo erreichbar");
+                Ok(())
+            }),
+        },
+        Cmd::Awtrix { host } => match pixoo::normalize(host) {
+            None => Err("Adresse der Uhr fehlt".to_string()),
+            Some(h) => awtrix::check(&h).and_then(|()| {
+                let mut session = awtrix::Session::default();
+                let shown = session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED });
+                if shown.is_ok() {
+                    std::thread::sleep(Duration::from_secs(5));
+                }
+                // auch nach einem Fehler abräumen, die Anzeige kann trotzdem angekommen sein
+                let restored = session.restore();
+                shown.and(restored)?;
+                println!("AWTRIX erreichbar");
                 Ok(())
             }),
         },

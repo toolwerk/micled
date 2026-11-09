@@ -44,6 +44,8 @@ enum ScreenshotMode {
         d.set(true, forKey: "remindersEnabled")
         d.set(true, forKey: "pixooEnabled")
         d.set("192.168.1.50", forKey: "pixooHost")
+        d.set(true, forKey: "awtrixEnabled")
+        d.set("192.168.1.60", forKey: "awtrixHost")
         d.set(true, forKey: "hueEnabled")
         d.set("192.168.1.20", forKey: "hueHost")
         d.set("screenshot", forKey: "hueFingerprint")

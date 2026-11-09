@@ -7,6 +7,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 ### Hinzugefügt
 
 - Divoom Pixoo 64 als Display: zeigt „ON AIR“ mit Mikro- oder Kamerasymbol, die Restminuten des Timers oder „FOKUS“ und kehrt danach zum vorherigen Kanal zurück. Einstellungen mit „Verbindung prüfen“, Kommandozeile `micled pixoo <adresse>`.
+- Ulanzi-Pixeluhr mit AWTRIX 3: zeigt „ON AIR“ in der Mikro- oder Kamerafarbe, die Restminuten des Timers oder „FOKUS“ als Text bis zum Ende, danach wieder die normale Anzeige. Einstellungen mit „Verbindung prüfen“, Kommandozeile `micled awtrix <adresse>`.
 - Philips Hue über die Hue Bridge: eine Lampe oder ein Raum zeigt die Farbe für Call, Timer und Fokus und bekommt danach An/Aus, Farbe und Helligkeit von vorher zurück. Koppeln per Knopf an der Bridge, App-Schlüssel im Schlüsselbund, Zertifikat der Bridge wird beim Koppeln festgehalten. Kommandozeile `micled hue pair` und `micled hue test`.
 - Govee und Nanoleaf im eigenen Netz, je mehrere Geräte: Sie zeigen die Farbe für Call, Timer und Fokus und bekommen danach An/Aus, Helligkeit und Farbe von vorher zurück, Nanoleaf auch einen gespeicherten Effekt. Suche im eigenen Netz oder Adresse von Hand, Nanoleaf-Schlüssel im Schlüsselbund. Kommandozeile `micled govee scan|test` und `micled nanoleaf scan|pair|test`.
 - „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack und am Webhook.
