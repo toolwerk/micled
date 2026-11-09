@@ -83,6 +83,12 @@ OUT="$ROOT/dist/MicLED-$VERSION.zip"
 ditto -c -k --keepParent "$APP" "$OUT"
 "$ROOT/scripts/appcast.sh" "$OUT" "$VERSION" "$BUILDNO"
 echo "Fertig: $OUT"
-echo "Veröffentlichen, in dieser Reihenfolge (der Appcast darf nie vor dem ZIP erreichbar sein):"
-echo "  gh release create v$VERSION \"$OUT\" --latest --title \"MicLED $VERSION\" --generate-notes"
+echo "Veröffentlichen, in dieser Reihenfolge (erst der Appcast, dann „Latest“):"
+if gh release view "v$VERSION" >/dev/null 2>&1; then
+  echo "  gh release upload v$VERSION \"$OUT\" --clobber"
+else
+  echo "  git push origin HEAD   # der Tag braucht den Commit auf GitHub"
+  echo "  gh release create v$VERSION \"$OUT\" --target $(git -C "$ROOT" rev-parse HEAD) --latest=false --title \"MicLED $VERSION\" --generate-notes"
+fi
 echo "  gh release upload v$VERSION \"$ROOT/dist/appcast.xml\" --clobber"
+echo "  gh release edit v$VERSION --latest"

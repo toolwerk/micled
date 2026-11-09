@@ -316,7 +316,7 @@ build/spm/artifacts/sparkle/Sparkle/bin/generate_keys --account micled -x <datei
 
 Den ausgegebenen öffentlichen Schlüssel in `apps/MicLED/Resources/Info.plist` bei `SUPublicEDKey` eintragen und committen. Den Schlüssel nie ersetzen: Installierte Apps nehmen nur Updates an, die mit ihm signiert sind.
 
-Für jedes Release:
+Für jedes Release (bei einer neuen Version vorher `MARKETING_VERSION` in `apps/MicLED/project.yml` hochsetzen):
 
 ```bash
 scripts/bump-build.sh
@@ -326,7 +326,7 @@ scripts/release.sh
 
 `release.sh` prüft zuerst Zertifikat, Notarisierungsprofil, Team-ID, sauberen Git-Stand, den Sparkle-Schlüssel und ob die Build-Nummer über der veröffentlichten liegt, denn Sparkle bietet nur eine höhere an. Danach folgen Archiv, Export mit Developer ID, Notarisierung, Stapeln und Prüfung mit `codesign`, `spctl` und `stapler`. Zum Schluss signiert `scripts/appcast.sh` das ZIP und schreibt `dist/appcast.xml`.
 
-Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Das Skript gibt am Ende zwei Befehle aus: `gh release create` mit dem ZIP, danach `gh release upload` mit dem Appcast. Die Reihenfolge einhalten, damit der Appcast nie auf ein fehlendes ZIP zeigt.
+Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Das Skript gibt am Ende die passenden Befehle aus: erst das ZIP, dann der Appcast, zuletzt wird der Release „Latest“. Die Reihenfolge einhalten, damit der Appcast nie auf ein fehlendes ZIP zeigt und die feste Adresse immer einen Appcast liefert.
 
 ## Lizenz
 
