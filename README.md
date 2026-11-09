@@ -326,7 +326,7 @@ scripts/release.sh
 
 `release.sh` prüft zuerst Zertifikat, Notarisierungsprofil, Team-ID, sauberen Git-Stand, den Sparkle-Schlüssel und ob die Build-Nummer über der veröffentlichten liegt, denn Sparkle bietet nur eine höhere an. Danach folgen Archiv, Export mit Developer ID, Notarisierung, Stapeln und Prüfung mit `codesign`, `spctl` und `stapler`. Zum Schluss signiert `scripts/appcast.sh` das ZIP und schreibt `dist/appcast.xml`.
 
-Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt, das ZIP zuerst. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Den passenden `gh release upload`-Befehl gibt das Skript am Ende aus.
+Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Das Skript gibt am Ende zwei Befehle aus: `gh release create` mit dem ZIP, danach `gh release upload` mit dem Appcast. Die Reihenfolge einhalten, damit der Appcast nie auf ein fehlendes ZIP zeigt.
 
 ## Lizenz
 
