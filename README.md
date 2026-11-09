@@ -134,12 +134,14 @@ actions:
               rgb_color: [255, 0, 0]
               brightness_pct: 100
     default:
+      - condition: template
+        value_template: "{{ states.scene.vor_dem_call is not none }}"
       - action: scene.turn_on
         target:
           entity_id: scene.vor_dem_call
 ```
 
-Die Szene `vor_dem_call` entsteht zur Laufzeit und braucht keine eigene Konfiguration. MicLED sendet den Webhook auch dann erneut mit `on_air: true`, wenn während des Calls die Kamera an- oder ausgeht. Die Bedingung `rgb_color` verhindert, dass der Snapshot dann die rote Lampe festhält. Startet Home Assistant während eines Calls neu, ist die Szene weg; die Lampe bleibt dann rot, bis du sie von Hand zurückstellst.
+Die Szene `vor_dem_call` entsteht zur Laufzeit und braucht keine eigene Konfiguration. MicLED sendet den Webhook auch dann erneut mit `on_air: true`, wenn während des Calls die Kamera an- oder ausgeht. Die Bedingung `rgb_color` verhindert, dass der Snapshot dann die rote Lampe festhält. Die Bedingung im `default`-Zweig überspringt das Zurückstellen, solange die Szene noch nicht existiert, etwa wenn der erste Webhook nach einem Neustart `on_air: false` ist. Startet Home Assistant während eines Calls neu, ist die Szene weg; die Lampe bleibt dann rot, bis du sie von Hand zurückstellst.
 
 ## Slack-Status
 
