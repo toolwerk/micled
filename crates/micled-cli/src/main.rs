@@ -305,14 +305,7 @@ fn main() {
         Cmd::Awtrix { host } => match pixoo::normalize(host) {
             None => Err("Adresse der Uhr fehlt".to_string()),
             Some(h) => awtrix::check(&h).and_then(|()| {
-                let mut session = awtrix::Session::default();
-                let shown = session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED });
-                if shown.is_ok() {
-                    std::thread::sleep(Duration::from_secs(5));
-                }
-                // auch nach einem Fehler abräumen, die Anzeige kann trotzdem angekommen sein
-                let restored = session.restore();
-                shown.and(restored)?;
+                show_red(&mut awtrix::Session::default(), &h)?;
                 println!("AWTRIX erreichbar");
                 Ok(())
             }),
