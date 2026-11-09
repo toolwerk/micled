@@ -148,7 +148,7 @@ Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen:
 
 Sonst läuft die normale Anzeige der Uhr, auch bei Ruhezustand und Bildschirmsperre, außer du bist gerade in einem Call. Abends gedimmt werden auch die Farben auf der Uhr.
 
-1. Die IP-Adresse steht beim Start auf der Uhr und im Menü der Uhr. Gib ihr im Router eine **feste IP-Adresse**, sonst findet MicLED sie nach einem Neustart des Routers nicht mehr.
+1. Die IP-Adresse der Uhr in der Geräteliste des Routers nachsehen und ihr dort eine **feste IP-Adresse** geben. Sonst findet MicLED die Uhr nach einem Neustart des Routers nicht mehr.
 2. In MicLED unter Einstellungen › AWTRIX „Status auf der AWTRIX-Uhr zeigen“ einschalten, die Adresse eintragen und „Verbindung prüfen“ drücken. Neben dem Knopf steht dann „AWTRIX erreichbar“.
 3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
 
