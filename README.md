@@ -261,6 +261,13 @@ Für diese Geräte: in Home Assistant einbinden und dort per Automation mit dem 
 
 Viele Lichtstreifen hinter dem Monitor mit Bildschirm-Sync nutzen denselben Controller von Robobloq, gesteuert sonst mit der App DX-Light bzw. DX-Lighting. MicLED schaltet ihn direkt per USB, ohne Treiber, zusätzlich zur Luxafor.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-strip-dark.png">
+    <img src="docs/images/settings-strip-light.png" alt="Einstellungen von MicLED: Abschnitt Lichtstreifen (USB) mit Schalter, Knopf „Testen“ und Hinweis auf das eine Programm" width="400">
+  </picture>
+</p>
+
 Bekannte Geräte: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (Vortex Gears), LEDstrips.dk „PC Sync“ und namenlose Streifen von AliExpress. Maßgeblich ist die **USB-ID `1A86:FE07`**, nicht der Produktname: Händler liefern unter gleichem Namen teils andere Controller. Den Controller `1A86:FE0C` und andere unterstützt MicLED nicht. Die USB-ID steht im Systembericht unter USB („ROBOBLOQ USBHID“, Hersteller-ID `0x1a86`, Produkt-ID `0xfe07`).
 
 1. Streifen per USB an den Mac stecken.

@@ -265,7 +265,7 @@ struct SettingsView: View {
                 Text("Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: {
-                Text("Lichtstreifen (USB)")
+                Text("Lichtstreifen (USB)").id("strip")
             } footer: {
                 Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
                     .font(.caption).foregroundStyle(.secondary)
