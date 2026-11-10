@@ -109,6 +109,8 @@ pub struct MicLedConfig {
     pub govee_hosts: Vec<String>,
     /// Gekoppelte Nanoleaf-Lampen; ohne Adresse oder Schlüssel fallen sie weg
     pub nanoleaf: Vec<NanoleafDevice>,
+    /// Lichtstreifen mit Robobloq-Controller per USB
+    pub robobloq: bool,
 }
 
 /// Nanoleaf-Lampe mit Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
@@ -177,6 +179,16 @@ pub struct PixooCheck {
 /// Ergebnis von [`awtrix_check`]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct AwtrixCheck {
+    pub error: Option<String>,
+}
+
+/// Ergebnis von [`robobloq_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct RobobloqCheck {
+    /// Zahl der LEDs, 0 bei Fehler
+    pub leds: u32,
+    /// Firmware wie „1.9.4“, leer bei Fehler
+    pub firmware: String,
     pub error: Option<String>,
 }
 
@@ -319,6 +331,7 @@ impl From<MicLedConfig> for core::Config {
             hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
             govee: govee(&c.govee_hosts),
             nanoleaf: nanoleaf(&c.nanoleaf),
+            robobloq: c.robobloq,
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -584,6 +597,16 @@ pub fn nanoleaf_pair(host: String) -> NanoleafPair {
     match result {
         Ok(key) => NanoleafPair { key, error: None },
         Err(e) => NanoleafPair { key: String::new(), error: Some(e) },
+    }
+}
+
+/// Geräteinfo des Lichtstreifens per USB lesen (blockiert bis zu einigen
+/// Sekunden, nicht im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn robobloq_check() -> RobobloqCheck {
+    match core::robobloq::check() {
+        Ok(info) => RobobloqCheck { leds: info.leds as u32, firmware: info.firmware_text(), error: None },
+        Err(e) => RobobloqCheck { leds: 0, firmware: String::new(), error: Some(e) },
     }
 }
 
