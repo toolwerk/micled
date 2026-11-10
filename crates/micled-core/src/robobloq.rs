@@ -213,7 +213,7 @@ pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
     };
     let mut info = None;
     for path in paths {
-        let dev = api.open_path(&path).map_err(usb_error)?;
+        let dev = crate::lamp::hid_open_path(&api, &path).map_err(usb_error)?;
         match cmd {
             Cmd::ReadInfo => {
                 info = read_info(&dev, &mut seq)?;
@@ -239,7 +239,7 @@ pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
         }
         // `dev` wird hier geschlossen, andere Programme bleiben unberührt
     }
-    drop(seq);
+    // Pause unter dem Schloss, damit kein anderer Befehl hineinfällt
     if cmd == Cmd::Brightness {
         sleep(BRIGHTNESS_GAP);
     }
@@ -270,12 +270,13 @@ pub struct Watch {
 }
 
 impl Watch {
-    /// Ergebnis einer Suche (`[]` = keiner da). Kommt ein Streifen dazu oder
-    /// ändert sich sein Pfad, ist das ein neues Anstecken; Abziehen nicht.
+    /// Ergebnis einer Suche (`[]` = keiner da). Ändert sich die Liste und ist
+    /// noch ein Streifen da, ist das ein neues Anstecken (Info neu lesen);
+    /// das Abziehen des letzten nicht.
     pub fn seen(&mut self, mut paths: Vec<CString>) {
         paths.sort();
         if let Some(old) = &self.paths {
-            if !paths.is_empty() && paths.iter().any(|p| !old.contains(p)) {
+            if !paths.is_empty() && paths != *old {
                 self.connection += 1;
             }
         }
@@ -473,7 +474,9 @@ mod tests {
         w.seen(paths(&["4", "3"]));
         assert_eq!(w.connection, 3, "zweiter Streifen dazu");
         w.seen(paths(&["3"]));
-        assert_eq!(w.connection, 3, "einer weg");
+        assert_eq!(w.connection, 4, "einer von zweien weg: Info des übrigen neu lesen");
+        w.seen(paths(&["3"]));
+        assert_eq!(w.connection, 4);
         let mut w = Watch::default();
         w.seen(vec![]);
         w.seen(paths(&["1"]));

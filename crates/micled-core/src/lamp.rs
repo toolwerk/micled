@@ -62,7 +62,7 @@ impl Lamp for NoLamp {
 // ---------------------------------------------------------------------------
 
 /// Die Gerätesuche von hidapi teilt sich unter macOS einen globalen
-/// `IOHIDManager` und ist nicht threadsicher; Luxafor und Lichtstreifen
+/// `IOHIDManager` und Fehlertext und ist nicht threadsicher; Luxafor und Lichtstreifen
 /// ([`crate::robobloq`]) suchen deshalb nie gleichzeitig.
 static ENUMERATE: Mutex<()> = Mutex::new(());
 
@@ -70,6 +70,13 @@ static ENUMERATE: Mutex<()> = Mutex::new(());
 pub(crate) fn hid_api() -> hidapi::HidResult<hidapi::HidApi> {
     let _guard = ENUMERATE.lock().unwrap_or_else(|e| e.into_inner());
     hidapi::HidApi::new()
+}
+
+/// Gerät öffnen, unter [`ENUMERATE`]: `hid_open_path` setzt wie die Suche den
+/// globalen Fehlertext von hidapi
+pub(crate) fn hid_open_path(api: &hidapi::HidApi, path: &std::ffi::CStr) -> hidapi::HidResult<hidapi::HidDevice> {
+    let _guard = ENUMERATE.lock().unwrap_or_else(|e| e.into_inner());
+    api.open_path(path)
 }
 
 /// Öffnet das Gerät nur für den Befehl und gibt es danach wieder frei, damit
