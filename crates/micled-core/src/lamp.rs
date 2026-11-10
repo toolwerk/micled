@@ -7,6 +7,7 @@
 //! Die Lampe kennt keinen Lesebefehl für die aktuelle Farbe. Wer die Farbe
 //! wissen will, muss sie sich merken (siehe [`crate::shared`]).
 
+use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -60,14 +61,36 @@ impl Lamp for NoLamp {
 // USB
 // ---------------------------------------------------------------------------
 
+/// Die Gerätesuche von hidapi teilt sich unter macOS einen globalen
+/// `IOHIDManager` und Fehlertext und ist nicht threadsicher; Luxafor und Lichtstreifen
+/// ([`crate::robobloq`]) suchen deshalb nie gleichzeitig.
+static ENUMERATE: Mutex<()> = Mutex::new(());
+
+/// Neuer hidapi-Kontext mit Geräteliste, unter [`ENUMERATE`]
+pub(crate) fn hid_api() -> hidapi::HidResult<hidapi::HidApi> {
+    let _guard = ENUMERATE.lock().unwrap_or_else(|e| e.into_inner());
+    hidapi::HidApi::new()
+}
+
+/// Gerät öffnen, unter [`ENUMERATE`]: `hid_open_path` setzt wie die Suche den
+/// globalen Fehlertext von hidapi
+pub(crate) fn hid_open_path(api: &hidapi::HidApi, path: &std::ffi::CStr) -> hidapi::HidResult<hidapi::HidDevice> {
+    let _guard = ENUMERATE.lock().unwrap_or_else(|e| e.into_inner());
+    api.open_path(path)
+}
+
 /// Öffnet das Gerät nur für den Befehl und gibt es danach wieder frei, damit
 /// Luxafor-App, Stream-Deck-Plugin und `lux` parallel funktionieren.
 pub struct UsbLamp;
 
 impl UsbLamp {
     fn write(reports: &[&[u8]]) -> Result<(), LampError> {
-        let api = hidapi::HidApi::new().map_err(|e| LampError::Usb(e.to_string()))?;
-        let dev = api.open(VENDOR_ID, PRODUCT_ID).map_err(|e| LampError::Usb(e.to_string()))?;
+        let dev = {
+            // `open` sucht noch einmal nach dem Gerät
+            let _guard = ENUMERATE.lock().unwrap_or_else(|e| e.into_inner());
+            let api = hidapi::HidApi::new().map_err(|e| LampError::Usb(e.to_string()))?;
+            api.open(VENDOR_ID, PRODUCT_ID).map_err(|e| LampError::Usb(e.to_string()))?
+        };
         for (i, bytes) in reports.iter().enumerate() {
             if i > 0 {
                 sleep(Duration::from_millis(60));

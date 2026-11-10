@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var hueResult = ""
     @State private var goveeResult = ""
     @State private var nanoleafResult = ""
+    @State private var robobloqResult = ""
     /// Meldung vom Koppeln je Nanoleaf-Eintrag
     @State private var nanoleafPairResults: [UUID: String] = [:]
 
@@ -247,6 +248,26 @@ struct SettingsView: View {
                 Text("Nanoleaf")
             } footer: {
                 Text("Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf dem Lichtstreifen zeigen", isOn: $model.robobloqEnabled)
+                if model.robobloqEnabled {
+                    HStack {
+                        Button("Testen") {
+                            robobloqResult = "Suche …"
+                            Task { robobloqResult = await model.checkRobobloq() }
+                        }
+                        Text(robobloqResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Text("Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: {
+                Text("Lichtstreifen (USB)").id("strip")
+            } footer: {
+                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

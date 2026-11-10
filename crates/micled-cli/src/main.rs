@@ -6,7 +6,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
 use micled_core::output::Device;
-use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, robobloq, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -58,6 +58,11 @@ enum Cmd {
     Nanoleaf {
         #[command(subcommand)]
         cmd: NanoleafCmd,
+    },
+    /// Lichtstreifen mit Robobloq-Controller per USB (1A86:FE07)
+    Strip {
+        #[command(subcommand)]
+        cmd: StripCmd,
     },
     /// Automatik laufen lassen, bis Strg-C
     Watch {
@@ -134,6 +139,14 @@ enum NanoleafCmd {
     Test { host: String },
 }
 
+#[derive(Subcommand)]
+enum StripCmd {
+    /// Zeigt Zahl der LEDs, Monitorgröße und Firmware
+    Info,
+    /// Zeigt fünf Sekunden Rot und schaltet den Streifen dann aus
+    Test,
+}
+
 /// Fünf Sekunden Rot, dann zurückstellen (auch nach einem Fehler, die Farbe
 /// kann trotzdem angekommen sein)
 fn show_red<D: Device>(device: &mut D, cfg: &D::Cfg) -> Result<(), String> {
@@ -181,6 +194,21 @@ fn nanoleaf_cmd(cmd: &NanoleafCmd) -> Result<(), String> {
             };
             show_red(&mut nanoleaf::Session::default(), &cfg)?;
             println!("Nanoleaf-Lampe geschaltet und zurückgestellt");
+            Ok(())
+        }
+    }
+}
+
+fn strip_cmd(cmd: &StripCmd) -> Result<(), String> {
+    match cmd {
+        StripCmd::Info => {
+            let info = robobloq::check()?;
+            println!("LEDs:      {}\nMonitor:   {}\"\nFirmware:  {}", info.leds, info.inches, info.firmware_text());
+            Ok(())
+        }
+        StripCmd::Test => {
+            show_red(&mut robobloq::Session::default(), &robobloq::Strip { connection: 0 })?;
+            println!("Lichtstreifen geschaltet und ausgeschaltet");
             Ok(())
         }
     }
@@ -313,6 +341,7 @@ fn main() {
         Cmd::Hue { cmd } => hue_cmd(cmd),
         Cmd::Govee { cmd } => govee_cmd(cmd),
         Cmd::Nanoleaf { cmd } => nanoleaf_cmd(cmd),
+        Cmd::Strip { cmd } => strip_cmd(cmd),
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,

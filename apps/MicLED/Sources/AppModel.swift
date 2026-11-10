@@ -88,6 +88,8 @@ final class AppModel {
             persist()
         }
     }
+    /// Status auf einem USB-Lichtstreifen mit Robobloq-Controller zeigen
+    var robobloqEnabled: Bool { didSet { persist() } }
     /// Schlüssel vom Koppeln je Eintrag, liegen im Schlüsselbund
     private(set) var nanoleafKeys: [UUID: String] = [:]
     var favorites: [String] { didSet { persist(pushConfig: false) } }
@@ -177,6 +179,7 @@ final class AppModel {
             Key.goveeDevices: [[String: String]](),
             Key.nanoleafEnabled: false,
             Key.nanoleafDevices: [[String: String]](),
+            Key.robobloqEnabled: false,
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
             Key.dimTo: 7 * 60,
@@ -222,6 +225,7 @@ final class AppModel {
         goveeDevices = NetLight.list(d.array(forKey: Key.goveeDevices))
         nanoleafEnabled = d.bool(forKey: Key.nanoleafEnabled)
         nanoleafDevices = NetLight.list(d.array(forKey: Key.nanoleafDevices))
+        robobloqEnabled = d.bool(forKey: Key.robobloqEnabled)
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -405,6 +409,13 @@ final class AppModel {
         return "Gekoppelt ✓"
     }
 
+    /// Lichtstreifen per USB suchen und Geräteinfo lesen, liefert eine Meldung
+    /// für die Einstellungen
+    func checkRobobloq() async -> String {
+        let result = await Task.detached { robobloqCheck() }.value
+        return result.error ?? "Gefunden: \(result.leds) LEDs, Firmware \(result.firmware)"
+    }
+
     func nanoleafPaired(_ id: UUID) -> Bool {
         !(nanoleafKeys[id] ?? "").isEmpty
     }
@@ -511,7 +522,8 @@ final class AppModel {
             goveeHosts: goveeEnabled ? goveeDevices.map(\.host) : [],
             nanoleaf: nanoleafEnabled
                 ? nanoleafDevices.map { NanoleafDevice(host: $0.host, key: nanoleafKeys[$0.id] ?? "") }
-                : []
+                : [],
+            robobloq: robobloqEnabled
         )
     }
 
@@ -572,6 +584,7 @@ final class AppModel {
         defaults.set(goveeDevices.map(\.stored), forKey: Key.goveeDevices)
         defaults.set(nanoleafEnabled, forKey: Key.nanoleafEnabled)
         defaults.set(nanoleafDevices.map(\.stored), forKey: Key.nanoleafDevices)
+        defaults.set(robobloqEnabled, forKey: Key.robobloqEnabled)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -691,6 +704,7 @@ final class AppModel {
         static let goveeDevices = "goveeDevices"
         static let nanoleafEnabled = "nanoleafEnabled"
         static let nanoleafDevices = "nanoleafDevices"
+        static let robobloqEnabled = "robobloqEnabled"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"

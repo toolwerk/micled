@@ -29,6 +29,7 @@
 - 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
 - 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
+- 📺 **Lichtstreifen am Monitor**: ein USB-Streifen mit Robobloq-Controller (z. B. Meewata) leuchtet bei Call, Timer und Fokus in der Farbe.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
 - ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
@@ -256,6 +257,29 @@ Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer
 
 Für diese Geräte: in Home Assistant einbinden und dort per Automation mit dem Webhook aus [„Auf Sendung“ an Home Assistant](#auf-sendung-an-home-assistant) schalten.
 
+## Lichtstreifen (USB)
+
+Viele Lichtstreifen hinter dem Monitor mit Bildschirm-Sync nutzen denselben Controller von Robobloq, gesteuert sonst mit der App DX-Light bzw. DX-Lighting. MicLED schaltet ihn direkt per USB, ohne Treiber, zusätzlich zur Luxafor.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-strip-dark.png">
+    <img src="docs/images/settings-strip-light.png" alt="Einstellungen von MicLED: Abschnitt Lichtstreifen (USB) mit Schalter, Knopf „Testen“ und Hinweis auf das eine Programm" width="400">
+  </picture>
+</p>
+
+Bekannte Geräte: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (Vortex Gears), LEDstrips.dk „PC Sync“ und namenlose Streifen von AliExpress. Maßgeblich ist die **USB-ID `1A86:FE07`**, nicht der Produktname: Händler liefern unter gleichem Namen teils andere Controller. Den Controller `1A86:FE0C` und andere unterstützt MicLED nicht. Die USB-ID steht im Systembericht unter USB („ROBOBLOQ USBHID“, Hersteller-ID `0x1a86`, Produkt-ID `0xfe07`).
+
+1. Streifen per USB an den Mac stecken.
+2. In MicLED unter Einstellungen › Lichtstreifen (USB) „Status auf dem Lichtstreifen zeigen“ einschalten.
+3. „Testen“ drücken. Es erscheint z. B. „Gefunden: 78 LEDs, Firmware 1.9.4“.
+
+Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt. Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
+
+**Nur ein Programm zur Zeit kann mit dem Controller sprechen.** Wer DX-Light, SyncLight, backlit oder ein anderes Programm für den Streifen laufen lässt, beendet es, damit MicLED ihn steuern kann.
+
+Die Seriennummer ist bei allen Streifen gleich. Hängen zwei Streifen am Mac, zeigen beide dieselbe Farbe.
+
 ## Termine aus Nextcloud
 
 Für die Vorwarnung gibt es zwei Wege:
@@ -314,12 +338,14 @@ cargo run -p micled-cli -- govee test 192.168.1.31   # 5 s Rot, dann zurück
 cargo run -p micled-cli -- nanoleaf scan       # Nanoleaf per Bonjour suchen
 cargo run -p micled-cli -- nanoleaf pair 192.168.1.40   # nach 5–7 s Einschaltknopf: Schlüssel
 MICLED_NANOLEAF_KEY=<schlüssel> cargo run -p micled-cli -- nanoleaf test 192.168.1.40   # 5 s Rot, dann zurück
+cargo run -p micled-cli -- strip info          # Lichtstreifen per USB: LEDs, Monitorgröße, Firmware
+cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ```
 
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, Lichtstreifen (USB)
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen

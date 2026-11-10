@@ -28,7 +28,7 @@ enum ScreenshotMode {
     /// (und nicht ausgegraut) aufgenommen wird
     static var window: String { argument("--window") ?? "menu" }
 
-    /// `--scroll network`: Einstellungen bis zu Govee und Nanoleaf scrollen
+    /// `--scroll network|strip`: Einstellungen bis zu Govee und Nanoleaf bzw. zum Lichtstreifen scrollen
     static var scroll: String? { isActive ? argument("--scroll") : nil }
 
     static let suiteName = "net.staude.micled.screenshots"
@@ -58,6 +58,7 @@ enum ScreenshotMode {
         ], forKey: "goveeDevices")
         d.set(true, forKey: "nanoleafEnabled")
         d.set([["id": UUID().uuidString, "host": "192.168.1.40:16021", "name": "Canvas 5B3C"]], forKey: "nanoleafDevices")
+        d.set(true, forKey: "robobloqEnabled")
         return d
     }
 

@@ -20,6 +20,7 @@ pub mod onair;
 pub mod output;
 pub mod pixoo;
 pub mod reminder;
+pub mod robobloq;
 pub mod shared;
 pub mod slack;
 pub mod stats;

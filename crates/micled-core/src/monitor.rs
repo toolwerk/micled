@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, shared, slack};
+use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -27,6 +27,8 @@ const NEXTCLOUD_SETTLE: Duration = Duration::from_secs(3);
 /// Höchstens so lange beim Beenden auf die Hue-Lampen warten (ein Raum wird
 /// Lampe für Lampe zurückgestellt), ebenso auf Govee und Nanoleaf
 const HUE_SHUTDOWN: Duration = Duration::from_secs(5);
+/// Abstand der Suche nach dem Lichtstreifen (Anstecken erkennen)
+const STRIP_EVERY: Duration = Duration::from_secs(5);
 
 /// Govee-Lampen
 type GoveeFleet = output::Fleet<govee::Session>;
@@ -111,6 +113,7 @@ impl Monitor {
         let hue_error = Arc::new(Mutex::new(None));
         let govee_error = Arc::new(Mutex::new(None));
         let nanoleaf_error = Arc::new(Mutex::new(None));
+        let robobloq_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
             .spawn(move || {
@@ -157,6 +160,11 @@ impl Monitor {
                     nanoleaf: output::Updater::start("nanoleaf", nanoleaf_error.clone()),
                     nanoleaf_error,
                     last_nanoleaf: None,
+                    robobloq: output::Updater::start("robobloq", robobloq_error.clone()),
+                    robobloq_error,
+                    last_robobloq: None,
+                    watch: robobloq::Watch::default(),
+                    next_watch: Instant::now(),
                 };
                 // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
                 w.report_slack();
@@ -192,19 +200,21 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                // Pixoo, AWTRIX, Hue, Govee und Nanoleaf gleichzeitig zurückstellen, nicht nacheinander
+                // Pixoo, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen gleichzeitig zurückstellen, nicht nacheinander
                 let started = Instant::now();
                 let pixoo = w.pixoo.begin_shutdown();
                 let awtrix = w.awtrix.begin_shutdown();
                 let hue = w.hue.begin_shutdown();
                 let govee = w.govee.begin_shutdown();
                 let nanoleaf = w.nanoleaf.begin_shutdown();
+                let strip = w.robobloq.begin_shutdown();
                 for (done, limit) in [
                     (pixoo, Duration::from_secs(3)),
                     (awtrix, Duration::from_secs(3)),
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
                     (nanoleaf, HUE_SHUTDOWN),
+                    (strip, Duration::from_secs(3)),
                 ] {
                     if let Some(done) = done {
                         let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
@@ -335,6 +345,13 @@ struct Worker {
     nanoleaf_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an die Nanoleaf-Lampen gegebene Liste und Szene
     last_nanoleaf: Option<(Option<Vec<nanoleaf::Nanoleaf>>, Scene)>,
+    robobloq: output::Updater<robobloq::Session>,
+    robobloq_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an den Lichtstreifen gegebenes Ziel und Szene
+    last_robobloq: Option<(Option<robobloq::Strip>, Scene)>,
+    /// Ist der Streifen angesteckt? Zählt das Wiederanstecken.
+    watch: robobloq::Watch,
+    next_watch: Instant,
 }
 
 impl Worker {
@@ -369,6 +386,11 @@ impl Worker {
         }
         if cfg.nanoleaf != self.engine.config().nanoleaf {
             *self.nanoleaf_error.lock().unwrap() = None;
+        }
+        if cfg.robobloq != self.engine.config().robobloq {
+            *self.robobloq_error.lock().unwrap() = None;
+            self.watch = robobloq::Watch { paths: None, connection: self.watch.connection };
+            self.next_watch = Instant::now();
         }
         if cfg.nextcloud != self.engine.config().nextcloud {
             self.round += 1;
@@ -563,7 +585,19 @@ impl Worker {
             self.set_live(live);
         }
 
-        // 7. Display, AWTRIX, Hue, Govee und Nanoleaf: nur bei einer Änderung (oder neuem Ziel) senden
+        // 7. Lichtstreifen: alle fünf Sekunden nachsehen, ob er (wieder) angesteckt ist
+        if self.engine.config().robobloq && Instant::now() >= self.next_watch {
+            self.next_watch = Instant::now() + STRIP_EVERY;
+            match robobloq::find() {
+                Ok(paths) => self.watch.seen(paths),
+                Err(e) => {
+                    self.watch.seen(Vec::new());
+                    *self.robobloq_error.lock().unwrap() = Some(e);
+                }
+            }
+        }
+
+        // 8. Display, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen: nur bei einer Änderung (oder neuem Ziel) senden
         let brightness = self.brightness;
         let scene = self.engine.scene(now).map_color(|c| dim::apply(c, brightness));
         let wanted = (self.engine.config().hue.clone(), scene.clone());
@@ -582,6 +616,12 @@ impl Worker {
         if self.last_nanoleaf.as_ref() != Some(&wanted) {
             self.nanoleaf.send(wanted.0.clone(), wanted.1.clone());
             self.last_nanoleaf = Some(wanted);
+        }
+        let strip = self.engine.config().robobloq.then_some(robobloq::Strip { connection: self.watch.connection });
+        let wanted = (strip, scene.clone());
+        if self.last_robobloq.as_ref() != Some(&wanted) {
+            self.robobloq.send(wanted.0.clone(), wanted.1.clone());
+            self.last_robobloq = Some(wanted);
         }
         let wanted = (self.engine.config().awtrix.clone(), scene.clone());
         if self.last_awtrix.as_ref() != Some(&wanted) {
@@ -665,6 +705,7 @@ impl Worker {
                 .or_else(|| self.hue_error.lock().unwrap().clone())
                 .or_else(|| self.govee_error.lock().unwrap().clone())
                 .or_else(|| self.nanoleaf_error.lock().unwrap().clone())
+                .or_else(|| self.robobloq_error.lock().unwrap().clone())
                 .or_else(|| self.awtrix_error.lock().unwrap().clone()),
         }
     }
