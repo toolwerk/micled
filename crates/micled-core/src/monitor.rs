@@ -389,7 +389,7 @@ impl Worker {
         }
         if cfg.robobloq != self.engine.config().robobloq {
             *self.robobloq_error.lock().unwrap() = None;
-            self.watch = robobloq::Watch { present: None, connection: self.watch.connection };
+            self.watch = robobloq::Watch { paths: None, connection: self.watch.connection };
             self.next_watch = Instant::now();
         }
         if cfg.nextcloud != self.engine.config().nextcloud {
@@ -588,10 +588,12 @@ impl Worker {
         // 7. Lichtstreifen: alle fünf Sekunden nachsehen, ob er (wieder) angesteckt ist
         if self.engine.config().robobloq && Instant::now() >= self.next_watch {
             self.next_watch = Instant::now() + STRIP_EVERY;
-            let found = robobloq::find();
-            self.watch.seen(found.is_ok());
-            if let Err(e) = found {
-                *self.robobloq_error.lock().unwrap() = Some(e);
+            match robobloq::find() {
+                Ok(paths) => self.watch.seen(paths),
+                Err(e) => {
+                    self.watch.seen(Vec::new());
+                    *self.robobloq_error.lock().unwrap() = Some(e);
+                }
             }
         }
 

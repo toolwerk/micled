@@ -162,7 +162,7 @@ fn usb_error(e: impl std::fmt::Display) -> String {
 
 /// Angesteckte Streifen (Pfade der Steuer-Schnittstelle)
 pub fn find() -> Result<Vec<CString>, String> {
-    find_in(&HidApi::new().map_err(usb_error)?)
+    find_in(&crate::lamp::hid_api().map_err(usb_error)?)
 }
 
 /// Ein Befehl an alle Streifen, mit dem Gerät nur für die Dauer des Befehls offen
@@ -202,9 +202,17 @@ fn read_info(dev: &HidDevice, seq: &mut u8) -> Result<Option<Info>, String> {
 /// Info des ersten, der antwortet (`None` ohne Antwort).
 pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
     let mut seq = USB.lock().unwrap_or_else(|e| e.into_inner());
-    let api = HidApi::new().map_err(usb_error)?;
+    let api = crate::lamp::hid_api().map_err(usb_error)?;
+    let paths = find_in(&api)?;
+    // mehrere Streifen: LED-Zahl und Firmware gelten nur für den ersten,
+    // deshalb für alle den ganzen Bereich und `0x97`
+    let cmd = match cmd {
+        Cmd::Color(c, _) if paths.len() > 1 => Cmd::Color(c, None),
+        Cmd::Off(_) if paths.len() > 1 => Cmd::Off(None),
+        other => other,
+    };
     let mut info = None;
-    for path in find_in(&api)? {
+    for path in paths {
         let dev = api.open_path(&path).map_err(usb_error)?;
         match cmd {
             Cmd::ReadInfo => {
@@ -231,6 +239,7 @@ pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
         }
         // `dev` wird hier geschlossen, andere Programme bleiben unberührt
     }
+    drop(seq);
     if cmd == Cmd::Brightness {
         sleep(BRIGHTNESS_GAP);
     }
@@ -249,20 +258,28 @@ pub struct Strip {
     pub connection: u32,
 }
 
-/// Merkt, ob ein Streifen angesteckt ist, und zählt das Wiederanstecken
+/// Merkt, welche Streifen angesteckt sind, und zählt das Wiederanstecken.
+/// Unter macOS enthält der Pfad die Registry-ID, die sich bei jedem Anmelden
+/// des Geräts ändert: So fällt auch kurzes Abziehen oder ein Neustart des
+/// Streifens im Ruhezustand des Macs auf.
 #[derive(Debug, Default)]
 pub struct Watch {
-    pub present: Option<bool>,
+    /// `None` = noch nicht gesucht, `Some(vec![])` = keiner da
+    pub paths: Option<Vec<CString>>,
     pub connection: u32,
 }
 
 impl Watch {
-    /// Ergebnis einer Suche; `false → true` ist ein neues Anstecken
-    pub fn seen(&mut self, present: bool) {
-        if self.present == Some(false) && present {
-            self.connection += 1;
+    /// Ergebnis einer Suche (`[]` = keiner da). Kommt ein Streifen dazu oder
+    /// ändert sich sein Pfad, ist das ein neues Anstecken; Abziehen nicht.
+    pub fn seen(&mut self, mut paths: Vec<CString>) {
+        paths.sort();
+        if let Some(old) = &self.paths {
+            if !paths.is_empty() && paths.iter().any(|p| !old.contains(p)) {
+                self.connection += 1;
+            }
         }
-        self.present = Some(present);
+        self.paths = Some(paths);
     }
 }
 
@@ -305,9 +322,13 @@ impl Device for Session {
 impl Session {
     fn apply_with(&mut self, cfg: Option<&Strip>, scene: &Scene, send: &mut SendFn<'_>) -> Result<(), String> {
         let Some(strip) = cfg else {
-            // ausgeschaltet: eine gezeigte Farbe geht aus, sonst bleibt alles
+            // ausgeschaltet: eine gezeigte Farbe geht aus. Fehlt der Streifen,
+            // wird es nicht wiederholt, sonst bliebe der Fehler stehen und ein
+            // später angesteckter Streifen ginge ungefragt aus.
             if self.lit {
-                self.turn_off(send)?;
+                if let Err(e) = self.turn_off(send) {
+                    log::warn!("Lichtstreifen nicht ausgeschaltet: {e}");
+                }
             }
             *self = Session::default();
             return Ok(());
@@ -347,6 +368,8 @@ impl Session {
     fn turn_off(&mut self, send: &mut SendFn<'_>) -> Result<(), String> {
         let info = self.info(send)?;
         send(Cmd::Off(info))?;
+        // nach dem Ausschalten vor der nächsten Farbe wieder die Helligkeit (wie DX-Light)
+        self.bright = false;
         self.lit = false;
         self.off = true;
         self.shown = None;
@@ -431,19 +454,29 @@ mod tests {
         assert_eq!(choose::<&str>(vec![]), Err(NOT_FOUND.into()));
     }
 
+    fn paths(ids: &[&str]) -> Vec<CString> {
+        ids.iter().map(|i| CString::new(format!("DevSrvsID:{i}")).unwrap()).collect()
+    }
+
     #[test]
     fn plugging_in_again_counts() {
         let mut w = Watch::default();
-        w.seen(true);
+        w.seen(paths(&["1"]));
         assert_eq!(w.connection, 0, "erster Blick ist kein Anstecken");
-        w.seen(true);
-        w.seen(false);
-        assert_eq!(w.connection, 0);
-        w.seen(true);
+        w.seen(paths(&["1"]));
+        w.seen(vec![]);
+        assert_eq!(w.connection, 0, "Abziehen zählt nicht");
+        w.seen(paths(&["2"]));
         assert_eq!(w.connection, 1);
+        w.seen(paths(&["3"]));
+        assert_eq!(w.connection, 2, "kurz abgezogen oder im Ruhezustand neu gestartet: neuer Pfad");
+        w.seen(paths(&["4", "3"]));
+        assert_eq!(w.connection, 3, "zweiter Streifen dazu");
+        w.seen(paths(&["3"]));
+        assert_eq!(w.connection, 3, "einer weg");
         let mut w = Watch::default();
-        w.seen(false);
-        w.seen(true);
+        w.seen(vec![]);
+        w.seen(paths(&["1"]));
         assert_eq!(w.connection, 1, "beim Start fehlend, dann angesteckt");
     }
 
@@ -501,6 +534,8 @@ mod tests {
         assert_eq!(f.take(), [Cmd::Color(Rgb::GREEN, Some(78))], "Info und Helligkeit nur einmal");
         s.apply_with(Some(&strip(0)), &Scene::Idle, &mut f.send()).unwrap();
         assert_eq!(f.take(), [Cmd::Off(Some(MEEWATA))]);
+        s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
+        assert_eq!(f.take(), [Cmd::Brightness, Cmd::Color(Rgb::RED, Some(78))], "nach dem Ausschalten wieder mit Helligkeit");
     }
 
     #[test]
@@ -529,15 +564,21 @@ mod tests {
         let mut s = Session::default();
         s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
         f.take();
-        f.fail = true;
-        assert!(s.apply_with(None, &LIVE, &mut f.send()).is_err());
-        assert_eq!(s.current(), Some(&strip(0)), "Zustand bleibt für den nächsten Versuch");
-        f.fail = false;
         s.apply_with(None, &LIVE, &mut f.send()).unwrap();
         assert_eq!(f.take(), [Cmd::Off(Some(MEEWATA))]);
         assert_eq!(s.current(), None);
         s.apply_with(None, &Scene::Idle, &mut f.send()).unwrap();
         assert!(f.take().is_empty(), "nichts gezeigt, nichts auszuschalten");
+
+        // abgezogen und dann ausgeschaltet: einmal versuchen, dann aufgeben
+        s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
+        f.take();
+        f.fail = true;
+        s.apply_with(None, &LIVE, &mut f.send()).unwrap();
+        assert_eq!(s.current(), None, "kein Fehler, keine Wiederholung");
+        f.fail = false;
+        s.apply_with(None, &LIVE, &mut f.send()).unwrap();
+        assert!(f.take().is_empty(), "ein später angesteckter Streifen geht nicht ungefragt aus");
     }
 
     #[test]
