@@ -6,6 +6,7 @@ struct MenuView: View {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @State private var custom = Color.orange
+    private let updater = UpdaterController.shared
 
     var body: some View {
         @Bindable var model = model
@@ -91,6 +92,16 @@ struct MenuView: View {
             }
 
             Divider()
+
+            HStack {
+                Text("MicLED \(updater.versionText)")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Nach Updates suchen …") { updater.checkForUpdates() }
+                    .disabled(!updater.isAvailable)
+            }
+            .font(.caption)
+            .buttonStyle(.borderless)
 
             HStack {
                 Button("Einstellungen …") {

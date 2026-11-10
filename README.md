@@ -323,7 +323,7 @@ crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdate
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
-scripts/             build-rust.sh, bump-build.sh, release.sh, screenshots.sh
+scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh
 docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README
 ```
 
@@ -337,16 +337,37 @@ scripts/screenshots.sh
 
 Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
+## Updates
+
+MicLED sucht einmal am Tag mit [Sparkle](https://sparkle-project.org) nach einer neuen Version und fragt vor der Installation nach. Von Hand geht das im Menü und im Kontextmenü mit „Nach Updates suchen …“, abschalten lässt sich die Suche in den Einstellungen unter „Updates“. Damit Sparkle die App ersetzen kann, muss sie in „Programme“ liegen und nicht in „Downloads“. Entwickler-Builds suchen nicht nach Updates.
+
 ## Release
+
+Einmalig: das Notarisierungsprofil und der Sparkle-Schlüssel. Der private Schlüssel bleibt im Anmelde-Schlüsselbund (Eintrag `micled`) und kommt nie ins Repo.
 
 ```bash
 xcrun notarytool store-credentials micled --apple-id <Apple-ID> --team-id <TEAM> --password <app-spezifisch>
+
+(cd apps/MicLED && xcodegen generate)
+xcodebuild -resolvePackageDependencies -project apps/MicLED/MicLED.xcodeproj -clonedSourcePackagesDirPath build/spm
+build/spm/artifacts/sparkle/Sparkle/bin/generate_keys --account micled
+build/spm/artifacts/sparkle/Sparkle/bin/generate_keys --account micled -x <datei>   # Sicherung für den Passwortmanager, danach löschen
+```
+
+Den ausgegebenen öffentlichen Schlüssel in `apps/MicLED/Resources/Info.plist` bei `SUPublicEDKey` eintragen und committen. Den Schlüssel nie ersetzen: Installierte Apps nehmen nur Updates an, die mit ihm signiert sind.
+
+Für jedes Release (bei einer neuen Version vorher `MARKETING_VERSION` in `apps/MicLED/project.yml` hochsetzen):
+
+```bash
 scripts/bump-build.sh
+git commit -am "chore(release): build <N>"
 scripts/release.sh
 ```
 
-`release.sh` prüft zuerst Zertifikat, Notarisierungsprofil, Team-ID und sauberen Git-Stand. Danach folgen Archiv, Export mit Developer ID, Notarisierung, Stapeln und Prüfung mit `codesign`, `spctl` und `stapler`.
+`release.sh` prüft zuerst Zertifikat, Notarisierungsprofil, Team-ID, sauberen Git-Stand, den Sparkle-Schlüssel und ob die Build-Nummer über der veröffentlichten liegt, denn Sparkle bietet nur eine höhere an. Danach folgen Archiv, Export mit Developer ID, Notarisierung, Stapeln und Prüfung mit `codesign`, `spctl` und `stapler`. Zum Schluss signiert `scripts/appcast.sh` das ZIP und schreibt `dist/appcast.xml`.
+
+Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Das Skript gibt am Ende die passenden Befehle aus: erst das ZIP, dann der Appcast, zuletzt wird der Release „Latest“. Die Reihenfolge einhalten, damit der Appcast nie auf ein fehlendes ZIP zeigt und die feste Adresse immer einen Appcast liefert.
 
 ## Lizenz
 
-MIT
+MIT. Die App enthält [Sparkle](https://github.com/sparkle-project/Sparkle), ebenfalls MIT.

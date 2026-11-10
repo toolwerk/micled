@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Kontextmenü für das Menüleisten-Symbol: Rechtsklick oder Ctrl-Klick zeigt
-/// „Einstellungen …“ und „MicLED beenden“, ein Linksklick öffnet weiter das
+/// „Einstellungen …“, „Nach Updates suchen …“ und „MicLED beenden“, ein Linksklick öffnet weiter das
 /// Menüfenster von `MenuBarExtra`.
 ///
 /// `MenuBarExtra` hat keinen eigenen Rechtsklick. Deshalb fängt ein lokaler
@@ -32,6 +32,7 @@ final class StatusContextMenu: NSObject {
         guard secondary, let window = event.window, Self.isStatusItemWindow(window),
               let view = window.contentView else { return false }
         let menu = NSMenu()
+        menu.autoenablesItems = false
         if AppModel.shared.timerUntil.map({ $0 > Date() }) == true {
             menu.addItem(withTitle: "Konzentration beenden", action: #selector(stopTimer), keyEquivalent: "").target = self
         } else {
@@ -46,6 +47,9 @@ final class StatusContextMenu: NSObject {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Statistik", action: #selector(stats), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Einstellungen …", action: #selector(settings), keyEquivalent: ",").target = self
+        let updates = menu.addItem(withTitle: "Nach Updates suchen …", action: #selector(checkForUpdates), keyEquivalent: "")
+        updates.target = self
+        updates.isEnabled = UpdaterController.shared.isAvailable
         menu.addItem(.separator())
         menu.addItem(withTitle: "MicLED beenden", action: #selector(quit), keyEquivalent: "q").target = self
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.minY - 4), in: view)
@@ -59,6 +63,10 @@ final class StatusContextMenu: NSObject {
     @objc private func settings() {
         NSApp.activate()
         openSettings?()
+    }
+
+    @objc private func checkForUpdates() {
+        UpdaterController.shared.checkForUpdates()
     }
 
     @objc private func startTimer(_ item: NSMenuItem) {

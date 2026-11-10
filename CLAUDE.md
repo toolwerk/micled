@@ -18,6 +18,7 @@ Menüleisten-App für macOS: schaltet eine Luxafor-Lampe bei aktivem Mikrofon um
 - Xcode-Projekt nur über `apps/MicLED/project.yml` und `xcodegen generate` ändern.
 - Rust baut im Aggregate-Target `RustCore` (nicht `MicLEDCore` nennen). Bibliothek und Header direkt einbinden, kein XCFramework, und explizite Module aus lassen. Sonst baut Xcode nach einer API-Änderung gegen den alten Header.
 - `apps/MicLED/Generated/` und `build/` sind generiert und nicht eingecheckt.
+- Updates laufen über Sparkle in `UpdaterController.swift`, nicht im Rust-Kern, weil Sparkle ein AppKit-Framework ist. Den EdDSA-Schlüssel (Schlüsselbund, Konto `micled`) nie ersetzen, sonst nehmen installierte Apps keine Updates mehr an. Sparkle vergleicht `CFBundleVersion`, jedes Release braucht eine höhere Build-Nummer.
 - Swift 6, macOS 14. Statusmeldungen aus Rust kommen auf einem Hintergrund-Thread und werden per `Task { @MainActor in }` übergeben.
 
 ## Prüfen

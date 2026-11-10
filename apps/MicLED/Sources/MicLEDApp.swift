@@ -2,6 +2,11 @@ import SwiftUI
 
 /// Nimmt `micled://`-Adressen entgegen (Raycast, Stream Deck, Kurzbefehle).
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Sparkle starten, sonst beginnt die tägliche Prüfung erst mit dem ersten Menü
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated { _ = UpdaterController.shared }
+    }
+
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls { AppModel.shared.handle(url: url) }
     }
