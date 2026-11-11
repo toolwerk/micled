@@ -314,6 +314,22 @@ msgctxt "Lichtstreifen: Test ohne Antwort"
 msgid "Light strip: test without reply"
 msgstr ""
 
+#. Statistics window
+#. Plural form “one”
+#. Keep the placeholders: %lld
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/%lld Calls#one"
+msgid "%lld call"
+msgstr ""
+
+#. Statistics window
+#. Plural form “other”
+#. Keep the placeholders: %lld
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/%lld Calls#other"
+msgid "%lld calls"
+msgstr ""
+
 #. Right-click menu
 #. Keep the placeholders: %lld
 #: apps/MicLED/Sources/StatusContextMenu.swift
@@ -407,6 +423,12 @@ msgctxt "Localizable/Aktualisieren"
 msgid "Refresh"
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Alle Calls"
+msgid "All calls"
+msgstr ""
+
 #. Settings window
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Allgemein"
@@ -444,10 +466,22 @@ msgctxt "Localizable/App-Passwort"
 msgid "App password"
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Art"
+msgid "Kind"
+msgstr ""
+
 #. Settings window
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Auch „Nicht stören“ setzen"
 msgid "Also set “Do not disturb”"
+msgstr ""
+
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Auf Sendung"
+msgid "On air"
 msgstr ""
 
 #. Settings window
@@ -548,6 +582,12 @@ msgctxt "Localizable/Call"
 msgid "Call"
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Calls"
+msgid "Calls"
+msgstr ""
+
 #. Settings window
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen."
@@ -588,6 +628,13 @@ msgstr ""
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Diese Programme schalten die Lampe nicht um, z. B. ein Diktier- oder Aufnahmewerkzeug, das das Mikrofon dauerhaft offen hält."
 msgid "These apps don’t switch the light, e.g. a dictation or recording tool that keeps the microphone open all the time."
+msgstr ""
+
+#. Statistics window
+#. Keep the placeholders: %lld
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Diese Woche (KW %lld)"
+msgid "This week (wk %lld)"
 msgstr ""
 
 #. Menu
@@ -730,8 +777,9 @@ msgctxt "Localizable/Flur – Tür"
 msgid "Hallway – Door"
 msgstr ""
 
-#. Settings window
+#. Settings window, Statistics window
 #: apps/MicLED/Sources/SettingsView.swift
+#: apps/MicLED/Sources/StatsView.swift
 msgctxt "Localizable/Fokus"
 msgid "Focus"
 msgstr ""
@@ -834,6 +882,19 @@ msgstr ""
 #: apps/MicLED/Sources/AppModel.swift
 msgctxt "Localizable/Im Call"
 msgid "In a call"
+msgstr ""
+
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Inhalt:"
+msgid "Content:"
+msgstr ""
+
+#. Statistics window
+#. Keep the placeholders: %lld
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/KW %lld"
+msgid "Wk %lld"
 msgstr ""
 
 #. Settings window
@@ -1067,6 +1128,12 @@ msgctxt "Localizable/MicLED-Menü"
 msgid "MicLED Menu"
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/MicLED-Wochen.csv"
+msgid "MicLED-Weeks.csv"
+msgstr ""
+
 #. Menu
 #: apps/MicLED/Sources/MenuView.swift
 msgctxt "Localizable/Mikro an"
@@ -1271,6 +1338,12 @@ msgctxt "Localizable/Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Mee
 msgid "Strips with a Robobloq controller (USB 1A86:FE07), e.g. Meewata. In the selected states the whole strip lights up in the color, otherwise it is off. After plugging it back in, it gets the color again within a few seconds."
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Stunden"
+msgid "Hours"
+msgstr ""
+
 #. Settings window
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Suche …"
@@ -1287,6 +1360,12 @@ msgstr ""
 #: apps/MicLED/Sources/StatsView.swift
 msgctxt "Localizable/Summe"
 msgid "Total"
+msgstr ""
+
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Summen je Woche"
+msgid "Totals per week"
 msgstr ""
 
 #. Statistics window
@@ -1433,6 +1512,18 @@ msgctxt "Localizable/Wenn das Mikro aus geht"
 msgid "When the mic turns off"
 msgstr ""
 
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Woche"
+msgid "Week"
+msgstr ""
+
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/Wochen"
+msgid "Weeks"
+msgstr ""
+
 #. Settings window
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
@@ -1473,6 +1564,12 @@ msgstr ""
 #: apps/MicLED/Sources/SettingsView.swift
 msgctxt "Localizable/Zurücksetzen"
 msgid "Reset"
+msgstr ""
+
+#. Statistics window
+#: apps/MicLED/Sources/StatsView.swift
+msgctxt "Localizable/ggü. Vorwoche bis jetzt"
+msgid "vs. last week to date"
 msgstr ""
 
 #. Settings window
