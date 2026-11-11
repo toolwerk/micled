@@ -155,6 +155,12 @@ Die Szene `vor_dem_call` entsteht zur Laufzeit und braucht keine eigene Konfigur
 
 MicLED setzt den Status nur, wenn gerade keiner gesetzt ist. Ändert sich der Status während des Calls, bleibt er danach stehen. Der eigene Status läuft nach vier Stunden von selbst ab, falls MicLED ihn nicht mehr zurücksetzen kann.
 
+## Welche Zustände ein Gerät zeigt
+
+Pixoo 64, AWTRIX, Hue, Govee, Nanoleaf und der Lichtstreifen haben in ihrem Abschnitt der Einstellungen die Zeile „Zeigen bei“ mit den Häkchen „Call“, „Timer“ und „Fokus“. Ab Werk sind alle drei gesetzt, auch nach einem Update. So bleibt z. B. eine Hue-Lampe im Wohnzimmer bei Timer und Fokus, wie sie ist, und färbt sich nur bei einem Call.
+
+Ein abgewählter Zustand gilt für dieses Gerät als frei. Läuft darunter ein Zustand, den es zeigen darf, zeigt es diesen: Ein Lichtstreifen ohne „Call“ bleibt während eines Calls in der Fokusfarbe, wenn „Fokus“ gesetzt ist. Sonst hat das Gerät seinen Zustand von vorher. „Fokus“ wirkt nur, wenn „Fokus von macOS anzeigen“ an ist, sonst ist das Häkchen ausgegraut. Die Luxafor-Lampe, Slack und der Webhook folgen den Häkchen nicht.
+
 ## Pixoo 64
 
 Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr.
@@ -276,7 +282,7 @@ Bekannte Geräte: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (V
 2. In MicLED unter Einstellungen › Lichtstreifen (USB) „Status auf dem Lichtstreifen zeigen“ einschalten.
 3. „Testen“ drücken. Der Streifen leuchtet etwa zwei Sekunden rot und zeigt danach wieder, was MicLED gerade zeigt (aus oder die Farbe von Call, Timer oder Fokus). Darunter erscheint z. B. „Gefunden: 78 LEDs, Firmware 1.9.4 ✓“. Findet MicLED den Streifen nicht oder antwortet er nicht, steht dort ein Fehler, und er bleibt unverändert.
 
-Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt. Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
+Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt; welche davon er zeigt, legen die Häkchen fest ([Welche Zustände ein Gerät zeigt](#welche-zustände-ein-gerät-zeigt)). Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
 
 **Nur ein Programm zur Zeit kann mit dem Controller sprechen.** Wer DX-Light, SyncLight, backlit oder ein anderes Programm für den Streifen laufen lässt, beendet es, damit MicLED ihn steuern kann.
 
