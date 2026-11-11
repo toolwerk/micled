@@ -104,6 +104,18 @@ struct StatsView: View {
             .position(by: .value("Art", bar.kind))
         }
         .chartForegroundStyleScale([Self.live: Color.red, Self.focus: Color.orange])
+        .chartXAxis {
+            AxisMarks { value in
+                AxisValueLabel {
+                    if let label = value.as(String.self) {
+                        VStack(spacing: 1) {
+                            Text(label)
+                            Text("\(callsByLabel[label] ?? 0) Calls").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
         .chartYAxisLabel("Stunden")
         .chartLegend(position: .top, alignment: .trailing)
         .frame(minHeight: 220)
@@ -131,6 +143,11 @@ struct StatsView: View {
                 WeekBar(label: "KW \(w.week)", kind: Self.focus, seconds: w.focusSeconds),
             ]
         }
+    }
+
+    /// Zahl der Calls je Beschriftung „KW <n>“
+    private var callsByLabel: [String: UInt32] {
+        Dictionary((weekly?.weeks ?? []).map { ("KW \($0.week)", $0.calls) }, uniquingKeysWith: { a, _ in a })
     }
 
     /// Differenz zweier Dauern mit Vorzeichen, z.B. „+1 h 5 min“
@@ -200,6 +217,7 @@ private final class ExportChoice: NSObject {
         let label = NSTextField(labelWithString: "Inhalt:")
         let stack = NSStackView(views: [label, popup])
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        stack.frame.size = stack.fittingSize
         view = stack
         super.init()
         popup.target = self
