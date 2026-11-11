@@ -6,7 +6,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
 use micled_core::output::Device;
-use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, robobloq, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, mqtt, nanoleaf, pixoo, robobloq, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -58,6 +58,11 @@ enum Cmd {
     Nanoleaf {
         #[command(subcommand)]
         cmd: NanoleafCmd,
+    },
+    /// MQTT-Broker für Home Assistant
+    Mqtt {
+        #[command(subcommand)]
+        cmd: MqttCmd,
     },
     /// Lichtstreifen mit Robobloq-Controller per USB (1A86:FE07)
     Strip {
@@ -140,6 +145,26 @@ enum NanoleafCmd {
 }
 
 #[derive(Subcommand)]
+enum MqttCmd {
+    /// Verbindung prüfen: anmelden und wieder abmelden.
+    /// Ohne --password kommt das Passwort aus MICLED_MQTT_PASSWORD.
+    Check {
+        /// Adresse des Brokers, z. B. homeassistant.local
+        host: String,
+        /// Ohne Angabe 1883, mit --tls 8883
+        #[arg(long)]
+        port: Option<u16>,
+        /// Verschlüsselt, Zertifikat gegen die öffentlichen Zertifizierungsstellen geprüft
+        #[arg(long)]
+        tls: bool,
+        #[arg(long, default_value = "")]
+        user: String,
+        #[arg(long)]
+        password: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
 enum StripCmd {
     /// Zeigt Zahl der LEDs, Monitorgröße und Firmware
     Info,
@@ -209,6 +234,25 @@ fn strip_cmd(cmd: &StripCmd) -> Result<(), String> {
         StripCmd::Test => {
             show_red(&mut robobloq::Session::default(), &robobloq::Strip { connection: 0 })?;
             println!("Lichtstreifen geschaltet und ausgeschaltet");
+            Ok(())
+        }
+    }
+}
+
+fn mqtt_cmd(cmd: &MqttCmd) -> Result<(), String> {
+    match cmd {
+        MqttCmd::Check { host, port, tls, user, password } => {
+            let cfg = mqtt::Mqtt {
+                host: mqtt::normalize(host).ok_or("Adresse des Brokers fehlt")?,
+                port: port.unwrap_or(if *tls { mqtt::TLS_PORT } else { mqtt::PORT }),
+                tls: *tls,
+                user: user.clone(),
+                password: password.clone().or_else(|| std::env::var("MICLED_MQTT_PASSWORD").ok()).unwrap_or_default(),
+                device_id: String::new(),
+                device_name: String::new(),
+            };
+            mqtt::check(&cfg)?;
+            println!("Verbunden mit {}:{}", cfg.host, cfg.port);
             Ok(())
         }
     }
@@ -342,6 +386,7 @@ fn main() {
         Cmd::Govee { cmd } => govee_cmd(cmd),
         Cmd::Nanoleaf { cmd } => nanoleaf_cmd(cmd),
         Cmd::Strip { cmd } => strip_cmd(cmd),
+        Cmd::Mqtt { cmd } => mqtt_cmd(cmd),
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {
                 enabled: true,
