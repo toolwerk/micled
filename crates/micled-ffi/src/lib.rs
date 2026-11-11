@@ -485,7 +485,6 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
     })
 }
 
-/// Farbe aus Text (`ff8800`, `#f80`, `rot`) als `rrggbb`, `None` wenn unlesbar
 /// Sprache der Texte aus dem Kern nach dem Sprachcode von macOS (`de`, `en` …);
 /// alles außer Deutsch wird Englisch. Vor dem ersten anderen Aufruf setzen.
 #[uniffi::export]
@@ -493,6 +492,7 @@ pub fn set_language(code: String) {
     core::lang::set(core::lang::from_code(&code));
 }
 
+/// Farbe aus Text (`ff8800`, `#f80`, `rot`) als `rrggbb`, `None` wenn unlesbar
 #[uniffi::export]
 pub fn parse_color(text: String) -> Option<String> {
     Rgb::parse(&text).map(|c| c.hex())
