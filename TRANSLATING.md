@@ -19,7 +19,7 @@ Every text shows:
 
 Please keep in mind:
 
-- **Keep placeholders exactly as they are:** `{e}`, `{host}`, `{code}` …, `%@`, `%lld` and `${applicationName}`. You may move them within the sentence. In texts with several `%@`, use `%1$@`, `%2$@` to change their order. A text with a missing or misspelled placeholder counts as not translated.
+- **Keep placeholders exactly as they are:** `{e}`, `{host}`, `{code}` …, `%@`, `%lld` and `${applicationName}`. You may move them within the sentence. To change the order of `%@`, `%lld` and the like, number all of them, e.g. `%2$lld … %1$@` for `%@ … %lld`. A text with a missing, extra or misspelled placeholder counts as not translated and shows in English.
 - **Fuzzy texts:** the English original changed after the text was translated. Check the translation and remove the “fuzzy” mark (Poedit: turn off “Needs work”). Until then MicLED shows the English text.
 - **Missing texts** are fine. MicLED shows them in English, so you can send a partial translation.
 - **Plural forms:** texts marked “Plural form “one”” and “Plural form “other”” are the singular and plural of the same sentence.

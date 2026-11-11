@@ -47,23 +47,85 @@ pub struct Output {
     pub details: Vec<String>,
 }
 
-/// Platzhalter eines Textes, sortiert: `{name}` (Kern), `%@`, `%lld` (App,
-/// ohne Position `1$`) und `${applicationName}` (Siri)
+/// Platzhalter eines Textes für den Hinweis in der Vorlage, sortiert:
+/// `{name}` (Kern), `%@`, `%lld` (App) und `${applicationName}` (Siri)
 pub fn placeholders(s: &str) -> Vec<String> {
-    let re = Regex::new(r"\$\{[A-Za-z]+\}|\{\{|\}\}|\{[A-Za-z_][A-Za-z0-9_]*\}|%%|%(\d+\$)?([-+ #0]*\d*(\.\d+)?(hh|h|ll|l|q|z|t|j)?[@dDiuUxXoOfFeEgGcCsSpaA])").expect("Regex");
-    let mut out: Vec<String> = re
-        .captures_iter(s)
-        .filter_map(|c| {
-            let all = c.get(0)?.as_str();
-            match all {
-                "{{" | "}}" | "%%" => None,
-                _ if all.starts_with('%') => Some(format!("%{}", &c[2])),
-                _ => Some(all.to_string()),
-            }
-        })
-        .collect();
+    let mut out = names(s);
+    out.extend(printf_specs(s).unwrap_or_default().into_iter().map(|(_, conv)| format!("%{conv}")));
     out.sort();
     out
+}
+
+/// Benannte Platzhalter `{name}` und `${name}`, sortiert
+fn names(s: &str) -> Vec<String> {
+    let re = Regex::new(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}|\{\{|\}\}|\{[A-Za-z_][A-Za-z0-9_]*\}").expect("Regex");
+    let mut out: Vec<String> = re.find_iter(s).map(|m| m.as_str()).filter(|m| *m != "{{" && *m != "}}").map(str::to_string).collect();
+    out.sort();
+    out
+}
+
+/// Formatangaben der App (`%@`, `%lld`, `%2$@`) als Position und Typ (Längen-
+/// angabe und Umwandlung, ohne Breite). Jedes `%` muss eine bekannte Angabe
+/// oder `%%` sein; `*`, `%n` und Unbekanntes sind ein Fehler, weil die App den
+/// Text an `String(format:)` gibt.
+fn printf_specs(s: &str) -> Result<Vec<(Option<usize>, String)>, String> {
+    let re = Regex::new(r"^%(?:(\d+)\$)?[-+ #0']*\d*(?:\.\d+)?((?:hh|h|ll|l|q|z|t|j)?[@dDiuUxXoOfFeEgGcCsSpaA])").expect("Regex");
+    let mut out = Vec::new();
+    let mut i = 0;
+    while let Some(off) = s[i..].find('%') {
+        let at = i + off;
+        let rest = &s[at..];
+        if rest.starts_with("%%") {
+            i = at + 2;
+            continue;
+        }
+        let c = re.captures(rest).ok_or_else(|| format!("unknown format “{}”", rest.chars().take(6).collect::<String>()))?;
+        let pos = match c.get(1) {
+            Some(p) => Some(p.as_str().parse::<usize>().ok().filter(|p| *p > 0).ok_or("position 0")?),
+            None => None,
+        };
+        out.push((pos, c[2].to_string()));
+        i = at + c[0].len();
+    }
+    Ok(out)
+}
+
+/// Formatangaben nach Position: ohne `n$` in der Reihenfolge, gemischt ist
+/// ein Fehler
+fn by_position(specs: Vec<(Option<usize>, String)>) -> Result<BTreeMap<usize, String>, String> {
+    let explicit = specs.iter().filter(|(p, _)| p.is_some()).count();
+    if explicit != 0 && explicit != specs.len() {
+        return Err("mixed numbered and plain formats".into());
+    }
+    let mut map = BTreeMap::new();
+    for (n, (pos, conv)) in specs.into_iter().enumerate() {
+        let pos = pos.unwrap_or(n + 1);
+        if let Some(prev) = map.insert(pos, conv.clone()) {
+            if prev != conv {
+                return Err(format!("format {pos} used as %{prev} and %{conv}"));
+            }
+        }
+    }
+    Ok(map)
+}
+
+/// Prüft die Platzhalter einer Übersetzung gegen das Englische: dieselben
+/// benannten; in der App dieselben Formatangaben mit Position und Typ
+pub fn check_placeholders(kind: Kind, en: &str, text: &str) -> Result<(), String> {
+    let (want, got) = (names(en), names(text));
+    if want != got {
+        return Err(format!("placeholders {} expected, found {}", show(&want), show(&got)));
+    }
+    if kind == Kind::Core {
+        return Ok(()); // Kern-Texte gehen nicht durch printf
+    }
+    let want = by_position(printf_specs(en)?)?;
+    let got = by_position(printf_specs(text)?)?;
+    if want != got {
+        let fmt = |m: &BTreeMap<usize, String>| m.iter().map(|(p, c)| format!("%{p}${c}")).collect::<Vec<_>>();
+        return Err(format!("formats {} expected, found {}", show(&fmt(&want)), show(&fmt(&got))));
+    }
+    Ok(())
 }
 
 pub fn status(tpl: &Entry, e: Option<&po::Entry>) -> Status {
@@ -73,11 +135,10 @@ pub fn status(tpl: &Entry, e: Option<&po::Entry>) -> Status {
     if e.fuzzy() || e.id != tpl.id {
         return Status::Fuzzy;
     }
-    let (want, got) = (placeholders(&tpl.id), placeholders(&e.text));
-    if want != got {
-        return Status::Invalid(format!("placeholders {} expected, found {}", show(&want), show(&got)));
+    match check_placeholders(tpl.kind, &tpl.id, &e.text) {
+        Ok(()) => Status::Translated,
+        Err(why) => Status::Invalid(why),
     }
-    Status::Translated
 }
 
 fn show(p: &[String]) -> String {
@@ -401,6 +462,9 @@ mod tests {
         assert!(entries.iter().any(|e| e.ctxt.starts_with("AppShortcuts/") && e.id.contains("${applicationName}")));
         assert!(entries.iter().any(|e| e.ctxt.ends_with("#one")));
         assert!(entries.iter().all(|e| !e.id.is_empty() && !e.hints.is_empty()));
+        for e in entries.iter().filter(|e| e.kind == Kind::App) {
+            assert!(check_placeholders(Kind::App, &e.id, &e.id).is_ok(), "{}", e.ctxt);
+        }
     }
 
     /// Entscheidung 3 und Erledigt 5: geändertes Englisch wird `fuzzy`, neue
@@ -433,12 +497,32 @@ mod tests {
         assert_eq!(status(&t, Some(&po_entry("x", &t.id, "Pixoo {host} : {code}"))), Status::Translated);
         assert_eq!(status(&t, Some(&po_entry("x", &t.id, "{code} sur Pixoo {host}"))), Status::Translated);
         assert!(matches!(status(&t, Some(&po_entry("x", &t.id, "Pixoo {hote} : {code}"))), Status::Invalid(_)));
-        let app = entry("Localizable/%@ · %lld", "%@ of %lld");
-        assert_eq!(status(&app, Some(&po_entry("x", &app.id, "%2$lld de %1$@"))), Status::Translated);
-        assert!(matches!(status(&app, Some(&po_entry("x", &app.id, "%@ de"))), Status::Invalid(_)));
-        let siri = entry("AppShortcuts/x", "Turn off ${applicationName}");
+        let siri = Entry { kind: Kind::App, ..entry("AppShortcuts/x", "Turn off ${applicationName}") };
         assert!(matches!(status(&siri, Some(&po_entry("x", &siri.id, "Éteindre MicLED"))), Status::Invalid(_)));
-        assert_eq!(placeholders("50 %% {{x}} %lld%"), ["%lld"]);
+        assert_eq!(placeholders("50 %% {{x}} %lld"), ["%lld"]);
+        assert_eq!(placeholders("{e} ${app} %2$@"), ["${app}", "%@", "{e}"]);
+    }
+
+    /// Die App gibt Übersetzungen an `String(format:)`: Position und Typ jeder
+    /// Formatangabe müssen zum Englischen passen, Unbekanntes ist ungültig
+    #[test]
+    fn app_formats_must_match_position_and_type() {
+        let ok = |en: &str, t: &str| check_placeholders(Kind::App, en, t);
+        assert!(ok("%@ of %lld", "%@ de %lld").is_ok());
+        assert!(ok("%@ of %lld", "%2$lld de %1$@").is_ok());
+        assert!(ok("%lld %%", "%lld %%").is_ok());
+        assert!(ok("%@ of %lld", "%lld de %@").is_err(), "Typen vertauscht ohne Position");
+        assert!(ok("%@ of %lld", "%@ de").is_err());
+        assert!(ok("%@ of %lld", "%1$@ de %3$lld").is_err(), "Position außerhalb");
+        assert!(ok("%@ of %lld", "%1$@ de %lld").is_err(), "gemischt");
+        assert!(ok("%@", "%@ %n").is_err());
+        assert!(ok("%lld", "%*lld").is_err());
+        assert!(ok("%@", "%@ 50 %").is_err(), "einzelnes %");
+        assert!(ok("%@", "%s").is_err());
+        assert!(ok("Hi", "Salut %@").is_err());
+        // im Kern ist % nur Text
+        assert!(check_placeholders(Kind::Core, "50 % {e}", "50 % {e}").is_ok());
+        assert!(check_placeholders(Kind::Core, "{e}", "{e} %n").is_ok());
     }
 
     #[test]
