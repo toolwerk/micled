@@ -387,6 +387,9 @@ pub fn check(cfg: &Mqtt) -> Result<(), String> {
 
 // --- Ablauf ---------------------------------------------------------------
 
+/// So oft versucht MicLED, ein Gerät nach dem Ausschalten noch zu entfernen
+const MAX_REMOVAL_TRIES: u32 = 5;
+
 /// Zeiten des Ablaufs (in den Tests kürzer)
 #[derive(Clone, Copy, Debug)]
 struct Timing {
@@ -432,6 +435,10 @@ struct Session {
     announced: Option<Mqtt>,
     /// Gerade aus dem Ruhezustand: Der erste Fehler beim Verbinden zählt noch nicht
     woke: bool,
+    /// MQTT ist (in der Ruhezeit) schon wieder eingeschaltet: nichts nachträglich entfernen
+    keep: bool,
+    /// Versuche, ein Gerät nachträglich zu entfernen
+    removal_tries: u32,
 }
 
 impl Session {
@@ -445,6 +452,8 @@ impl Session {
             next_try: None,
             announced: None,
             woke: false,
+            keep: false,
+            removal_tries: 0,
         }
     }
 
@@ -458,7 +467,7 @@ impl Session {
             Some((false, true)) => self.goodbye(),
             _ => {}
         }
-        if asleep {
+        if asleep && cfg.is_some() {
             self.woke = true;
         }
         let Some(cfg) = cfg.filter(|_| !asleep) else {
@@ -499,7 +508,17 @@ impl Session {
     /// MQTT ist aus, das Gerät steht aber noch in Home Assistant (beim
     /// Ausschalten fehlte die Verbindung): neu verbinden und entfernen
     fn remove_later(&mut self, now: Instant) {
+        if self.keep {
+            return;
+        }
         let Some(old) = self.announced.clone() else { return };
+        if self.removal_tries >= MAX_REMOVAL_TRIES {
+            log::warn!("MQTT: Gerät nach {MAX_REMOVAL_TRIES} Versuchen nicht entfernt, gebe auf");
+            self.announced = None;
+            self.next_try = None;
+            return;
+        }
+        self.removal_tries += 1;
         if matches!(&self.next_try, Some((c, t)) if *c == old && now < *t) {
             return;
         }
@@ -524,7 +543,7 @@ impl Session {
         match (&self.link, cfg.filter(|_| !asleep)) {
             (Some(_), None) => Some(now),
             (None, None) => match &self.announced {
-                Some(old) if cfg.is_none() && !asleep => retry(old),
+                Some(old) if cfg.is_none() && !asleep && !self.keep => retry(old),
                 _ => None,
             },
             (Some((current, _)), Some(wanted)) if current != wanted => Some(now),
@@ -536,6 +555,9 @@ impl Session {
     fn open(&mut self, cfg: &Mqtt, report: &Report, now: Instant) -> Result<(), String> {
         let link = (self.connect)(cfg)?;
         self.link = Some((cfg.clone(), link));
+        // ab der ersten Discovery-Nachricht kann das Gerät in Home Assistant stehen
+        self.announced = Some(cfg.clone());
+        self.removal_tries = 0;
         self.last_state = None;
         let r = (|| {
             for (topic, payload) in discovery(cfg) {
@@ -545,7 +567,6 @@ impl Session {
             let state = state_payload(report);
             self.publish(&state_topic(cfg), &state, now)?;
             self.last_state = Some(state);
-            self.announced = Some(cfg.clone());
             Ok(())
         })();
         if r.is_err() {
@@ -645,6 +666,7 @@ impl Updater {
                 let mut asleep = false;
                 loop {
                     let now = Instant::now();
+                    session.keep = pending.is_some();
                     let wake = [settle_at, session.next_wake(active.as_ref(), asleep, now)].into_iter().flatten().min();
                     let wait = wake.map(|t| t.saturating_duration_since(now)).unwrap_or(Duration::from_secs(3600));
                     match rx.recv_timeout(wait) {
@@ -671,6 +693,7 @@ impl Updater {
                         active = pending.clone();
                         settle_at = None;
                     }
+                    session.keep = pending.is_some();
                     if let Some(r) = session.step(active.as_ref(), &report, asleep, Instant::now()) {
                         if let Err(e) = &r {
                             log::warn!("{e}");
@@ -1015,6 +1038,35 @@ mod tests {
         assert_eq!(packets.iter().filter_map(|p| topic_of(p)).filter(|(_, m)| m.is_empty()).count(), 5);
         assert_eq!(packets.last().unwrap(), &DISCONNECT.to_vec());
         assert_eq!(s.next_wake(None, false, t), None, "erledigt");
+    }
+
+    #[test]
+    fn no_late_removal_once_switched_on_again() {
+        let (mut s, wire) = session();
+        let t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        wire.lock().unwrap().broken = true;
+        s.step(None, &live(&[]), false, t);
+        wire.lock().unwrap().broken = false;
+        s.keep = true;
+        assert_eq!(s.next_wake(None, false, t + Duration::from_secs(10)), None);
+        s.step(None, &live(&[]), false, t + Duration::from_secs(10));
+        assert_eq!(wire.lock().unwrap().connections.len(), 1, "nicht entfernt");
+    }
+
+    #[test]
+    fn late_removal_gives_up() {
+        let (mut s, wire) = session();
+        let mut t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        wire.lock().unwrap().broken = true;
+        s.step(None, &live(&[]), false, t);
+        wire.lock().unwrap().refuse = true;
+        for _ in 0..6 {
+            t += Duration::from_secs(10);
+            s.step(None, &live(&[]), false, t);
+        }
+        assert_eq!(s.next_wake(None, false, t), None, "aufgegeben");
     }
 
     #[test]
