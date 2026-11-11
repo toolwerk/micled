@@ -312,34 +312,34 @@
         }
       }
     },
-    "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.": {
+    "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen."
+            "value": "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While on air, the display shows a mic or camera symbol with “ON AIR”, the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color. Afterwards, whatever ran before comes back. A fixed IP in the router is recommended."
+            "value": "While on air, the display shows a mic or camera symbol with “ON AIR”, during an event its end below it (setting under Events), the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color. Afterwards, whatever ran before comes back. A fixed IP in the router is recommended."
           }
         }
       }
     },
-    "Auf Sendung zeigt die Uhr „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.": {
+    "Auf Sendung zeigt die Uhr „ON AIR“, während eines Termins als Lauftext mit dessen Ende („ON AIR BIS 14:30“, Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auf Sendung zeigt die Uhr „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen."
+            "value": "Auf Sendung zeigt die Uhr „ON AIR“, während eines Termins als Lauftext mit dessen Ende („ON AIR BIS 14:30“, Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While on air, the clock shows “ON AIR”, the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color and until it ends. Afterwards, its normal display comes back. A fixed IP in the router is recommended."
+            "value": "While on air, the clock shows “ON AIR”, during an event as scrolling text with its end (“ON AIR TIL 14:30”, setting under Events), the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color and until it ends. Afterwards, its normal display comes back. A fixed IP in the router is recommended."
           }
         }
       }
@@ -590,18 +590,18 @@
         }
       }
     },
-    "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
+    "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
+            "value": "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The light flashes shortly before every event once “Flash before events” is on, except all-day and cancelled events. Not during a call and only via USB. A Nextcloud calendar already added to macOS doesn’t need “Nextcloud directly”. Create the app password in Nextcloud under Settings › Security; MicLED stores it in the keychain."
+            "value": "The light flashes shortly before every event once “Flash before events” is on, except all-day and cancelled events. Not during a call and only via USB. If a call runs during an event, Pixoo and AWTRIX show its end, e.g. “TIL 14:30”, never the title. A Nextcloud calendar already added to macOS doesn’t need “Nextcloud directly”. Create the app password in Nextcloud under Settings › Security; MicLED stores it in the keychain."
           }
         }
       }
@@ -736,6 +736,22 @@
     },
     "Emoji": {
       "shouldTranslate": false
+    },
+    "Ende des Termins auf Pixoo und AWTRIX zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ende des Termins auf Pixoo und AWTRIX zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the event end on Pixoo and AWTRIX"
+          }
+        }
+      }
     },
     "Entfernen": {
       "localizations": {

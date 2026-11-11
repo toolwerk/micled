@@ -29,7 +29,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - 🌙 **Focus and evening**: a custom color while a macOS Focus is on, dimmed in the evening.
 - 📅 **Warning before events** from the macOS calendars or directly from Nextcloud.
 - 💬 **Slack status** “In a call” while you are on air.
-- 🖼️ **Pixoo 64**: “ON AIR”, the remaining timer time or Focus on a Divoom display in your own network, even without any light.
+- 🖼️ **Pixoo 64**: “ON AIR” (during an event with its end, e.g. “TIL 14:30”), the remaining timer time or Focus on a Divoom display in your own network, even without any light.
 - 🕒 **AWTRIX clock**: the same display on an Ulanzi pixel clock with AWTRIX 3, for example at the office door.
 - 💡 **Philips Hue**: a Hue light or a whole room lights up in the status color and returns to its previous light afterwards.
 - 🌈 **Govee and Nanoleaf**: lights in your own Wi-Fi show the status color and get their light or effect back afterwards, without an account and without the cloud.
@@ -167,7 +167,7 @@ A Divoom Pixoo 64 in the same Wi-Fi shows the status in addition to the light or
 
 It shows:
 
-- on air: a mic or camera symbol with “ON AIR” in the mic, camera or app color,
+- on air: a mic or camera symbol with “ON AIR” in the mic, camera or app color; if an event is running, its end appears below, e.g. “TIL 14:30” (see [Event end](#event-end)),
 - timer: the remaining minutes with “MIN”, updated every minute,
 - Focus: “FOCUS” in the Focus color.
 
@@ -183,9 +183,9 @@ If the display can't be reached, an error appears in the menu and MicLED retries
 
 An Ulanzi pixel clock (TC001) with the [AWTRIX 3](https://blueforcer.github.io/awtrix3/) firmware in the same Wi-Fi shows the status in addition to the light or instead of it. The firmware must already be on the clock; MicLED talks to its local HTTP API, no MQTT broker is needed.
 
-The text fills the whole display and stays until the end:
+The text fills the whole display and stays until the end; with an end time it scrolls:
 
-- on air: “ON AIR” in the mic, camera or app color,
+- on air: “ON AIR” in the mic, camera or app color; if an event is running, “ON AIR TIL 14:30” scrolls through (see [Event end](#event-end)),
 - timer: the remaining minutes, e.g. “25 MIN”, updated every minute,
 - Focus: “FOCUS” in the Focus color.
 
@@ -284,12 +284,23 @@ During a call, timer and Focus the whole strip lights up in their color, dimmed 
 
 The serial number is the same on all strips. If two strips are connected to the Mac, both show the same color.
 
+## Event end
+
+If a call runs during an event, Pixoo 64 and AWTRIX clock also show until when it is expected to last, e.g. “TIL 14:30” in local time. The event title never appears; whoever stands at the door only sees the time. Lights, Hue, Govee, Nanoleaf and the light strip show no end time.
+
+- An event counts if it has already started and has not ended yet. All-day, declined and cancelled events don't count, nor do entries longer than 12 hours.
+- If several events run at the same time, the end of the one that started last applies.
+- If the call takes longer, the time disappears when the event ends; “ON AIR” stays.
+- Turn it off under Settings › Events › “Show the event end on Pixoo and AWTRIX” (on by default).
+
+For this, MicLED also reads the calendars when “Flash before events” is off, as soon as Pixoo or AWTRIX is turned on. macOS then asks once for calendar access. The sources are the same as for the warning (see [Events from Nextcloud](#events-from-nextcloud)).
+
 ## Events from Nextcloud
 
-There are two ways to get the warning:
+There are two ways to get the warning and the event end:
 
 1. **Via macOS** (recommended if you use the calendar on the Mac anyway): System Settings › Internet Accounts › Add Account › Other › CalDAV Account, account type “Manual”, server `https://<your-nextcloud>/remote.php/dav`. MicLED reads all calendars that appear in the Calendar app.
-2. **Directly in MicLED**: turn on Settings › Events › “Nextcloud directly”, enter the server (e.g. `https://cloud.example.org`), user and an app password. You create the app password in Nextcloud under Settings › Security › “Create new app password”. MicLED stores it in the keychain and fetches the events of the next hour every two minutes, recurring events included. “Check connection” shows how many calendars were found.
+2. **Directly in MicLED**: turn on Settings › Events › “Nextcloud directly”, enter the server (e.g. `https://cloud.example.org`), user and an app password. You create the app password in Nextcloud under Settings › Security › “Create new app password”. MicLED stores it in the keychain and fetches the running events and those of the next hour every two minutes, recurring events included. “Check connection” shows how many calendars were found.
 
 Both ways can be combined; an event in both sources flashes only once. If you only use Nextcloud directly, turn off “macOS calendars”; then MicLED doesn't ask for calendar access either. When fetching directly, MicLED doesn't evaluate whether you declined an event.
 
