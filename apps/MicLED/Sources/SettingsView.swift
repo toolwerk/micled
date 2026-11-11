@@ -122,7 +122,7 @@ struct SettingsView: View {
                     Toggle("Auch „Nicht stören“ setzen", isOn: $model.nextcloudStatusDnd)
                 }
             } header: {
-                Text("Nextcloud")
+                Text("Nextcloud").id("nextcloud")
             } footer: {
                 Text("Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
