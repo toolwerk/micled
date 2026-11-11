@@ -127,7 +127,7 @@ pub fn request(
     key: Option<&str>,
     body: Option<Value>,
 ) -> Result<(Value, String), String> {
-    let unreachable = |e: &dyn std::fmt::Display| tr!("Hue-Bridge nicht erreichbar: {e}", "Hue Bridge unreachable: {e}");
+    let unreachable = |e: &dyn std::fmt::Display| tr!("Hue-Bridge nicht erreichbar: {e}", "Hue Bridge unreachable: {e}", e = e);
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let verifier = Arc::new(Pinned {
         expected: fingerprint.map(str::to_string),
@@ -141,7 +141,7 @@ pub fn request(
         .with_custom_certificate_verifier(verifier.clone())
         .with_no_client_auth();
     let (name, port) = split_port(host);
-    let name = ServerName::try_from(name.to_string()).map_err(|_| tr!("Ungültige Adresse der Bridge: {host}", "Invalid bridge address: {host}"))?;
+    let name = ServerName::try_from(name.to_string()).map_err(|_| tr!("Ungültige Adresse der Bridge: {host}", "Invalid bridge address: {host}", host = host))?;
     let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
 
     // jede aufgelöste Adresse versuchen (z. B. erst IPv6, dann IPv4)
@@ -293,8 +293,8 @@ pub fn parse_response(raw: &[u8]) -> Result<Value, String> {
     };
     if status >= 400 {
         return Err(match error_text(&json) {
-            Some(t) => tr!("Hue-Bridge meldet Fehler {status}: {t}", "Hue Bridge reports error {status}: {t}"),
-            None => tr!("Hue-Bridge meldet Fehler {status}", "Hue Bridge reports error {status}"),
+            Some(t) => tr!("Hue-Bridge meldet Fehler {status}: {t}", "Hue Bridge reports error {status}: {t}", status = status, t = t),
+            None => tr!("Hue-Bridge meldet Fehler {status}", "Hue Bridge reports error {status}", status = status),
         });
     }
     Ok(json)

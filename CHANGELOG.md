@@ -20,6 +20,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Home Assistant per MQTT mit Discovery: MicLED erscheint als Gerät „MicLED (<Mac-Name>)“ mit den Sensoren Auf Sendung, Kamera und Programm, ist per Last Will nicht verfügbar, wenn MicLED endet oder der Mac schläft, und entfernt das Gerät beim Ausschalten wieder. Einstellungen mit Broker, Port, optional TLS, Benutzer und Passwort (im Schlüsselbund) und „Verbindung prüfen“, Kommandozeile `micled mqtt check`. Der Webhook bleibt als Alternative.
 - Englische Oberfläche: Steht macOS nicht auf Deutsch, erscheinen Menü, Einstellungen, Statistik, Kurzbefehle und die Fehlermeldungen von Lampen und Geräten auf Englisch, Pixoo und AWTRIX-Uhr zeigen dann „FOCUS“ und beim Termin-Ende „TIL 14:30“. Dazu eine englische README mit englischen Screenshots.
 - Statistik „Wochen“: Zeit auf Sendung und Fokuszeit der letzten zwölf Kalenderwochen, für die laufende Woche mit Calls und Veränderung zur Vorwoche bis jetzt. Fokuszeit (Timer oder Fokus von macOS bei wachem, entsperrtem Mac) wird neu ein Jahr lang gespeichert. Der CSV-Export kann wahlweise Summen je Woche schreiben.
+- Weitere Sprachen von außen: `translations/template.pot` enthält alle Texte aus App und Fehlermeldungen mit englischem Original und Hinweis, wo sie erscheinen, zum Ausfüllen mit Poedit. `scripts/translations.sh import <datei.po>` übernimmt eine Übersetzung, fehlende oder nach einer Textänderung ungeprüfte Texte erscheinen auf Englisch. Anleitung in `TRANSLATING.md`, Issue-Vorlage „New translation“.
 
 ### Geändert
 

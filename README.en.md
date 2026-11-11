@@ -460,8 +460,10 @@ cargo run -p micled-cli -- strip test          # 5 s red, then off
 crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar and status, Slack status, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB), MQTT for Home Assistant
 crates/micled-cli    command line `micled`
 crates/micled-ffi    UniFFI layer for Swift
+crates/micled-i18n   translation template and further languages (scripts/translations.sh)
 apps/MicLED          SwiftUI menu bar app, project.yml for xcodegen
-scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh
+scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh, translations.sh
+translations/        translation template template.pot and contributed languages <code>.po
 docs/images/         screenshots and videos of the light and Pixoo (lamp.gif, pixoo.gif) for README.md, en/ for this README
 ```
 
@@ -505,6 +507,16 @@ scripts/release.sh
 `release.sh` first checks the certificate, notarization profile, team ID, a clean Git state, the Sparkle key and whether the build number is above the published one, because Sparkle only offers a higher one. Then follow archive, export with Developer ID, notarization, stapling and verification with `codesign`, `spctl` and `stapler`. Finally, `scripts/appcast.sh` signs the ZIP and writes `dist/appcast.xml`.
 
 Both files belong to the release `v<version>`, which GitHub lists as “Latest”. The app reads the appcast at `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. At the end, the script prints the matching commands: first the ZIP, then the appcast, and last the release becomes “Latest”. Keep this order so the appcast never points to a missing ZIP and the fixed address always delivers an appcast.
+
+## More languages
+
+MicLED is available in German and English. More languages come from users, without Xcode and without programming:
+
+1. Download [`translations/template.pot`](translations/template.pot), or `translations/<code>.po` for an existing language.
+2. Fill it in with [Poedit](https://poedit.net) (free) or a text editor. Every text comes with the English original, mostly the German original and a note where it appears. Whatever is missing, MicLED shows in English.
+3. Send it as a pull request (`translations/<code>.po`) or as an issue with the template “New translation” and the file attached.
+
+The full guide is in [TRANSLATING.md](TRANSLATING.md). After a text change in the app or the core, `scripts/translations.sh` updates the template and the languages, and `scripts/translations.sh import <file.po>` takes over a translation that was sent in.
 
 ## License
 

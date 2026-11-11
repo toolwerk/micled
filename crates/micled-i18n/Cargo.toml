@@ -1,0 +1,16 @@
+[package]
+name = "micled-i18n"
+description = "Übersetzungsvorlage und weitere Sprachen für MicLED (scripts/translations.sh)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+# Argumente von `tr!` lesen, mit Zeilennummer für Fehlermeldungen
+syn = { version = "2", features = ["full"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+serde = "1"
+serde_json = "1"
+regex = "1"

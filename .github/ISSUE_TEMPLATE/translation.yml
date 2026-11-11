@@ -1,0 +1,27 @@
+name: New translation
+description: Send a translation of MicLED into a new language, or an update of one.
+title: "Translation: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you! How to get and fill in the file is described in [TRANSLATING.md](https://github.com/toolwerk/micled/blob/main/TRANSLATING.md).
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: Name and code of the language, e.g. “French (fr)” or “Portuguese, Brazil (pt-BR)”.
+    validations:
+      required: true
+  - type: textarea
+    id: file
+    attributes:
+      label: Translation file
+      description: Attach the `.po` file by dragging it here (zip it if GitHub refuses the file type).
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything we should know, e.g. texts you were unsure about.

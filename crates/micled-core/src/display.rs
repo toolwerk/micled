@@ -2,7 +2,7 @@
 //! [`Scene`], aus der Szene ein Bild aus 64 × 64 Pixeln. Rein und ohne Ein-/Ausgabe.
 
 use crate::color::Rgb;
-use crate::tr;
+use crate::lang::tr_fixed;
 
 /// Kantenlänge des Bildes in Pixeln
 pub const SIZE: usize = 64;
@@ -43,7 +43,7 @@ impl Scene {
 
 /// `BIS 14:30` zu Minuten nach Mitternacht
 pub fn until_text(min: u16) -> String {
-    tr!("BIS {:02}:{:02}", "TIL {:02}:{:02}", min / 60 % 24, min % 60)
+    tr_fixed!("BIS {:02}:{:02}", "TIL {:02}:{:02}", min / 60 % 24, min % 60)
 }
 
 /// Bild zur Szene: 64 · 64 · 3 Bytes, Zeilen von oben nach unten, je Pixel R G B,
@@ -68,7 +68,7 @@ pub fn render(scene: &Scene) -> Vec<u8> {
             c.text_centered(&digits, 14, 2, *color);
             c.text_centered("MIN", 40, 1, *color);
         }
-        Scene::Focus { color } => c.text_centered(&tr!("FOKUS", "FOCUS"), 25, 2, *color),
+        Scene::Focus { color } => c.text_centered(&tr_fixed!("FOKUS", "FOCUS"), 25, 2, *color),
     }
     c.px
 }

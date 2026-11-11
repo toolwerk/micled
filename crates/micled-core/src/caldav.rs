@@ -77,12 +77,12 @@ fn resolve(base: &str, href: &str) -> Result<String, String> {
     if origin(href) == origin(base) {
         Ok(href.to_string())
     } else {
-        Err(tr!("Nextcloud verweist auf einen anderen Server: {}", "Nextcloud points to another server: {}", origin(href)))
+        Err(tr!("Nextcloud verweist auf einen anderen Server: {server}", "Nextcloud points to another server: {server}", server = origin(href)))
     }
 }
 
 fn parse(xml: &str) -> Result<roxmltree::Document<'_>, String> {
-    roxmltree::Document::parse(xml).map_err(|e| tr!("Antwort von Nextcloud unlesbar: {e}", "Unreadable reply from Nextcloud: {e}"))
+    roxmltree::Document::parse(xml).map_err(|e| tr!("Antwort von Nextcloud unlesbar: {e}", "Unreadable reply from Nextcloud: {e}", e = e))
 }
 
 /// Erstes `<href>` innerhalb des Elements `prop` (z. B. `current-user-principal`)
@@ -320,12 +320,12 @@ impl Client {
             .header("Content-Type", "application/xml; charset=utf-8")
             .body(body.to_string())
             .map_err(|e| e.to_string())?;
-        let mut resp = self.agent.run(req).map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}"))?;
+        let mut resp = self.agent.run(req).map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}", e = e))?;
         match resp.status().as_u16() {
             200..=299 => resp.body_mut().read_to_string().map_err(|e| format!("Nextcloud: {e}")),
             401 => Err(tr!("Nextcloud: Benutzer oder App-Passwort falsch", "Nextcloud: wrong user or app password")),
             404 => Err(tr!("Nextcloud: Kalender nicht gefunden (Serveradresse prüfen)", "Nextcloud: calendars not found (check the server address)")),
-            s => Err(tr!("Nextcloud antwortet mit Status {s}", "Nextcloud replies with status {s}")),
+            s => Err(tr!("Nextcloud antwortet mit Status {s}", "Nextcloud replies with status {s}", s = s)),
         }
     }
 

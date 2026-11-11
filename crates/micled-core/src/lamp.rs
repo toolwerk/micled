@@ -28,9 +28,9 @@ pub enum LampError {
 impl std::fmt::Display for LampError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&match self {
-            LampError::Usb(e) => tr!("Luxafor per USB nicht gefunden (angesteckt?): {e}", "Luxafor not found via USB (plugged in?): {e}"),
+            LampError::Usb(e) => tr!("Luxafor per USB nicht gefunden (angesteckt?): {e}", "Luxafor not found via USB (plugged in?): {e}", e = e),
             LampError::MissingId => tr!("Keine Luxafor-ID für den Webhook eingetragen", "No Luxafor ID entered for the webhook"),
-            LampError::Webhook(e) => tr!("Webhook fehlgeschlagen: {e}", "Webhook failed: {e}"),
+            LampError::Webhook(e) => tr!("Webhook fehlgeschlagen: {e}", "Webhook failed: {e}", e = e),
         })
     }
 }

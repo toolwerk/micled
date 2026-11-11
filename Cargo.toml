@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/micled-core", "crates/micled-cli", "crates/micled-ffi"]
+members = ["crates/micled-core", "crates/micled-cli", "crates/micled-ffi", "crates/micled-i18n"]
 
 [workspace.package]
 version = "0.1.0"

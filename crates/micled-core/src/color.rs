@@ -62,7 +62,7 @@ impl fmt::Display for Rgb {
 impl TryFrom<String> for Rgb {
     type Error = String;
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        Rgb::parse(&s).ok_or_else(|| tr!("ungültige Farbe: {s}", "invalid color: {s}"))
+        Rgb::parse(&s).ok_or_else(|| tr!("ungültige Farbe: {s}", "invalid color: {s}", s = s))
     }
 }
 

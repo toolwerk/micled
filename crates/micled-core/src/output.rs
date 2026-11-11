@@ -167,8 +167,8 @@ pub(crate) fn instance_name(fullname: &str, service: &str) -> String {
 /// jedes Gerät einmal.
 pub(crate) fn bonjour(service: &str, what: &str) -> Result<Vec<(Ipv4Addr, u16, String)>, String> {
     use mdns_sd::{ServiceDaemon, ServiceEvent};
-    let daemon = ServiceDaemon::new().map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
-    let rx = daemon.browse(service).map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
+    let daemon = ServiceDaemon::new().map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}", what = what, e = e))?;
+    let rx = daemon.browse(service).map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}", what = what, e = e))?;
     let deadline = Instant::now() + SCAN_WAIT;
     let mut found: Vec<(Ipv4Addr, u16, String)> = Vec::new();
     while let Ok(ev) = rx.recv_deadline(deadline) {

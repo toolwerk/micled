@@ -55,7 +55,7 @@ pub fn send(url: &str, body: &Value) -> Result<(), String> {
         .post(url.trim())
         .send_json(body)
         .map(|_| ())
-        .map_err(|e| tr!("Auf-Sendung-Meldung fehlgeschlagen: {e}", "On-air notification failed: {e}"))
+        .map_err(|e| tr!("Auf-Sendung-Meldung fehlgeschlagen: {e}", "On-air notification failed: {e}", e = e))
 }
 
 #[cfg(test)]

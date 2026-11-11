@@ -120,7 +120,7 @@ pub fn error_for(code: u16) -> String {
         401 => tr!("Nextcloud: Benutzer oder App-Passwort falsch", "Nextcloud: wrong user or app password"),
         400 => tr!("Nextcloud: Statustext oder Emoji ungültig", "Nextcloud: status text or emoji invalid"),
         404 => tr!("Nextcloud: Benutzerstatus nicht verfügbar", "Nextcloud: user status not available"),
-        c => tr!("Nextcloud-Status: Antwort {c}", "Nextcloud status: reply {c}"),
+        c => tr!("Nextcloud-Status: Antwort {c}", "Nextcloud status: reply {c}", c = c),
     }
 }
 
@@ -156,7 +156,7 @@ fn send(nc: &Nextcloud, method: &str, path: &str, body: Option<Value>) -> Result
         ("DELETE", _) => headers.iter().fold(agent.delete(&url), |r, (k, v)| r.header(*k, *v)).call(),
         _ => headers.iter().fold(agent.get(&url), |r, (k, v)| r.header(*k, *v)).call(),
     };
-    let mut resp = resp.map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}"))?;
+    let mut resp = resp.map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}", e = e))?;
     let code = resp.status().as_u16();
     let v = resp.body_mut().read_json::<Value>().unwrap_or(Value::Null);
     Ok((code, v))

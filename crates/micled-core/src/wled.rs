@@ -173,11 +173,11 @@ fn send_real(w: &Wled, body: Option<Value>) -> Result<Value, String> {
         // die Antwort auf POST (`{"success":true}`) ist kein Zustand
         Ok(_) if !get => Ok(Value::Null),
         Ok(mut r) => {
-            let text = r.body_mut().read_to_string().map_err(|e| tr!("WLED {}: Antwort nicht lesbar: {e}", "WLED {}: reply unreadable: {e}", w.host))?;
+            let text = r.body_mut().read_to_string().map_err(|e| tr!("WLED {host}: Antwort nicht lesbar: {e}", "WLED {host}: reply unreadable: {e}", host = w.host, e = e))?;
             parse_state(&text).map_err(|e| format!("WLED {}: {e}", w.host))
         }
-        Err(ureq::Error::StatusCode(c)) => Err(tr!("WLED {} meldet Fehler {c}", "WLED {} reports error {c}", w.host)),
-        Err(e) => Err(tr!("WLED {} nicht erreichbar: {e}", "WLED {} unreachable: {e}", w.host)),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("WLED {host} meldet Fehler {c}", "WLED {host} reports error {c}", host = w.host, c = c)),
+        Err(e) => Err(tr!("WLED {host} nicht erreichbar: {e}", "WLED {host} unreachable: {e}", host = w.host, e = e)),
     }
 }
 

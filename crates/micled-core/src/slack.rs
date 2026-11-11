@@ -107,7 +107,7 @@ fn call(token: &str, method: &str, body: Option<Value>) -> Result<Value, String>
         None => agent().get(&url).header("Authorization", &auth).call(),
     };
     let v: Value = resp
-        .map_err(|e| tr!("Slack nicht erreichbar: {e}", "Slack unreachable: {e}"))?
+        .map_err(|e| tr!("Slack nicht erreichbar: {e}", "Slack unreachable: {e}", e = e))?
         .body_mut()
         .read_json()
         .map_err(|e| format!("Slack: {e}"))?;

@@ -150,7 +150,7 @@ fn choose<T: PartialEq>(devices: Vec<(u16, u16, T)>) -> Result<Vec<T>, String> {
     }
     match (out.is_empty(), other) {
         (false, _) => Ok(out),
-        (true, Some(pid)) => Err(tr!("Controller 1A86:{pid:04X} wird nicht unterstützt (nur 1A86:FE07)", "Controller 1A86:{pid:04X} is not supported (only 1A86:FE07)")),
+        (true, Some(pid)) => Err(tr!("Controller 1A86:{pid} wird nicht unterstützt (nur 1A86:FE07)", "Controller 1A86:{pid} is not supported (only 1A86:FE07)", pid = format!("{pid:04X}"))),
         (true, None) => Err(not_found()),
     }
 }
@@ -165,7 +165,7 @@ fn find_in(api: &HidApi) -> Result<Vec<CString>, String> {
 }
 
 fn usb_error(e: impl std::fmt::Display) -> String {
-    tr!("Lichtstreifen per USB: {e}", "Light strip via USB: {e}")
+    tr!("Lichtstreifen per USB: {e}", "Light strip via USB: {e}", e = e)
 }
 
 /// Angesteckte Streifen (Pfade der Steuer-Schnittstelle)

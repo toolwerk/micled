@@ -678,7 +678,8 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
 }
 
 /// Sprache der Texte aus dem Kern nach dem Sprachcode von macOS (`de`, `en` …);
-/// alles außer Deutsch wird Englisch. Vor dem ersten anderen Aufruf setzen.
+/// Deutsch, eine eingereichte Sprache aus `locales.json`, sonst Englisch. Vor
+/// dem ersten anderen Aufruf setzen.
 #[uniffi::export]
 pub fn set_language(code: String) {
     core::lang::set(core::lang::from_code(&code));

@@ -458,8 +458,10 @@ cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender und -Status, Slack-Status, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, WLED, Lichtstreifen (USB), MQTT für Home Assistant
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
+crates/micled-i18n   Übersetzungsvorlage und weitere Sprachen (scripts/translations.sh)
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
-scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh
+scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh, translations.sh
+translations/        Übersetzungsvorlage template.pot und eingereichte Sprachen <code>.po
 docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README, en/ für README.en.md
 ```
 
@@ -503,6 +505,16 @@ scripts/release.sh
 `release.sh` prüft zuerst Zertifikat, Notarisierungsprofil, Team-ID, sauberen Git-Stand, den Sparkle-Schlüssel und ob die Build-Nummer über der veröffentlichten liegt, denn Sparkle bietet nur eine höhere an. Danach folgen Archiv, Export mit Developer ID, Notarisierung, Stapeln und Prüfung mit `codesign`, `spctl` und `stapler`. Zum Schluss signiert `scripts/appcast.sh` das ZIP und schreibt `dist/appcast.xml`.
 
 Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ führt. Die App liest den Appcast unter `https://github.com/toolwerk/micled/releases/latest/download/appcast.xml`. Das Skript gibt am Ende die passenden Befehle aus: erst das ZIP, dann der Appcast, zuletzt wird der Release „Latest“. Die Reihenfolge einhalten, damit der Appcast nie auf ein fehlendes ZIP zeigt und die feste Adresse immer einen Appcast liefert.
+
+## Weitere Sprachen
+
+MicLED gibt es auf Deutsch und Englisch. Weitere Sprachen kommen von Nutzerinnen und Nutzern, ohne Xcode und ohne Programmierkenntnisse:
+
+1. [`translations/template.pot`](translations/template.pot) herunterladen, für eine vorhandene Sprache `translations/<code>.po`.
+2. Mit [Poedit](https://poedit.net) (kostenlos) oder einem Texteditor ausfüllen. Jeder Text steht mit englischem Original, meist dem deutschen Original und einem Hinweis, wo er erscheint. Was fehlt, zeigt MicLED auf Englisch.
+3. Als Pull Request (`translations/<code>.po`) einschicken oder als Issue mit der Vorlage „New translation“ und der Datei im Anhang.
+
+Die ausführliche Anleitung auf Englisch steht in [TRANSLATING.md](TRANSLATING.md). Nach einer Textänderung in App oder Kern bringt `scripts/translations.sh` Vorlage und Sprachen auf den Stand, `scripts/translations.sh import <datei.po>` übernimmt eine eingeschickte Übersetzung.
 
 ## Lizenz
 
