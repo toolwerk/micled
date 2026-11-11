@@ -8,20 +8,18 @@
 //! Bonjour (`_nanoleafapi._tcp`).
 
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde_json::{json, Value};
 
 use crate::color::Rgb;
 use crate::display::Scene;
-use crate::output::{scene_color, Device, Keyed};
+use crate::output::{bonjour, scene_color, Device, Keyed};
 use crate::tr;
 
 pub const PORT: u16 = 16021;
 const TIMEOUT: Duration = Duration::from_secs(3);
 const SERVICE: &str = "_nanoleafapi._tcp.local.";
-/// So lange sammelt die Suche Antworten
-const SCAN_WAIT: Duration = Duration::from_secs(3);
 
 pub fn pair_hint() -> String {
     tr!("Einschaltknopf 5–7 Sekunden halten, dann innerhalb von 30 Sekunden koppeln", "Hold the power button for 5–7 seconds, then pair within 30 seconds")
@@ -197,34 +195,12 @@ pub fn pair(host: &str) -> Result<String, String> {
     }
 }
 
-/// Name des Geräts aus dem Bonjour-Namen („Canvas 5B3C._nanoleafapi._tcp.local.“)
-fn instance_name(fullname: &str) -> String {
-    fullname.strip_suffix(SERVICE).map(|s| s.trim_end_matches('.')).unwrap_or(fullname).replace("\\032", " ")
-}
-
 /// Geräte im eigenen Netz per Bonjour suchen (blockiert etwa drei Sekunden,
 /// nicht aus einem Ausgabe-Thread aufrufen: `mdns-sd` startet einen eigenen).
 /// Liefert Adresse mit Port und Namen, nach Adresse sortiert.
 pub fn discover() -> Result<Vec<(String, String)>, String> {
-    use mdns_sd::{ServiceDaemon, ServiceEvent};
-    let daemon = ServiceDaemon::new().map_err(|e| tr!("Nanoleaf-Suche nicht möglich: {e}", "Nanoleaf search not possible: {e}"))?;
-    let rx = daemon.browse(SERVICE).map_err(|e| tr!("Nanoleaf-Suche nicht möglich: {e}", "Nanoleaf search not possible: {e}"))?;
-    let deadline = Instant::now() + SCAN_WAIT;
-    let mut found: Vec<(String, String)> = Vec::new();
-    while let Ok(ev) = rx.recv_deadline(deadline) {
-        if let ServiceEvent::ServiceResolved(info) = ev {
-            let name = instance_name(info.get_fullname());
-            let mut ips: Vec<_> = info.get_addresses_v4().into_iter().collect();
-            ips.sort();
-            if let Some(ip) = ips.first() {
-                let host = format!("{ip}:{}", info.get_port());
-                if !found.iter().any(|(h, _)| *h == host) {
-                    found.push((host, name));
-                }
-            }
-        }
-    }
-    let _ = daemon.shutdown();
+    let mut found: Vec<(String, String)> =
+        bonjour(SERVICE, "Nanoleaf")?.into_iter().map(|(ip, port, name)| (format!("{ip}:{port}"), name)).collect();
     found.sort();
     Ok(found)
 }
@@ -373,8 +349,9 @@ mod tests {
     fn pairing_reply_and_names() {
         assert_eq!(parse_pair(&json!({"auth_token": "abc"})).unwrap(), "abc");
         assert!(parse_pair(&json!({})).is_err());
-        assert_eq!(instance_name("Canvas 5B3C._nanoleafapi._tcp.local."), "Canvas 5B3C");
-        assert_eq!(instance_name("Shapes\\0329A1F._nanoleafapi._tcp.local."), "Shapes 9A1F");
+        let name = |f: &str| crate::output::instance_name(f, SERVICE);
+        assert_eq!(name("Canvas 5B3C._nanoleafapi._tcp.local."), "Canvas 5B3C");
+        assert_eq!(name("Shapes\\0329A1F._nanoleafapi._tcp.local."), "Shapes 9A1F");
     }
 
     #[test]

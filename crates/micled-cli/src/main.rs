@@ -6,7 +6,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use micled_core::display::Scene;
 use micled_core::output::Device;
-use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, robobloq, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
+use micled_core::{awtrix, caldav, camera, govee, hue, lamp, mic, nanoleaf, pixoo, robobloq, wled, AfterMic, Config, Monitor, Rgb, Status, StatusListener, Transport};
 
 #[derive(Parser)]
 #[command(name = "micled", version, about = "Luxafor-Lampe nach Mikrofon-Status schalten")]
@@ -58,6 +58,11 @@ enum Cmd {
     Nanoleaf {
         #[command(subcommand)]
         cmd: NanoleafCmd,
+    },
+    /// LED-Streifen und -Lampen mit WLED über die lokale JSON-API
+    Wled {
+        #[command(subcommand)]
+        cmd: WledCmd,
     },
     /// Lichtstreifen mit Robobloq-Controller per USB (1A86:FE07)
     Strip {
@@ -140,6 +145,17 @@ enum NanoleafCmd {
 }
 
 #[derive(Subcommand)]
+enum WledCmd {
+    /// Geräte im eigenen Netz per Bonjour suchen
+    Scan,
+    /// Zeigt fünf Sekunden Rot und stellt den Zustand von vorher wieder her
+    Test {
+        /// Adresse im eigenen Netz, z. B. 192.168.1.45
+        host: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum StripCmd {
     /// Zeigt Zahl der LEDs, Monitorgröße und Firmware
     Info,
@@ -174,6 +190,18 @@ fn govee_cmd(cmd: &GoveeCmd) -> Result<(), String> {
             let cfg = govee::Govee { host: govee::normalize(host).ok_or("Adresse fehlt")? };
             show_red(&mut govee::Session::default(), &cfg)?;
             println!("Govee-Lampe geschaltet und zurückgestellt");
+            Ok(())
+        }
+    }
+}
+
+fn wled_cmd(cmd: &WledCmd) -> Result<(), String> {
+    match cmd {
+        WledCmd::Scan => wled::discover().map(print_found),
+        WledCmd::Test { host } => {
+            let cfg = wled::Wled { host: wled::normalize(host).ok_or("Adresse fehlt")? };
+            show_red(&mut wled::Session::default(), &cfg)?;
+            println!("WLED-Gerät geschaltet und zurückgestellt");
             Ok(())
         }
     }
@@ -343,6 +371,7 @@ fn main() {
         Cmd::Hue { cmd } => hue_cmd(cmd),
         Cmd::Govee { cmd } => govee_cmd(cmd),
         Cmd::Nanoleaf { cmd } => nanoleaf_cmd(cmd),
+        Cmd::Wled { cmd } => wled_cmd(cmd),
         Cmd::Strip { cmd } => strip_cmd(cmd),
         Cmd::Watch { on, off, fixed, delay, no_camera, camera, on_air_url, ignore } => {
             let cfg = Config {

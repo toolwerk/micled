@@ -25,6 +25,7 @@ pub mod robobloq;
 pub mod shared;
 pub mod slack;
 pub mod stats;
+pub mod wled;
 
 pub use caldav::Nextcloud;
 pub use color::Rgb;

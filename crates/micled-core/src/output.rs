@@ -1,12 +1,14 @@
 //! Gemeinsamer Hintergrund-Thread für Ausgaben im eigenen Netz (Pixoo 64,
-//! AWTRIX, Philips Hue, Govee, Nanoleaf): Ein fehlendes Gerät hält die Lampe nicht
+//! AWTRIX, Philips Hue, Govee, Nanoleaf, WLED): Ein fehlendes Gerät hält die Lampe nicht
 //! auf, Fehler landen im Fehler-Slot und werden nach einer Pause wiederholt.
 //! [`Fleet`] steuert mehrere Geräte derselben Art als ein [`Device`].
+//! [`bonjour`] sucht Geräte für Nanoleaf und WLED.
 
 use std::marker::PhantomData;
+use std::net::Ipv4Addr;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::color::Rgb;
 use crate::display::Scene;
@@ -148,6 +150,42 @@ pub(crate) fn scene_color(scene: &Scene) -> Option<Rgb> {
         Scene::Idle => None,
         Scene::Live { color, .. } | Scene::Timer { color, .. } | Scene::Focus { color } => Some(*color),
     }
+}
+
+/// So lange sammelt [`bonjour`] Antworten
+const SCAN_WAIT: Duration = Duration::from_secs(3);
+
+/// Name des Geräts aus dem Bonjour-Namen („Canvas 5B3C._nanoleafapi._tcp.local.“)
+pub(crate) fn instance_name(fullname: &str, service: &str) -> String {
+    fullname.strip_suffix(service).map(|s| s.trim_end_matches('.')).unwrap_or(fullname).replace("\\032", " ")
+}
+
+/// Geräte mit dem Bonjour-Dienst `service` (z. B. `_wled._tcp.local.`) im
+/// eigenen Netz suchen. Blockiert etwa drei Sekunden, nicht aus einem
+/// Ausgabe-Thread aufrufen: `mdns-sd` startet einen eigenen. `what` steht im
+/// Fehlertext. Liefert IPv4-Adresse (die kleinste des Geräts), Port und Namen,
+/// jedes Gerät einmal.
+pub(crate) fn bonjour(service: &str, what: &str) -> Result<Vec<(Ipv4Addr, u16, String)>, String> {
+    use mdns_sd::{ServiceDaemon, ServiceEvent};
+    let daemon = ServiceDaemon::new().map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
+    let rx = daemon.browse(service).map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
+    let deadline = Instant::now() + SCAN_WAIT;
+    let mut found: Vec<(Ipv4Addr, u16, String)> = Vec::new();
+    while let Ok(ev) = rx.recv_deadline(deadline) {
+        if let ServiceEvent::ServiceResolved(info) = ev {
+            let name = instance_name(info.get_fullname(), service);
+            let mut ips: Vec<Ipv4Addr> = info.get_addresses_v4().into_iter().collect();
+            ips.sort();
+            let port = info.get_port();
+            if let Some(&ip) = ips.first() {
+                if !found.iter().any(|(i, p, _)| *i == ip && *p == port) {
+                    found.push((ip, port, name));
+                }
+            }
+        }
+    }
+    let _ = daemon.shutdown();
+    Ok(found)
 }
 
 /// Ziel mit eigener Adresse, über die eine [`Fleet`] ihre Geräte zuordnet
