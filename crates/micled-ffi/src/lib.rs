@@ -215,6 +215,41 @@ pub struct NextcloudCheck {
     pub error: Option<String>,
 }
 
+/// Summen einer Kalenderwoche (ISO 8601, Beginn Montag 00:00 Ortszeit)
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct WeekStats {
+    /// Montag 00:00 Ortszeit (Unix-Sekunden)
+    pub start: u64,
+    /// Jahr der ISO-Woche
+    pub year: i32,
+    pub week: u32,
+    pub live_seconds: u64,
+    /// Calls, die in der Woche begonnen haben
+    pub calls: u32,
+    pub focus_seconds: u64,
+}
+
+impl From<micled_core::stats::WeekSum> for WeekStats {
+    fn from(w: micled_core::stats::WeekSum) -> Self {
+        WeekStats {
+            start: w.start,
+            year: w.year,
+            week: w.week,
+            live_seconds: w.live,
+            calls: w.calls,
+            focus_seconds: w.focus,
+        }
+    }
+}
+
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct WeeklyStats {
+    /// Letzte Kalenderwochen, die laufende zuletzt
+    pub weeks: Vec<WeekStats>,
+    /// Vorwoche bis zum selben Wochentag und zur selben Uhrzeit wie jetzt
+    pub last_week_to_date: WeekStats,
+}
+
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct MicUser {
     pub pid: i32,
@@ -452,6 +487,17 @@ impl MicLedController {
     /// Gespeicherte Calls als CSV (`start,end,seconds`, UTC)
     pub fn calls_csv(&self) -> String {
         self.monitor.calls_csv()
+    }
+
+    /// Summen der letzten `weeks` Kalenderwochen und die Vorwoche bis jetzt
+    pub fn weekly_stats(&self, weeks: u32) -> WeeklyStats {
+        let (list, last) = self.monitor.weekly(weeks as usize);
+        WeeklyStats { weeks: list.into_iter().map(Into::into).collect(), last_week_to_date: last.into() }
+    }
+
+    /// Summen je Kalenderwoche als CSV (`week,start,live_seconds,calls,focus_seconds`)
+    pub fn weeks_csv(&self) -> String {
+        self.monitor.weeks_csv()
     }
 
     pub fn turn_off(&self) {
