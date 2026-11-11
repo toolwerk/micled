@@ -23,6 +23,8 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 
 - Der Nextcloud-Zugang steht in einem eigenen Abschnitt „Nextcloud“ mit den Schaltern „Termine lesen“ (bisher „Nextcloud direkt“ unter Termine) und „Status setzen“. Wer „Nextcloud direkt“ an hatte, behält Zugang und Vorwarnung.
 
+- Eine ungültige Adresse bei „Auf Sendung“ melden fällt schon in den Einstellungen auf: Ein Hinweis erscheint, wenn sie nicht mit `http://` oder `https://` beginnt oder keinen Server nennt. MicLED sendet dann nichts und zeigt im Menü „Webhook-Adresse ungültig“.
+
 ### Behoben
 
 - Abgesagte Termine im Kalender von macOS lösen keine Vorwarnung mehr aus.

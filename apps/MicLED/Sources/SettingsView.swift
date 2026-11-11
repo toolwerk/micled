@@ -77,6 +77,11 @@ struct SettingsView: View {
             Section {
                 TextField("Adresse", text: $model.onAirUrl, prompt: Text("http://homeassistant.local:8123/api/webhook/…"))
                     .autocorrectionDisabled()
+                let url = model.onAirUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !url.isEmpty && !onAirUrlValid(url: url) {
+                    Text("Die Adresse muss mit http:// oder https:// beginnen und einen Server nennen.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
             } header: {
                 Text("„Auf Sendung“ melden")
             } footer: {

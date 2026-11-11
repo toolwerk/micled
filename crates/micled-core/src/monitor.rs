@@ -772,6 +772,10 @@ impl Worker {
         if url.is_empty() {
             return;
         }
+        if !onair::valid_url(&url) {
+            *self.on_air_error.lock().unwrap() = Some(onair::INVALID_URL.into());
+            return;
+        }
         let apps: Vec<String> = self
             .engine
             .users()
