@@ -132,6 +132,18 @@ pub struct MicLedConfig {
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
     pub robobloq_states: OutputStates,
+    /// MQTT-Broker für Home Assistant; leere Adresse oder Geräte-ID = aus
+    pub mqtt_host: String,
+    /// 0 = Standard (1883, mit TLS 8883)
+    pub mqtt_port: u16,
+    pub mqtt_tls: bool,
+    pub mqtt_user: String,
+    /// Liegt in der App im Schlüsselbund
+    pub mqtt_password: String,
+    /// Feste ID dieses Macs in den Topics
+    pub mqtt_device_id: String,
+    /// Name des Macs, in Home Assistant „MicLED (<Name>)“
+    pub mqtt_device_name: String,
 }
 
 /// Zustände, die ein Zusatzgerät zeigt; ein abgewählter gilt dort als frei
@@ -242,6 +254,12 @@ pub struct RobobloqCheck {
     pub leds: u32,
     /// Firmware wie „1.9.4“, leer bei Fehler
     pub firmware: String,
+    pub error: Option<String>,
+}
+
+/// Ergebnis von [`mqtt_check`]
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct MqttCheck {
     pub error: Option<String>,
 }
 
@@ -395,6 +413,37 @@ fn found(result: Result<Vec<(String, String)>, String>) -> FoundDevices {
     }
 }
 
+/// Zugang zum Broker; `None` ohne Adresse. Ein Port im Feld der Adresse
+/// gilt vor dem Feld „Port“.
+fn mqtt_access(host: &str, port: u16, tls: bool, user: &str, password: String) -> Option<core::mqtt::Mqtt> {
+    let (host, in_host) = core::mqtt::address(host)?;
+    let port = match (in_host.unwrap_or(port), tls) {
+        (0, false) => core::mqtt::PORT,
+        (0, true) => core::mqtt::TLS_PORT,
+        (p, _) => p,
+    };
+    Some(core::mqtt::Mqtt {
+        host,
+        port,
+        tls,
+        user: user.trim().to_string(),
+        password,
+        device_id: String::new(),
+        device_name: String::new(),
+    })
+}
+
+/// MQTT aus den Einstellungen; ohne Adresse oder Geräte-ID aus
+fn mqtt(c: &MicLedConfig) -> Option<core::mqtt::Mqtt> {
+    let access = mqtt_access(&c.mqtt_host, c.mqtt_port, c.mqtt_tls, &c.mqtt_user, c.mqtt_password.clone())?;
+    let name = c.mqtt_device_name.trim();
+    Some(core::mqtt::Mqtt {
+        device_id: core::mqtt::clean_id(&c.mqtt_device_id)?,
+        device_name: if name.is_empty() { "Mac".into() } else { name.to_string() },
+        ..access
+    })
+}
+
 fn nextcloud(server: String, user: String, password: String) -> Option<core::Nextcloud> {
     let filled = [&server, &user, &password].iter().all(|s| !s.trim().is_empty());
     filled.then_some(core::Nextcloud { server, user, password })
@@ -409,8 +458,10 @@ fn nextcloud_status(nc: Option<core::Nextcloud>, on: bool, text: &str, emoji: &s
 
 impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
+        let mqtt = mqtt(&c);
         let nc = nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password);
         core::Config {
+            mqtt,
             nextcloud_status: nextcloud_status(
                 nc.clone(),
                 c.nextcloud_status,
@@ -640,6 +691,17 @@ pub fn nextcloud_check(server: String, user: String, password: String) -> Nextcl
     }
 }
 
+/// Zugang zum MQTT-Broker prüfen: verbinden und abmelden (blockiert bis zu
+/// einigen Sekunden, nicht im Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn mqtt_check(host: String, port: u16, tls: bool, user: String, password: String) -> MqttCheck {
+    let result = match mqtt_access(&host, port, tls, &user, password) {
+        Some(m) => core::mqtt::check(&m),
+        None => Err("Adresse des Brokers eintragen".into()),
+    };
+    MqttCheck { error: result.err() }
+}
+
 /// Slack-Token prüfen (blockiert, nicht im Haupt-Thread aufrufen)
 #[uniffi::export]
 pub fn slack_check(token: String) -> SlackCheck {
@@ -791,6 +853,99 @@ mod tests {
         let hosts = ["192.168.1.31", " ", "http://192.168.1.31/", "192.168.1.32"].map(String::from);
         let list: Vec<String> = govee(&hosts).into_iter().map(|g| g.host).collect();
         assert_eq!(list, ["192.168.1.31", "192.168.1.32"]);
+    }
+
+    const ALL: OutputStates = OutputStates { call: true, timer: true, focus: true };
+
+    fn config() -> MicLedConfig {
+        MicLedConfig {
+            enabled: true,
+            transport: TransportKind::NoLamp,
+            luxafor_id: String::new(),
+            mic_on_color: "ff0000".into(),
+            mic_off_color: "00ff00".into(),
+            after_mic: AfterMic::Restore,
+            release_delay_ms: 3000,
+            ignored: vec![],
+            off_when_away: true,
+            camera_enabled: true,
+            camera_color: "ff00ff".into(),
+            on_air_url: String::new(),
+            reminder_color: "ffff00".into(),
+            reminder_lead_s: 120,
+            reminders_enabled: false,
+            meeting_end_enabled: false,
+            nextcloud_server: String::new(),
+            nextcloud_user: String::new(),
+            nextcloud_password: String::new(),
+            nextcloud_calendar: false,
+            nextcloud_status: false,
+            nextcloud_status_text: String::new(),
+            nextcloud_status_emoji: String::new(),
+            nextcloud_status_dnd: false,
+            app_colors: vec![],
+            timer_color: "8000ff".into(),
+            focus_enabled: false,
+            focus_color: "ff8800".into(),
+            dim_enabled: false,
+            dim_from_min: 0,
+            dim_to_min: 0,
+            dim_percent: 100,
+            slack_token: String::new(),
+            slack_text: String::new(),
+            slack_emoji: String::new(),
+            pixoo_host: String::new(),
+            pixoo_states: ALL,
+            awtrix_host: String::new(),
+            awtrix_states: ALL,
+            hue_host: String::new(),
+            hue_key: String::new(),
+            hue_fingerprint: String::new(),
+            hue_target_kind: HueTargetKind::Light,
+            hue_target_id: String::new(),
+            hue_states: ALL,
+            govee_hosts: vec![],
+            govee_states: ALL,
+            nanoleaf: vec![],
+            nanoleaf_states: ALL,
+            wled_hosts: vec![],
+            wled_states: ALL,
+            robobloq: false,
+            robobloq_states: ALL,
+            mqtt_host: " homeassistant.local ".into(),
+            mqtt_port: 0,
+            mqtt_tls: false,
+            mqtt_user: "micled".into(),
+            mqtt_password: "pw".into(),
+            mqtt_device_id: "a1b2c3d4e5f6".into(),
+            mqtt_device_name: "Franks MacBook".into(),
+        }
+    }
+
+    #[test]
+    fn mqtt_settings_become_core_config() {
+        let m = core::Config::from(config()).mqtt.expect("an");
+        assert_eq!((m.host.as_str(), m.port, m.tls), ("homeassistant.local", 1883, false));
+        assert_eq!((m.user.as_str(), m.password.as_str()), ("micled", "pw"));
+        assert_eq!((m.device_id.as_str(), m.device_name.as_str()), ("a1b2c3d4e5f6", "Franks MacBook"));
+        let tls = core::Config::from(MicLedConfig { mqtt_tls: true, ..config() }).mqtt.unwrap();
+        assert_eq!(tls.port, 8883, "Standard-Port mit TLS");
+        let own = core::Config::from(MicLedConfig { mqtt_port: 1884, mqtt_tls: true, ..config() }).mqtt.unwrap();
+        assert_eq!(own.port, 1884);
+        let in_host = core::Config::from(MicLedConfig { mqtt_host: "homeassistant.local:1885".into(), ..config() });
+        let m = in_host.mqtt.unwrap();
+        assert_eq!((m.host.as_str(), m.port), ("homeassistant.local", 1885), "Port in der Adresse gewinnt");
+    }
+
+    #[test]
+    fn mqtt_without_host_or_id_is_off() {
+        assert!(core::Config::from(MicLedConfig { mqtt_host: " ".into(), ..config() }).mqtt.is_none());
+        assert!(core::Config::from(MicLedConfig { mqtt_device_id: "/#".into(), ..config() }).mqtt.is_none());
+    }
+
+    #[test]
+    fn mqtt_check_needs_host() {
+        assert_eq!(mqtt_check(" ".into(), 0, false, String::new(), String::new()).error.as_deref(), Some("Adresse des Brokers eintragen"));
     }
 
     #[test]
