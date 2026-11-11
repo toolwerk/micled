@@ -34,24 +34,24 @@ final class StatusContextMenu: NSObject {
         let menu = NSMenu()
         menu.autoenablesItems = false
         if AppModel.shared.timerUntil.map({ $0 > Date() }) == true {
-            menu.addItem(withTitle: "Konzentration beenden", action: #selector(stopTimer), keyEquivalent: "").target = self
+            menu.addItem(withTitle: String(localized: "Konzentration beenden"), action: #selector(stopTimer), keyEquivalent: "").target = self
         } else {
             let sub = NSMenu()
             for m in AppModel.timerChoices {
-                let item = sub.addItem(withTitle: "\(m) Minuten", action: #selector(startTimer(_:)), keyEquivalent: "")
+                let item = sub.addItem(withTitle: String(localized: "\(m) Minuten"), action: #selector(startTimer(_:)), keyEquivalent: "")
                 item.target = self
                 item.tag = m
             }
-            menu.addItem(withTitle: "Konzentration", action: nil, keyEquivalent: "").submenu = sub
+            menu.addItem(withTitle: String(localized: "Konzentration"), action: nil, keyEquivalent: "").submenu = sub
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Statistik", action: #selector(stats), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Einstellungen …", action: #selector(settings), keyEquivalent: ",").target = self
-        let updates = menu.addItem(withTitle: "Nach Updates suchen …", action: #selector(checkForUpdates), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Statistik"), action: #selector(stats), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Einstellungen …"), action: #selector(settings), keyEquivalent: ",").target = self
+        let updates = menu.addItem(withTitle: String(localized: "Nach Updates suchen …"), action: #selector(checkForUpdates), keyEquivalent: "")
         updates.target = self
         updates.isEnabled = UpdaterController.shared.isAvailable
         menu.addItem(.separator())
-        menu.addItem(withTitle: "MicLED beenden", action: #selector(quit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: String(localized: "MicLED beenden"), action: #selector(quit), keyEquivalent: "q").target = self
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.minY - 4), in: view)
         return true
     }

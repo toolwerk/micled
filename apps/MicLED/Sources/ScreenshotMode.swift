@@ -64,10 +64,10 @@ enum ScreenshotMode {
 
     /// Beispiel-Räume und -Lampen für die Hue-Auswahl
     static let hueChoices = [
-        HueTarget(kind: .room, id: "buero", name: "Büro"),
-        HueTarget(kind: .room, id: "flur", name: "Flur"),
-        HueTarget(kind: .light, id: "tuer", name: "Flur – Tür"),
-        HueTarget(kind: .light, id: "steh", name: "Stehlampe"),
+        HueTarget(kind: .room, id: "buero", name: String(localized: "Büro")),
+        HueTarget(kind: .room, id: "flur", name: String(localized: "Flur")),
+        HueTarget(kind: .light, id: "tuer", name: String(localized: "Flur – Tür")),
+        HueTarget(kind: .light, id: "steh", name: String(localized: "Stehlampe")),
     ]
 
     /// Beispiel-Ergebnis der Govee-Suche (eines schon eingetragen)

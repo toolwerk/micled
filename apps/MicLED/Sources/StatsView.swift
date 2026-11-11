@@ -59,7 +59,7 @@ struct StatsView: View {
         return workdays.map(\.seconds).reduce(0, +) / UInt64(workdays.count)
     }
 
-    private func summary(_ title: String, _ seconds: UInt64) -> some View {
+    private func summary(_ title: LocalizedStringKey, _ seconds: UInt64) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Text(MenuView.duration(seconds)).font(.title3.monospacedDigit())
