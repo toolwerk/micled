@@ -44,7 +44,7 @@
 	<key>NSFocusStatusUsageDescription</key>
 	<string>MicLED zeigt auf der Lampe eine eigene Farbe, solange ein Fokus an ist.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>MicLED zeigt den Status auf Geräten im eigenen Netz, etwa einem Pixoo 64, einer AWTRIX-Uhr, einer Hue Bridge, Govee- und Nanoleaf-Lampen oder Home Assistant, und sucht dort nach Govee- und Nanoleaf-Lampen.</string>
+	<string>MicLED zeigt den Status auf Geräten im eigenen Netz, etwa einem Pixoo 64, einer AWTRIX-Uhr, einer Hue Bridge, Govee- und Nanoleaf-Lampen, WLED-Geräten oder Home Assistant, und sucht dort nach Govee- und Nanoleaf-Lampen und WLED-Geräten.</string>
 	<key>SUFeedURL</key>
 	<string>https://github.com/toolwerk/micled/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
