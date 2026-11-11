@@ -697,6 +697,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "ureq",
+ "webpki-roots",
 ]
 
 [[package]]

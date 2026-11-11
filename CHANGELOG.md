@@ -17,11 +17,14 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Ende des Termins auf Pixoo 64 und AWTRIX-Uhr: Läuft ein Call während eines Termins, zeigt das Pixoo unter „ON AIR“ „BIS 14:30“, die AWTRIX-Uhr „ON AIR BIS 14:30“ als Lauftext, nie den Titel. Ganztägige, abgesagte und (im Kalender von macOS) abgelehnte Termine zählen nicht, nach dem Terminende verschwindet die Zeit. Abschaltbar unter Einstellungen › Termine. Die Kalender werden dafür auch ohne Vorwarnung gelesen, sobald Pixoo oder AWTRIX an ist.
 - Nextcloud-Status: Während du auf Sendung bist, steht im Benutzerstatus z. B. 🔴 „Im Call“, auf Wunsch mit „Nicht stören“; danach kommt der vorherige Status zurück. Eine vorhandene Nachricht überschreibt MicLED nicht, Fehler stehen im Menü.
 - Zustände je Gerät: Pixoo 64, AWTRIX, Hue, Govee, Nanoleaf, WLED und der Lichtstreifen haben in den Einstellungen die Häkchen „Call“, „Timer“ und „Fokus“. Ein abgewählter Zustand gilt für das Gerät als frei, es zeigt dann den nächsten gewählten darunter oder seinen Zustand von vorher. Ab Werk und nach dem Update sind alle gesetzt.
+- Home Assistant per MQTT mit Discovery: MicLED erscheint als Gerät „MicLED (<Mac-Name>)“ mit den Sensoren Auf Sendung, Kamera und Programm, ist per Last Will nicht verfügbar, wenn MicLED endet oder der Mac schläft, und entfernt das Gerät beim Ausschalten wieder. Einstellungen mit Broker, Port, optional TLS, Benutzer und Passwort (im Schlüsselbund) und „Verbindung prüfen“, Kommandozeile `micled mqtt check`. Der Webhook bleibt als Alternative.
 - Englische Oberfläche: Steht macOS nicht auf Deutsch, erscheinen Menü, Einstellungen, Statistik, Kurzbefehle und die Fehlermeldungen von Lampen und Geräten auf Englisch, Pixoo und AWTRIX-Uhr zeigen dann „FOCUS“ und beim Termin-Ende „TIL 14:30“. Dazu eine englische README mit englischen Screenshots.
 
 ### Geändert
 
 - Der Nextcloud-Zugang steht in einem eigenen Abschnitt „Nextcloud“ mit den Schaltern „Termine lesen“ (bisher „Nextcloud direkt“ unter Termine) und „Status setzen“. Wer „Nextcloud direkt“ an hatte, behält Zugang und Vorwarnung.
+
+- Eine ungültige Adresse bei „Auf Sendung“ melden fällt schon in den Einstellungen auf: Ein Hinweis erscheint, wenn sie nicht mit `http://` oder `https://` beginnt oder keinen Server nennt. MicLED sendet dann nichts und zeigt im Menü „Webhook-Adresse ungültig“.
 
 ### Behoben
 

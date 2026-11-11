@@ -16,6 +16,7 @@ pub mod lamp;
 pub mod lang;
 pub mod mic;
 pub mod monitor;
+pub mod mqtt;
 pub mod nanoleaf;
 pub mod nc_status;
 pub mod onair;
