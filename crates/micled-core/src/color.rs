@@ -4,6 +4,8 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::tr;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct Rgb {
@@ -60,7 +62,7 @@ impl fmt::Display for Rgb {
 impl TryFrom<String> for Rgb {
     type Error = String;
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        Rgb::parse(&s).ok_or_else(|| format!("ungültige Farbe: {s}"))
+        Rgb::parse(&s).ok_or_else(|| tr!("ungültige Farbe: {s}", "invalid color: {s}"))
     }
 }
 

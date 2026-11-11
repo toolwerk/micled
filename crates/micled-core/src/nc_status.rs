@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 
 use crate::caldav::{basic_auth, check_secure, normalize, Nextcloud};
 use crate::presence::{plan, Presence};
+use crate::tr;
 
 /// Ablauf der eigenen Nachricht, falls MicLED sie nicht mehr zurücksetzen kann
 const EXPIRES_AFTER: u64 = 4 * 3600;
@@ -116,10 +117,10 @@ pub fn parse_current(v: &Value) -> Current {
 /// Fehlermeldung zu einem HTTP-Status
 pub fn error_for(code: u16) -> String {
     match code {
-        401 => "Nextcloud: Benutzer oder App-Passwort falsch".into(),
-        400 => "Nextcloud: Statustext oder Emoji ungültig".into(),
-        404 => "Nextcloud: Benutzerstatus nicht verfügbar".into(),
-        c => format!("Nextcloud-Status: Antwort {c}"),
+        401 => tr!("Nextcloud: Benutzer oder App-Passwort falsch", "Nextcloud: wrong user or app password"),
+        400 => tr!("Nextcloud: Statustext oder Emoji ungültig", "Nextcloud: status text or emoji invalid"),
+        404 => tr!("Nextcloud: Benutzerstatus nicht verfügbar", "Nextcloud: user status not available"),
+        c => tr!("Nextcloud-Status: Antwort {c}", "Nextcloud status: reply {c}"),
     }
 }
 
@@ -155,7 +156,7 @@ fn send(nc: &Nextcloud, method: &str, path: &str, body: Option<Value>) -> Result
         ("DELETE", _) => headers.iter().fold(agent.delete(&url), |r, (k, v)| r.header(*k, *v)).call(),
         _ => headers.iter().fold(agent.get(&url), |r, (k, v)| r.header(*k, *v)).call(),
     };
-    let mut resp = resp.map_err(|e| format!("Nextcloud nicht erreichbar: {e}"))?;
+    let mut resp = resp.map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}"))?;
     let code = resp.status().as_u16();
     let v = resp.body_mut().read_json::<Value>().unwrap_or(Value::Null);
     Ok((code, v))

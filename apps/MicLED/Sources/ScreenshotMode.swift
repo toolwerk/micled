@@ -66,17 +66,17 @@ enum ScreenshotMode {
         d.set(true, forKey: "nanoleafEnabled")
         d.set([["id": UUID().uuidString, "host": "192.168.1.40:16021", "name": "Canvas 5B3C"]], forKey: "nanoleafDevices")
         d.set(true, forKey: "wledEnabled")
-        d.set([["id": UUID().uuidString, "host": "192.168.1.45", "name": "Schreibtisch"]], forKey: "wledDevices")
+        d.set([["id": UUID().uuidString, "host": "192.168.1.45", "name": String(localized: "Schreibtisch")]], forKey: "wledDevices")
         d.set(true, forKey: "robobloqEnabled")
         return d
     }
 
     /// Beispiel-Räume und -Lampen für die Hue-Auswahl
     static let hueChoices = [
-        HueTarget(kind: .room, id: "buero", name: "Büro"),
-        HueTarget(kind: .room, id: "flur", name: "Flur"),
-        HueTarget(kind: .light, id: "tuer", name: "Flur – Tür"),
-        HueTarget(kind: .light, id: "steh", name: "Stehlampe"),
+        HueTarget(kind: .room, id: "buero", name: String(localized: "Büro")),
+        HueTarget(kind: .room, id: "flur", name: String(localized: "Flur")),
+        HueTarget(kind: .light, id: "tuer", name: String(localized: "Flur – Tür")),
+        HueTarget(kind: .light, id: "steh", name: String(localized: "Stehlampe")),
     ]
 
     /// Beispiel-Ergebnis der Govee-Suche (eines schon eingetragen)
@@ -88,7 +88,7 @@ enum ScreenshotMode {
     /// Beispiel-Ergebnis der WLED-Suche (eines schon eingetragen)
     static let wledFound = [
         FoundDevice(host: "192.168.1.45", name: "Schreibtisch"),
-        FoundDevice(host: "192.168.1.47", name: "Regal"),
+        FoundDevice(host: "192.168.1.47", name: String(localized: "Regal")),
     ]
 
     /// Feste Zeit auf Sendung: Wochenende frei, werktags 40–220 min

@@ -10,6 +10,7 @@ use std::time::Duration;
 use serde_json::{json, Value};
 
 use crate::presence::{plan, Presence};
+use crate::tr;
 
 const API: &str = "https://slack.com/api";
 /// Ablauf des eigenen Status, falls MicLED ihn nicht mehr zurücksetzen kann
@@ -83,10 +84,14 @@ fn check_ok(v: &Value) -> Result<(), String> {
     if v["ok"].as_bool() == Some(true) {
         return Ok(());
     }
-    Err(match v["error"].as_str().unwrap_or("unbekannter Fehler") {
-        "invalid_auth" | "not_authed" | "token_revoked" => "Slack: Token ungültig".to_string(),
-        "missing_scope" => "Slack: Token fehlt users.profile:read oder users.profile:write".to_string(),
-        e => format!("Slack: {e}"),
+    Err(match v["error"].as_str() {
+        Some("invalid_auth" | "not_authed" | "token_revoked") => tr!("Slack: Token ungültig", "Slack: token invalid"),
+        Some("missing_scope") => tr!(
+            "Slack: Token fehlt users.profile:read oder users.profile:write",
+            "Slack: token lacks users.profile:read or users.profile:write"
+        ),
+        Some(e) => format!("Slack: {e}"),
+        None => tr!("Slack: unbekannter Fehler", "Slack: unknown error"),
     })
 }
 
@@ -102,7 +107,7 @@ fn call(token: &str, method: &str, body: Option<Value>) -> Result<Value, String>
         None => agent().get(&url).header("Authorization", &auth).call(),
     };
     let v: Value = resp
-        .map_err(|e| format!("Slack nicht erreichbar: {e}"))?
+        .map_err(|e| tr!("Slack nicht erreichbar: {e}", "Slack unreachable: {e}"))?
         .body_mut()
         .read_json()
         .map_err(|e| format!("Slack: {e}"))?;

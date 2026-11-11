@@ -124,7 +124,7 @@ mod imp {
         let mut size = 0u32;
         let st = unsafe { AudioObjectGetPropertyDataSize(SYSTEM_OBJECT, &list, 0, null(), &mut size) };
         if st != 0 {
-            return Err(format!("CoreAudio-Prozessliste nicht lesbar (OSStatus {st}, macOS 14+ nötig)"));
+            return Err(crate::tr!("CoreAudio-Prozessliste nicht lesbar (OSStatus {st}, macOS 14+ nötig)", "CoreAudio process list unreadable (OSStatus {st}, macOS 14+ required)"));
         }
         let count = size as usize / size_of::<AudioObjectID>();
         let mut ids = vec![0 as AudioObjectID; count];
@@ -132,7 +132,7 @@ mod imp {
             AudioObjectGetPropertyData(SYSTEM_OBJECT, &list, 0, null(), &mut size, ids.as_mut_ptr() as *mut c_void)
         };
         if st != 0 {
-            return Err(format!("CoreAudio-Prozessliste nicht lesbar (OSStatus {st})"));
+            return Err(crate::tr!("CoreAudio-Prozessliste nicht lesbar (OSStatus {st})", "CoreAudio process list unreadable (OSStatus {st})"));
         }
         ids.truncate(size as usize / size_of::<AudioObjectID>());
 
@@ -157,6 +157,6 @@ mod imp {
     use super::MicUser;
 
     pub fn users() -> Result<Vec<MicUser>, String> {
-        Err("Mikrofon-Erkennung gibt es nur unter macOS".into())
+        Err(crate::tr!("Mikrofon-Erkennung gibt es nur unter macOS", "Microphone detection is only available on macOS"))
     }
 }

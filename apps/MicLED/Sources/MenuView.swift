@@ -123,7 +123,7 @@ struct MenuView: View {
                 .resizable()
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.cameraOn ? "Kamera aktiv" : model.micActive ? "Mikrofon aktiv" : "Mikrofon aus")
+                Text(model.cameraOn ? String(localized: "Kamera aktiv") : model.micActive ? String(localized: "Mikrofon aktiv") : String(localized: "Mikrofon aus"))
                     .font(.headline)
                 Text(subtitle)
                     .font(.caption)
@@ -136,17 +136,19 @@ struct MenuView: View {
     /// „2 h 40 min“, „12 min“, „0 min“
     static func duration(_ seconds: UInt64) -> String {
         let minutes = seconds / 60
-        return minutes >= 60 ? "\(minutes / 60) h \(minutes % 60) min" : "\(minutes) min"
+        return minutes >= 60
+            ? String(localized: "\(Int(minutes / 60)) h \(Int(minutes % 60)) min")
+            : String(localized: "\(Int(minutes)) min")
     }
 
     private var subtitle: String {
         if model.micActive {
             return model.micUsers.map(model.displayName).joined(separator: ", ")
         }
-        if model.cameraOn { return "Kamera in Benutzung" }
-        if model.lampKind == .noLamp { return "Ohne Lampe" }
-        guard let hex = model.shownHex else { return "Lampenfarbe noch unbekannt" }
-        return isOff(hex) ? "Lampe aus" : "Lampe #\(hex)"
+        if model.cameraOn { return String(localized: "Kamera in Benutzung") }
+        if model.lampKind == .noLamp { return String(localized: "Ohne Lampe") }
+        guard let hex = model.shownHex else { return String(localized: "Lampenfarbe noch unbekannt") }
+        return isOff(hex) ? String(localized: "Lampe aus") : String(localized: "Lampe #\(hex)")
     }
 }
 
@@ -172,6 +174,6 @@ struct Swatch: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(isOff(hex) ? "Aus" : "#\(hex)")
+        .help(isOff(hex) ? String(localized: "Aus") : "#\(hex)")
     }
 }

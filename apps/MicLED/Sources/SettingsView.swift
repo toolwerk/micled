@@ -52,7 +52,9 @@ struct SettingsView: View {
                     Text("Feste Farbe setzen").tag(false)
                 }
                 ColorPicker(
-                    model.restorePrevious ? "Farbe, falls keine vorherige bekannt" : "Farbe bei Mikro aus",
+                    model.restorePrevious
+                        ? String(localized: "Farbe, falls keine vorherige bekannt")
+                        : String(localized: "Farbe bei Mikro aus"),
                     selection: colorBinding($model.micOffHex),
                     supportsOpacity: false
                 )
@@ -101,7 +103,7 @@ struct SettingsView: View {
                     SecureField("Passwort", text: $model.mqttPassword)
                     HStack {
                         Button("Verbindung prüfen") {
-                            mqttResult = "Prüfe …"
+                            mqttResult = String(localized: "Prüfe …")
                             Task { mqttResult = await model.checkMqtt() }
                         }
                         Text(mqttResult).font(.caption).foregroundStyle(.secondary)
@@ -122,7 +124,7 @@ struct SettingsView: View {
                     TextField("Emoji", text: $model.slackEmoji, prompt: Text(":red_circle:"))
                     HStack {
                         Button("Verbindung prüfen") {
-                            slackResult = "Prüfe …"
+                            slackResult = String(localized: "Prüfe …")
                             Task { slackResult = await model.checkSlack() }
                         }
                         Text(slackResult).font(.caption).foregroundStyle(.secondary)
@@ -141,7 +143,7 @@ struct SettingsView: View {
                 SecureField("App-Passwort", text: $model.nextcloudPassword)
                 HStack {
                     Button("Verbindung prüfen") {
-                        nextcloudResult = "Prüfe …"
+                        nextcloudResult = String(localized: "Prüfe …")
                         Task { nextcloudResult = await model.checkNextcloud() }
                     }
                     Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
@@ -167,7 +169,7 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                     HStack {
                         Button("Verbindung prüfen") {
-                            pixooResult = "Prüfe …"
+                            pixooResult = String(localized: "Prüfe …")
                             Task { pixooResult = await model.checkPixoo() }
                         }
                         Text(pixooResult).font(.caption).foregroundStyle(.secondary)
@@ -188,7 +190,7 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                     HStack {
                         Button("Verbindung prüfen") {
-                            awtrixResult = "Prüfe …"
+                            awtrixResult = String(localized: "Prüfe …")
                             Task { awtrixResult = await model.checkAwtrix() }
                         }
                         Text(awtrixResult).font(.caption).foregroundStyle(.secondary)
@@ -209,18 +211,18 @@ struct SettingsView: View {
                         TextField("Bridge", text: $model.hueHost, prompt: Text("192.168.1.20"))
                             .autocorrectionDisabled()
                         Button("Koppeln") {
-                            hueResult = "Kopple …"
+                            hueResult = String(localized: "Kopple …")
                             Task { hueResult = await model.pairHue() }
                         }
                         .disabled(model.hueHost.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    Text(hueResult.isEmpty ? (model.huePaired ? "Gekoppelt ✓" : "Nicht gekoppelt") : hueResult)
+                    Text(hueResult.isEmpty ? pairState(model.huePaired) : hueResult)
                         .font(.caption).foregroundStyle(.secondary)
                     if model.huePaired {
                         Picker("Lampe", selection: $model.hueSelection) {
                             Text("Bitte wählen").tag("")
                             ForEach(model.hueChoices, id: \.self) { t in
-                                Text(t.kind == .room ? "Raum: \(t.name)" : t.name)
+                                Text(t.kind == .room ? String(localized: "Raum: \(t.name)") : t.name)
                                     .tag("\(t.kind == .room ? "room" : "light"):\(t.id)")
                             }
                             // gespeicherte Auswahl, solange die Liste noch nicht geladen ist
@@ -257,7 +259,7 @@ struct SettingsView: View {
                     }
                     HStack {
                         Button("Suchen") {
-                            goveeResult = "Suche …"
+                            goveeResult = String(localized: "Suche …")
                             Task { goveeResult = await model.searchGovee() }
                         }
                         Button("Adresse hinzufügen") {
@@ -281,12 +283,12 @@ struct SettingsView: View {
                     ForEach($model.nanoleafDevices) { $light in
                         HStack {
                             lightAddress($light)
-                            Text(nanoleafPairResults[light.id] ?? (model.nanoleafPaired(light.id) ? "Gekoppelt ✓" : "Nicht gekoppelt"))
+                            Text(nanoleafPairResults[light.id] ?? pairState(model.nanoleafPaired(light.id)))
                                 .font(.caption).foregroundStyle(.secondary)
                                 .lineLimit(2)
                             Button("Koppeln") {
                                 let id = light.id
-                                nanoleafPairResults[id] = "Kopple …"
+                                nanoleafPairResults[id] = String(localized: "Kopple …")
                                 Task { nanoleafPairResults[id] = await model.pairNanoleaf(id) }
                             }
                             .disabled(light.host.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -296,7 +298,7 @@ struct SettingsView: View {
                     }
                     HStack {
                         Button("Suchen") {
-                            nanoleafResult = "Suche …"
+                            nanoleafResult = String(localized: "Suche …")
                             Task { nanoleafResult = await model.searchNanoleaf() }
                         }
                         Button("Adresse hinzufügen") {
@@ -325,7 +327,7 @@ struct SettingsView: View {
                     }
                     HStack {
                         Button("Suchen") {
-                            wledResult = "Suche …"
+                            wledResult = String(localized: "Suche …")
                             Task { wledResult = await model.searchWled() }
                         }
                         Button("Adresse hinzufügen") {
@@ -348,7 +350,7 @@ struct SettingsView: View {
                 if model.robobloqEnabled {
                     HStack {
                         Button("Testen") {
-                            robobloqResult = "Teste …"
+                            robobloqResult = String(localized: "Teste …")
                             robobloqTesting = true
                             Task {
                                 robobloqResult = await model.checkRobobloq()
@@ -522,8 +524,8 @@ struct SettingsView: View {
                 Text("Updates")
             } footer: {
                 Text(updater.isAvailable
-                    ? "Einmal am Tag. Vor der Installation fragt MicLED nach.\nInstalliert: MicLED \(updater.versionText)"
-                    : "Entwickler-Builds suchen nicht nach Updates.")
+                    ? String(localized: "Einmal am Tag. Vor der Installation fragt MicLED nach.\nInstalliert: MicLED \(updater.versionText)")
+                    : String(localized: "Entwickler-Builds suchen nicht nach Updates."))
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -538,6 +540,10 @@ struct SettingsView: View {
         .frame(width: 480)
         .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
+    }
+
+    private func pairState(_ paired: Bool) -> String {
+        paired ? String(localized: "Gekoppelt ✓") : String(localized: "Nicht gekoppelt")
     }
 
     /// Häkchen für die Zustände, die ein Zusatzgerät zeigt

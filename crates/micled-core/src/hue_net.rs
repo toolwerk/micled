@@ -18,12 +18,16 @@ use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use rustls::{ClientConfig, ClientConnection, DigitallySignedStruct, SignatureScheme, StreamOwned};
 use serde_json::Value;
 
+use crate::tr;
+
 const TIMEOUT: Duration = Duration::from_secs(3);
 /// Höchstgröße einer Antwort (die Liste aller Lampen ist der größte Brocken)
 const MAX_RESPONSE: usize = 4 * 1024 * 1024;
 
 /// Meldung, wenn die Bridge ein anderes Zertifikat zeigt als beim Koppeln
-pub const CERT_CHANGED: &str = "Zertifikat der Bridge hat sich geändert, bitte neu koppeln";
+pub fn cert_changed() -> String {
+    tr!("Zertifikat der Bridge hat sich geändert, bitte neu koppeln", "The bridge certificate has changed, please pair again")
+}
 
 /// SHA-256 eines Zertifikats als Hex in Kleinbuchstaben
 pub fn fingerprint(der: &[u8]) -> String {
@@ -51,7 +55,7 @@ impl ServerCertVerifier for Pinned {
         let fp = fingerprint(end_entity.as_ref());
         *self.seen.lock().unwrap() = Some(fp.clone());
         match &self.expected {
-            Some(e) if !e.eq_ignore_ascii_case(&fp) => Err(rustls::Error::General(CERT_CHANGED.into())),
+            Some(e) if !e.eq_ignore_ascii_case(&fp) => Err(rustls::Error::General(cert_changed())),
             _ => Ok(ServerCertVerified::assertion()),
         }
     }
@@ -123,7 +127,7 @@ pub fn request(
     key: Option<&str>,
     body: Option<Value>,
 ) -> Result<(Value, String), String> {
-    let unreachable = |e: &dyn std::fmt::Display| format!("Hue-Bridge nicht erreichbar: {e}");
+    let unreachable = |e: &dyn std::fmt::Display| tr!("Hue-Bridge nicht erreichbar: {e}", "Hue Bridge unreachable: {e}");
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let verifier = Arc::new(Pinned {
         expected: fingerprint.map(str::to_string),
@@ -137,7 +141,7 @@ pub fn request(
         .with_custom_certificate_verifier(verifier.clone())
         .with_no_client_auth();
     let (name, port) = split_port(host);
-    let name = ServerName::try_from(name.to_string()).map_err(|_| format!("Ungültige Adresse der Bridge: {host}"))?;
+    let name = ServerName::try_from(name.to_string()).map_err(|_| tr!("Ungültige Adresse der Bridge: {host}", "Invalid bridge address: {host}"))?;
     let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
 
     // jede aufgelöste Adresse versuchen (z. B. erst IPv6, dann IPv4)
@@ -155,7 +159,7 @@ pub fn request(
     let tcp = match (tcp, last_error) {
         (Some(t), _) => t,
         (None, Some(e)) => return Err(unreachable(&e)),
-        (None, None) => return Err(unreachable(&"Adresse unbekannt")),
+        (None, None) => return Err(unreachable(&tr!("Adresse unbekannt", "address unknown"))),
     };
     tcp.set_read_timeout(Some(TIMEOUT)).map_err(|e| unreachable(&e))?;
     tcp.set_write_timeout(Some(TIMEOUT)).map_err(|e| unreachable(&e))?;
@@ -164,7 +168,7 @@ pub fn request(
     let cert_error = || {
         let seen = verifier.seen.lock().unwrap().clone();
         match (fingerprint, seen) {
-            (Some(e), Some(s)) if !e.eq_ignore_ascii_case(&s) => Some(CERT_CHANGED.to_string()),
+            (Some(e), Some(s)) if !e.eq_ignore_ascii_case(&s) => Some(cert_changed()),
             _ => None,
         }
     };
@@ -180,7 +184,7 @@ pub fn request(
             Ok(n) => {
                 buf.extend_from_slice(&chunk[..n]);
                 if buf.len() > MAX_RESPONSE {
-                    return Err("Antwort der Hue-Bridge ist zu groß".into());
+                    return Err(tr!("Antwort der Hue-Bridge ist zu groß", "Reply from the Hue Bridge is too large"));
                 }
                 // nicht auf das Schließen warten, falls die Bridge die Verbindung offen hält
                 if is_complete(&buf) {
@@ -220,7 +224,7 @@ fn is_complete(raw: &[u8]) -> bool {
 
 /// Rumpf mit `Transfer-Encoding: chunked` zusammensetzen
 fn dechunk(mut rest: &[u8]) -> Result<Vec<u8>, String> {
-    let incomplete = || "Hue-Bridge: Antwort unvollständig".to_string();
+    let incomplete = || tr!("Hue-Bridge: Antwort unvollständig", "Hue Bridge: incomplete reply");
     let mut out = Vec::new();
     loop {
         let end = find(rest, b"\r\n").ok_or_else(incomplete)?;
@@ -251,16 +255,16 @@ fn error_text(v: &Value) -> Option<String> {
 /// HTTP-Antwort zerlegen: Statuszeile, Rumpf (chunked oder mit
 /// `Content-Length`), JSON. Status ab 400 wird ein Fehler.
 pub fn parse_response(raw: &[u8]) -> Result<Value, String> {
-    let incomplete = || "Hue-Bridge: Antwort unvollständig".to_string();
+    let incomplete = || tr!("Hue-Bridge: Antwort unvollständig", "Hue Bridge: incomplete reply");
     let split = find(raw, b"\r\n\r\n").ok_or_else(incomplete)?;
-    let head = std::str::from_utf8(&raw[..split]).map_err(|_| "Hue-Bridge: Antwort unlesbar".to_string())?;
+    let head = std::str::from_utf8(&raw[..split]).map_err(|_| tr!("Hue-Bridge: Antwort unlesbar", "Hue Bridge: unreadable reply"))?;
     let body = &raw[split + 4..];
     let mut lines = head.split("\r\n");
     let status: u16 = lines
         .next()
         .and_then(|l| l.split_whitespace().nth(1))
         .and_then(|c| c.parse().ok())
-        .ok_or_else(|| "Hue-Bridge: Antwort unlesbar".to_string())?;
+        .ok_or_else(|| tr!("Hue-Bridge: Antwort unlesbar", "Hue Bridge: unreadable reply"))?;
     let mut chunked = false;
     let mut length = None;
     for l in lines {
@@ -285,12 +289,12 @@ pub fn parse_response(raw: &[u8]) -> Result<Value, String> {
     let json: Value = if body.iter().all(u8::is_ascii_whitespace) {
         Value::Null
     } else {
-        serde_json::from_slice(&body).map_err(|_| "Hue-Bridge: Antwort ist kein JSON".to_string())?
+        serde_json::from_slice(&body).map_err(|_| tr!("Hue-Bridge: Antwort ist kein JSON", "Hue Bridge: reply is not JSON"))?
     };
     if status >= 400 {
         return Err(match error_text(&json) {
-            Some(t) => format!("Hue-Bridge meldet Fehler {status}: {t}"),
-            None => format!("Hue-Bridge meldet Fehler {status}"),
+            Some(t) => tr!("Hue-Bridge meldet Fehler {status}: {t}", "Hue Bridge reports error {status}: {t}"),
+            None => tr!("Hue-Bridge meldet Fehler {status}", "Hue Bridge reports error {status}"),
         });
     }
     Ok(json)

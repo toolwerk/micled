@@ -1,0 +1,60 @@
+{
+  "sourceLanguage": "de",
+  "strings": {
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "Info.plist",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED lässt die Lampe kurz vor einem Termin blinken. Gelesen werden nur die Startzeiten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED flashes the light shortly before an event. Only the start times are read."
+          }
+        }
+      }
+    },
+    "NSFocusStatusUsageDescription": {
+      "comment": "Info.plist",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED zeigt auf der Lampe eine eigene Farbe, solange ein Fokus an ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED shows its own color on the light while a Focus is on."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "comment": "Info.plist",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED zeigt den Status auf Geräten im eigenen Netz, etwa einem Pixoo 64, einer AWTRIX-Uhr, einer Hue Bridge, Govee- und Nanoleaf-Lampen oder Home Assistant, und sucht dort nach Govee- und Nanoleaf-Lampen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED shows the status on devices in your network, such as a Pixoo 64, an AWTRIX clock, a Hue Bridge, Govee and Nanoleaf lights or Home Assistant, and searches there for Govee and Nanoleaf lights."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

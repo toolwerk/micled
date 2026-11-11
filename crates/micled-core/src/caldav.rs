@@ -13,6 +13,7 @@ use std::time::Duration;
 use base64::Engine as _;
 
 use crate::reminder::Event;
+use crate::tr;
 
 /// Zugang zu einer Nextcloud. `server` ist die Adresse der Instanz,
 /// z. B. `https://cloud.example.org` oder `https://example.org/nextcloud`.
@@ -63,7 +64,7 @@ pub fn check_secure(server: &str) -> Result<(), String> {
     if ok {
         Ok(())
     } else {
-        Err("Nextcloud nur über https:// erreichbar eintragen".into())
+        Err(tr!("Nextcloud nur über https:// erreichbar eintragen", "Enter a Nextcloud address with https://"))
     }
 }
 
@@ -76,12 +77,12 @@ fn resolve(base: &str, href: &str) -> Result<String, String> {
     if origin(href) == origin(base) {
         Ok(href.to_string())
     } else {
-        Err(format!("Nextcloud verweist auf einen anderen Server: {}", origin(href)))
+        Err(tr!("Nextcloud verweist auf einen anderen Server: {}", "Nextcloud points to another server: {}", origin(href)))
     }
 }
 
 fn parse(xml: &str) -> Result<roxmltree::Document<'_>, String> {
-    roxmltree::Document::parse(xml).map_err(|e| format!("Antwort von Nextcloud unlesbar: {e}"))
+    roxmltree::Document::parse(xml).map_err(|e| tr!("Antwort von Nextcloud unlesbar: {e}", "Unreadable reply from Nextcloud: {e}"))
 }
 
 /// Erstes `<href>` innerhalb des Elements `prop` (z. B. `current-user-principal`)
@@ -319,12 +320,12 @@ impl Client {
             .header("Content-Type", "application/xml; charset=utf-8")
             .body(body.to_string())
             .map_err(|e| e.to_string())?;
-        let mut resp = self.agent.run(req).map_err(|e| format!("Nextcloud nicht erreichbar: {e}"))?;
+        let mut resp = self.agent.run(req).map_err(|e| tr!("Nextcloud nicht erreichbar: {e}", "Nextcloud unreachable: {e}"))?;
         match resp.status().as_u16() {
             200..=299 => resp.body_mut().read_to_string().map_err(|e| format!("Nextcloud: {e}")),
-            401 => Err("Nextcloud: Benutzer oder App-Passwort falsch".into()),
-            404 => Err("Nextcloud: Kalender nicht gefunden (Serveradresse prüfen)".into()),
-            s => Err(format!("Nextcloud antwortet mit Status {s}")),
+            401 => Err(tr!("Nextcloud: Benutzer oder App-Passwort falsch", "Nextcloud: wrong user or app password")),
+            404 => Err(tr!("Nextcloud: Kalender nicht gefunden (Serveradresse prüfen)", "Nextcloud: calendars not found (check the server address)")),
+            s => Err(tr!("Nextcloud antwortet mit Status {s}", "Nextcloud replies with status {s}")),
         }
     }
 
@@ -333,10 +334,10 @@ impl Client {
         check_secure(server)?;
         let root = format!("{server}/remote.php/dav/");
         let principal = href_of(&self.call("PROPFIND", &root, "0", PRINCIPAL)?, "current-user-principal")?
-            .ok_or("Nextcloud: kein Benutzerkonto gefunden")?;
+            .ok_or_else(|| tr!("Nextcloud: kein Benutzerkonto gefunden", "Nextcloud: no user account found"))?;
         let principal = resolve(server, &principal)?;
         let home = href_of(&self.call("PROPFIND", &principal, "0", HOME)?, "calendar-home-set")?
-            .ok_or("Nextcloud: kein Kalenderordner gefunden")?;
+            .ok_or_else(|| tr!("Nextcloud: kein Kalenderordner gefunden", "Nextcloud: no calendar folder found"))?;
         let home = resolve(server, &home)?;
         calendars(&self.call("PROPFIND", &home, "1", CALENDARS)?)?.into_iter().map(|h| resolve(server, &h)).collect()
     }

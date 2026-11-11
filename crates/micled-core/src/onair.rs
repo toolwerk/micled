@@ -9,8 +9,12 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 
+use crate::tr;
+
 /// Meldung im Menü, wenn die eingetragene Adresse nicht passt.
-pub const INVALID_URL: &str = "Webhook-Adresse ungültig";
+pub fn invalid_url() -> String {
+    tr!("Webhook-Adresse ungültig", "Webhook address invalid")
+}
 
 /// Prüft nur die Form der Adresse: `http://` oder `https://`, danach ein Server,
 /// keine Leerzeichen. Ob der Server antwortet, zeigt erst der Versand.
@@ -51,7 +55,7 @@ pub fn send(url: &str, body: &Value) -> Result<(), String> {
         .post(url.trim())
         .send_json(body)
         .map(|_| ())
-        .map_err(|e| format!("Auf-Sendung-Meldung fehlgeschlagen: {e}"))
+        .map_err(|e| tr!("Auf-Sendung-Meldung fehlgeschlagen: {e}", "On-air notification failed: {e}"))
 }
 
 #[cfg(test)]
