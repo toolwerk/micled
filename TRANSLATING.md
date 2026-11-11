@@ -32,7 +32,7 @@ In a text editor, write your translation into the `msgstr ""` line below each `m
 
 Either way works:
 
-- **Pull request:** save the file as `translations/<code>.po` (e.g. `translations/fr.po`) and open a pull request. If you can run Rust, run `scripts/translations.sh import translations/<code>.po` first; otherwise we do it.
+- **Pull request:** save the file as `translations/<code>.po` (e.g. `translations/fr.po`, with the region in capitals as in `translations/pt-BR.po`) and open a pull request. If you can run Rust, run `scripts/translations.sh import translations/<code>.po` first; otherwise we do it.
 - **Issue:** open an issue with the template [“New translation”](https://github.com/toolwerk/micled/issues/new?template=translation.yml) and attach the `.po` file (zip it if GitHub refuses the file type).
 
 ## For maintainers

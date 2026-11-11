@@ -294,8 +294,9 @@ pub fn lang_code(raw: &str) -> Result<String, String> {
     Ok(code)
 }
 
-/// Vorhandene Sprachen `translations/<code>.po`, nach Code sortiert
-fn languages(root: &Path) -> Result<Vec<(String, po::File)>, String> {
+/// Vorhandene Sprachen `translations/<code>.po`, nach Code sortiert; `skip`
+/// (der gerade importierte Code) wird in jeder Schreibweise übergangen
+fn languages(root: &Path, skip: Option<&str>) -> Result<Vec<(String, po::File)>, String> {
     let dir = root.join(DIR);
     let mut out = Vec::new();
     let Ok(rd) = std::fs::read_dir(&dir) else { return Ok(out) };
@@ -305,10 +306,13 @@ fn languages(root: &Path) -> Result<Vec<(String, po::File)>, String> {
             continue;
         }
         let stem = p.file_stem().unwrap_or_default().to_string_lossy().to_string();
+        if skip.is_some_and(|s| s.eq_ignore_ascii_case(&stem.replace('_', "-"))) {
+            continue;
+        }
         let rel = format!("{DIR}/{stem}.po");
         let code = lang_code(&stem).map_err(|e| format!("{rel}: {e}"))?;
         if code != stem {
-            return Err(format!("{rel}: Datei muss {code}.po heißen"));
+            return Err(format!("{rel}: Datei muss {code}.po heißen (git mv {rel} {DIR}/{code}.po)"));
         }
         let file = po::parse(&read(root, &rel)?).map_err(|e| format!("{rel}: {e}"))?;
         out.push((code, file));
@@ -321,7 +325,7 @@ fn languages(root: &Path) -> Result<Vec<(String, po::File)>, String> {
 /// eine Sprache (Import)
 pub fn export(root: &Path, extra: Option<(String, po::File)>) -> Result<Output, String> {
     let (entries, mut catalogs) = template(root)?;
-    let mut langs = languages(root)?;
+    let mut langs = languages(root, extra.as_ref().map(|(c, _)| c.as_str()))?;
     if let Some((code, file)) = extra {
         langs.retain(|(c, _)| *c != code);
         langs.push((code, file));
@@ -412,12 +416,27 @@ pub fn import(root: &Path, text: &str, lang: Option<&str>) -> Result<(String, Ou
     Ok((code, out))
 }
 
+/// Liegt die Datei in anderer Schreibweise vor (`pt-br.po` statt `pt-BR.po`),
+/// bekommt sie den richtigen Namen; auf macOS behielte sie ihn sonst beim Schreiben
+fn rename_other_spelling(path: &Path) -> std::io::Result<()> {
+    let (Some(dir), Some(name)) = (path.parent(), path.file_name()) else { return Ok(()) };
+    let Ok(rd) = std::fs::read_dir(dir) else { return Ok(()) };
+    for e in rd.flatten() {
+        let other = e.file_name();
+        if other != name && other.to_string_lossy().eq_ignore_ascii_case(&name.to_string_lossy()) {
+            std::fs::rename(e.path(), path)?;
+        }
+    }
+    Ok(())
+}
+
 /// Schreibt nur geänderte Dateien, damit Xcode nicht unnötig neu baut;
 /// liefert die geschriebenen
 pub fn write(root: &Path, out: &Output) -> Result<Vec<String>, String> {
     let mut written = Vec::new();
     for (rel, content) in &out.files {
         let path = root.join(rel);
+        rename_other_spelling(&path).map_err(|e| format!("{rel}: {e}"))?;
         if std::fs::read_to_string(&path).ok().as_deref() == Some(content.as_str()) {
             continue;
         }
