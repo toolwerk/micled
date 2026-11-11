@@ -396,10 +396,16 @@ struct Timing {
     retry: Duration,
     /// So lange ohne Senden, dann PINGREQ
     idle: Duration,
+    /// Zweiter Versuch, wenn der erste nach dem Aufwachen scheitert
+    wake_retry: Duration,
 }
 
-const TIMING: Timing =
-    Timing { settle: Duration::from_secs(2), retry: Duration::from_secs(10), idle: Duration::from_secs(15) };
+const TIMING: Timing = Timing {
+    settle: Duration::from_secs(2),
+    retry: Duration::from_secs(10),
+    idle: Duration::from_secs(15),
+    wake_retry: Duration::from_secs(3),
+};
 
 type Connector = Box<dyn FnMut(&Mqtt) -> Result<Box<dyn Link>, String> + Send>;
 
@@ -422,11 +428,24 @@ struct Session {
     last_send: Instant,
     /// Nächster Versuch nach einem Fehler, nur für diese Einstellung
     next_try: Option<(Mqtt, Instant)>,
+    /// Einstellung, unter der das Gerät zuletzt in Home Assistant angemeldet wurde
+    announced: Option<Mqtt>,
+    /// Gerade aus dem Ruhezustand: Der erste Fehler beim Verbinden zählt noch nicht
+    woke: bool,
 }
 
 impl Session {
     fn new(connect: Connector, timing: Timing) -> Session {
-        Session { connect, timing, link: None, last_state: None, last_send: Instant::now(), next_try: None }
+        Session {
+            connect,
+            timing,
+            link: None,
+            last_state: None,
+            last_send: Instant::now(),
+            next_try: None,
+            announced: None,
+            woke: false,
+        }
     }
 
     /// Gewünschten Zustand herstellen. Liefert das Ergebnis, falls etwas
@@ -435,12 +454,17 @@ impl Session {
         // (aus, Abschied nötig) für eine bestehende Verbindung
         let leave = self.link.as_ref().map(|(current, _)| (cfg.is_none(), asleep || cfg != Some(current)));
         match leave {
-            Some((true, _)) => self.remove(),
+            Some((true, _)) => self.remove(now),
             Some((false, true)) => self.goodbye(),
             _ => {}
         }
+        if asleep {
+            self.woke = true;
+        }
         let Some(cfg) = cfg.filter(|_| !asleep) else {
-            self.next_try = None;
+            if cfg.is_none() && !asleep {
+                self.remove_later(now);
+            }
             return Some(Ok(()));
         };
         if self.link.is_none() {
@@ -448,8 +472,14 @@ impl Session {
                 return None;
             }
             let r = self.open(cfg, report, now);
-            self.next_try = r.is_err().then(|| (cfg.clone(), now + self.timing.retry));
-            return Some(r);
+            let quiet = r.is_err() && std::mem::take(&mut self.woke);
+            if r.is_ok() {
+                self.woke = false;
+            }
+            let pause = if quiet { self.timing.wake_retry } else { self.timing.retry };
+            self.next_try = r.is_err().then(|| (cfg.clone(), now + pause));
+            // gleich nach dem Aufwachen fehlt oft noch das Netz: erst der zweite Fehler zählt
+            return if quiet { None } else { Some(r) };
         }
         let state = state_payload(report);
         let r = if self.last_state.as_ref() != Some(&state) {
@@ -466,17 +496,40 @@ impl Session {
         Some(r)
     }
 
+    /// MQTT ist aus, das Gerät steht aber noch in Home Assistant (beim
+    /// Ausschalten fehlte die Verbindung): neu verbinden und entfernen
+    fn remove_later(&mut self, now: Instant) {
+        let Some(old) = self.announced.clone() else { return };
+        if matches!(&self.next_try, Some((c, t)) if *c == old && now < *t) {
+            return;
+        }
+        match (self.connect)(&old) {
+            Ok(link) => {
+                self.link = Some((old, link));
+                self.remove(now);
+            }
+            Err(e) => {
+                log::warn!("{e}");
+                self.next_try = Some((old, now + self.timing.retry));
+            }
+        }
+    }
+
     /// Wann `step` wieder dran ist (`None` = erst bei einer Nachricht)
     fn next_wake(&self, cfg: Option<&Mqtt>, asleep: bool, now: Instant) -> Option<Instant> {
+        let retry = |wanted: &Mqtt| match &self.next_try {
+            Some((c, t)) if c == wanted => Some(*t),
+            _ => Some(now),
+        };
         match (&self.link, cfg.filter(|_| !asleep)) {
             (Some(_), None) => Some(now),
-            (None, None) => None,
+            (None, None) => match &self.announced {
+                Some(old) if cfg.is_none() && !asleep => retry(old),
+                _ => None,
+            },
             (Some((current, _)), Some(wanted)) if current != wanted => Some(now),
             (Some(_), Some(_)) => Some(self.last_send + self.timing.idle),
-            (None, Some(wanted)) => match &self.next_try {
-                Some((c, t)) if c == wanted => Some(*t),
-                _ => Some(now),
-            },
+            (None, Some(wanted)) => retry(wanted),
         }
     }
 
@@ -492,6 +545,7 @@ impl Session {
             let state = state_payload(report);
             self.publish(&state_topic(cfg), &state, now)?;
             self.last_state = Some(state);
+            self.announced = Some(cfg.clone());
             Ok(())
         })();
         if r.is_err() {
@@ -514,6 +568,16 @@ impl Session {
         Ok(())
     }
 
+    /// Beim Beenden: abmelden, oder das Gerät entfernen, falls MicLED gerade
+    /// erst ausgeschaltet wurde (Ruhezeit noch nicht um)
+    fn finish(&mut self, off: bool, now: Instant) {
+        if off {
+            self.remove(now);
+        } else {
+            self.goodbye();
+        }
+    }
+
     /// `offline` melden und abmelden (Ruhezustand, andere Einstellung, Ende)
     fn goodbye(&mut self) {
         if let Some((cfg, mut link)) = self.link.take() {
@@ -524,8 +588,9 @@ impl Session {
         }
     }
 
-    /// Gerät aus Home Assistant entfernen und abmelden (MQTT ausgeschaltet)
-    fn remove(&mut self) {
+    /// Gerät aus Home Assistant entfernen und abmelden (MQTT ausgeschaltet).
+    /// Scheitert das, bleibt es für [`Session::remove_later`] vorgemerkt.
+    fn remove(&mut self, now: Instant) {
         if let Some((cfg, mut link)) = self.link.take() {
             let mut topics: Vec<String> = discovery(&cfg).into_iter().map(|(t, _)| t).collect();
             topics.push(state_topic(&cfg));
@@ -534,8 +599,16 @@ impl Session {
                 .iter()
                 .try_for_each(|t| link.write(&publish_packet(t, b"")))
                 .and_then(|()| link.write(&DISCONNECT));
-            if let Err(e) = r {
-                log::warn!("{e}");
+            match r {
+                Ok(()) => {
+                    self.announced = None;
+                    self.next_try = None;
+                }
+                Err(e) => {
+                    log::warn!("{e}");
+                    self.announced = Some(cfg.clone());
+                    self.next_try = Some((cfg, now + self.timing.retry));
+                }
             }
         }
     }
@@ -584,12 +657,12 @@ impl Updater {
                             asleep = a;
                         }
                         Ok(Msg::Shutdown(ack)) => {
-                            session.goodbye();
+                            session.finish(pending.is_none(), Instant::now());
                             let _ = ack.send(());
                             break;
                         }
                         Err(RecvTimeoutError::Disconnected) => {
-                            session.goodbye();
+                            session.finish(pending.is_none(), Instant::now());
                             break;
                         }
                         Err(RecvTimeoutError::Timeout) => {}
@@ -817,8 +890,12 @@ mod tests {
         }
     }
 
-    const FAST: Timing =
-        Timing { settle: Duration::from_millis(50), retry: Duration::from_secs(10), idle: Duration::from_secs(15) };
+    const FAST: Timing = Timing {
+        settle: Duration::from_millis(50),
+        retry: Duration::from_secs(10),
+        idle: Duration::from_secs(15),
+        wake_retry: Duration::from_secs(3),
+    };
 
     fn session() -> (Session, Arc<Mutex<Wire>>) {
         let wire = Arc::new(Mutex::new(Wire::default()));
@@ -924,6 +1001,35 @@ mod tests {
     }
 
     #[test]
+    fn switching_off_without_connection_removes_later() {
+        let (mut s, wire) = session();
+        let t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        wire.lock().unwrap().broken = true;
+        s.step(None, &live(&[]), false, t);
+        assert_eq!(s.next_wake(None, false, t), Some(t + Duration::from_secs(10)), "später erneut");
+        assert_eq!(s.next_wake(None, true, t), None, "nicht im Ruhezustand");
+        wire.lock().unwrap().broken = false;
+        s.step(None, &live(&[]), false, t + Duration::from_secs(10));
+        let packets = sent(&wire, 1);
+        assert_eq!(packets.iter().filter_map(|p| topic_of(p)).filter(|(_, m)| m.is_empty()).count(), 5);
+        assert_eq!(packets.last().unwrap(), &DISCONNECT.to_vec());
+        assert_eq!(s.next_wake(None, false, t), None, "erledigt");
+    }
+
+    #[test]
+    fn first_error_after_wake_is_quiet() {
+        let (mut s, wire) = session();
+        let t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        s.step(Some(&cfg()), &live(&[]), true, t);
+        wire.lock().unwrap().refuse = true;
+        assert_eq!(s.step(Some(&cfg()), &live(&[]), false, t), None, "Netz noch nicht da");
+        assert_eq!(s.next_wake(Some(&cfg()), false, t), Some(t + Duration::from_secs(3)));
+        assert!(s.step(Some(&cfg()), &live(&[]), false, t + Duration::from_secs(3)).unwrap().is_err());
+    }
+
+    #[test]
     fn off_at_start_does_nothing() {
         let (mut s, wire) = session();
         assert_eq!(s.step(None, &Report::default(), false, Instant::now()), Some(Ok(())));
@@ -999,6 +1105,16 @@ mod tests {
         assert!(started.elapsed() < Duration::from_millis(20), "send wartet nicht auf den Broker");
         let e = wait_for(&error, Option::is_some).expect("Fehler im Slot");
         assert!(e.starts_with("MQTT: Broker nicht erreichbar"), "{e}");
+    }
+
+    #[test]
+    fn quitting_right_after_switching_off_removes_the_device() {
+        let (mut s, wire) = session();
+        let t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        s.finish(true, t);
+        let packets = sent(&wire, 0);
+        assert_eq!(packets[5..].iter().filter_map(|p| topic_of(p)).filter(|(_, m)| m.is_empty()).count(), 5);
     }
 
     #[test]
