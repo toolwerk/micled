@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var hueResult = ""
     @State private var goveeResult = ""
     @State private var nanoleafResult = ""
+    @State private var wledResult = ""
     @State private var robobloqResult = ""
     @State private var robobloqTesting = false
     /// Meldung vom Koppeln je Nanoleaf-Eintrag
@@ -205,7 +206,7 @@ struct SettingsView: View {
                         }
                         Text(goveeResult).font(.caption).foregroundStyle(.secondary)
                     }
-                    found(model.goveeFound, in: model.goveeDevices, nanoleaf: false)
+                    found(model.goveeFound, .govee)
                 }
             } header: {
                 Text("Govee").id("network")
@@ -243,12 +244,40 @@ struct SettingsView: View {
                         }
                         Text(nanoleafResult).font(.caption).foregroundStyle(.secondary)
                     }
-                    found(model.nanoleafFound, in: model.nanoleafDevices, nanoleaf: true)
+                    found(model.nanoleafFound, .nanoleaf)
                 }
             } header: {
                 Text("Nanoleaf")
             } footer: {
                 Text("Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf WLED-Geräten zeigen", isOn: $model.wledEnabled)
+                if model.wledEnabled {
+                    ForEach($model.wledDevices) { $light in
+                        HStack {
+                            lightAddress($light)
+                            Button("Entfernen") { model.wledDevices.removeAll { $0.id == light.id } }
+                        }
+                    }
+                    HStack {
+                        Button("Suchen") {
+                            wledResult = "Suche …"
+                            Task { wledResult = await model.searchWled() }
+                        }
+                        Button("Adresse hinzufügen") {
+                            model.wledDevices.append(NetLight(id: UUID(), host: "", name: ""))
+                        }
+                        Text(wledResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                    found(model.wledFound, .wled)
+                }
+            } header: {
+                Text("WLED").id("wled")
+            } footer: {
+                Text("Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -475,13 +504,13 @@ struct SettingsView: View {
 
     /// Gefundene Geräte, die noch nicht eingetragen sind
     @ViewBuilder
-    private func found(_ found: [FoundDevice], in lights: [NetLight], nanoleaf: Bool) -> some View {
-        ForEach(found.filter { !NetLight.contains(lights, $0.host, nanoleaf: nanoleaf) }, id: \.host) { f in
+    private func found(_ found: [FoundDevice], _ kind: NetKind) -> some View {
+        ForEach(found.filter { !NetLight.contains(model.devices(kind), $0.host, kind) }, id: \.host) { f in
             HStack {
                 Text("Gefunden: \(f.name) · \(NetLight(id: UUID(), host: f.host, name: f.name).shownHost)")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Hinzufügen") { model.add(f, toNanoleaf: nanoleaf) }
+                Button("Hinzufügen") { model.add(f, to: kind) }
             }
         }
     }
