@@ -33,7 +33,9 @@ fn locales() -> &'static [(String, Table)] {
 
 fn parse_locales(json: &str) -> Vec<(String, Table)> {
     let map: BTreeMap<String, Table> = serde_json::from_str(json).unwrap_or_default();
-    map.into_iter().map(|(code, table)| (normalize(&code), table)).collect()
+    let mut v: Vec<(String, Table)> = map.into_iter().map(|(code, table)| (normalize(&code), table)).collect();
+    v.sort_by(|a, b| a.0.cmp(&b.0));
+    v
 }
 
 pub fn set(lang: Lang) {
@@ -213,8 +215,8 @@ mod tests {
     fn locales_file_parses() {
         let parsed = parse_locales(include_str!("locales.json"));
         assert!(parsed.windows(2).all(|w| w[0].0 < w[1].0));
-        let sample = parse_locales(r#"{"fr": {"Fehler {code}": "Erreur {code}"}, "ES": {}}"#);
-        assert_eq!(sample.iter().map(|(c, _)| c.as_str()).collect::<Vec<_>>(), ["es", "fr"]);
+        let sample = parse_locales(r#"{"fr": {"Fehler {code}": "Erreur {code}"}, "ES": {}, "zh-HK": {}, "zh-Hans": {}}"#);
+        assert_eq!(sample.iter().map(|(c, _)| c.as_str()).collect::<Vec<_>>(), ["es", "fr", "zh-hans", "zh-hk"]);
     }
 
     #[test]

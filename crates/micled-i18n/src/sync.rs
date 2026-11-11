@@ -280,10 +280,18 @@ pub fn lang_code(raw: &str) -> Result<String, String> {
     if app::BUILT_IN.contains(&first.as_str()) {
         return Err(format!("{code}: Deutsch und Englisch sind eingebaut und kommen nicht aus einer Übersetzungsdatei"));
     }
-    Ok(match parts.next() {
-        Some(rest) => format!("{first}-{rest}"),
-        None => first,
-    })
+    // wie Apple: Region groß (pt-BR), Schrift mit großem Anfang (zh-Hans)
+    let mut code = first;
+    for part in parts.next().unwrap_or_default().split('-').filter(|p| !p.is_empty()) {
+        let part = match part.len() {
+            4 => part[..1].to_ascii_uppercase() + &part[1..].to_ascii_lowercase(),
+            2 => part.to_ascii_uppercase(),
+            _ => part.to_ascii_lowercase(),
+        };
+        code.push('-');
+        code.push_str(&part);
+    }
+    Ok(code)
 }
 
 /// Vorhandene Sprachen `translations/<code>.po`, nach Code sortiert
@@ -530,6 +538,8 @@ mod tests {
         assert_eq!(lang_code("fr").unwrap(), "fr");
         assert_eq!(lang_code("pt_BR").unwrap(), "pt-BR");
         assert_eq!(lang_code("FR").unwrap(), "fr");
+        assert_eq!(lang_code("pt-br").unwrap(), "pt-BR");
+        assert_eq!(lang_code("zh_hans").unwrap(), "zh-Hans");
         for bad in ["de", "de-AT", "en", "en_GB", "", "français", "../x"] {
             assert!(lang_code(bad).is_err(), "{bad}");
         }
