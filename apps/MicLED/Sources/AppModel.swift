@@ -27,6 +27,28 @@ final class AppModel {
     var cameraEnabled: Bool { didSet { persist() } }
     var cameraHex: String { didSet { persist() } }
     var onAirUrl: String { didSet { persist() } }
+    /// „Auf Sendung“ per MQTT an Home Assistant (mit Discovery)
+    var mqttEnabled: Bool { didSet { persist() } }
+    var mqttHost: String { didSet { persist() } }
+    var mqttPort: Int { didSet { persist() } }
+    /// TLS umschalten setzt den Port auf den passenden Standard, falls er auf dem anderen steht
+    var mqttTls: Bool {
+        didSet {
+            if mqttTls != oldValue, mqttPort == (mqttTls ? Self.mqttPort : Self.mqttTlsPort) {
+                batching = true
+                mqttPort = mqttTls ? Self.mqttTlsPort : Self.mqttPort
+                batching = false
+            }
+            persist()
+        }
+    }
+    var mqttUser: String { didSet { persist() } }
+    /// Liegt im Schlüsselbund
+    var mqttPassword: String { didSet { Keychain.write(.mqtt, mqttPassword); persist() } }
+    /// Feste ID dieses Macs in den Topics (einmal erzeugt)
+    private let mqttDeviceId: String
+    /// Name des Macs, in Home Assistant „MicLED (<Name>)“
+    let mqttDeviceName: String
     var remindersEnabled: Bool { didSet { persist(); updateCalendar() } }
     var reminderHex: String { didSet { persist() } }
     var reminderLeadMinutes: Double { didSet { persist() } }
@@ -135,6 +157,8 @@ final class AppModel {
     private let defaults: UserDefaults
 
     static let defaultFavorites = ["00ff00", "ffff00", "ff0000", "0000ff", "ffffff"]
+    static let mqttPort = 1883
+    static let mqttTlsPort = 8883
 
     private init() {
         let d = ScreenshotMode.isActive ? ScreenshotMode.defaults() : UserDefaults.standard
@@ -151,6 +175,11 @@ final class AppModel {
             Key.cameraEnabled: true,
             Key.cameraColor: "ff00ff",
             Key.onAirUrl: "",
+            Key.mqttEnabled: false,
+            Key.mqttHost: "",
+            Key.mqttPort: AppModel.mqttPort,
+            Key.mqttTls: false,
+            Key.mqttUser: "",
             Key.remindersEnabled: false,
             Key.reminderColor: "ffff00",
             Key.reminderLead: 2.0,
@@ -199,6 +228,19 @@ final class AppModel {
         cameraEnabled = d.bool(forKey: Key.cameraEnabled)
         cameraHex = d.string(forKey: Key.cameraColor) ?? "ff00ff"
         onAirUrl = d.string(forKey: Key.onAirUrl) ?? ""
+        mqttEnabled = d.bool(forKey: Key.mqttEnabled)
+        mqttHost = d.string(forKey: Key.mqttHost) ?? ""
+        mqttPort = d.integer(forKey: Key.mqttPort)
+        mqttTls = d.bool(forKey: Key.mqttTls)
+        mqttUser = d.string(forKey: Key.mqttUser) ?? ""
+        mqttPassword = ScreenshotMode.isActive ? "" : Keychain.read(.mqtt)
+        if let id = d.string(forKey: Key.mqttDeviceId), !id.isEmpty {
+            mqttDeviceId = id
+        } else {
+            mqttDeviceId = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(12))
+            d.set(mqttDeviceId, forKey: Key.mqttDeviceId)
+        }
+        mqttDeviceName = ScreenshotMode.isActive ? "MacBook Pro" : (Host.current().localizedName ?? "Mac")
         remindersEnabled = d.bool(forKey: Key.remindersEnabled)
         reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
         reminderLeadMinutes = d.double(forKey: Key.reminderLead)
@@ -312,6 +354,15 @@ final class AppModel {
         }.value
         if let error = result.error { return error }
         return result.calendars == 1 ? "Verbunden, 1 Kalender" : "Verbunden, \(result.calendars) Kalender"
+    }
+
+    /// Zugang zum MQTT-Broker prüfen, liefert eine Meldung für die Einstellungen
+    func checkMqtt() async -> String {
+        let (host, port, tls, user, password) = (mqttHost, UInt16(clamping: mqttPort), mqttTls, mqttUser, mqttPassword)
+        let result = await Task.detached {
+            mqttCheck(host: host, port: port, tls: tls, user: user, password: password)
+        }.value
+        return result.error ?? "Verbunden ✓"
     }
 
     /// Slack-Token prüfen, liefert eine Meldung für die Einstellungen
@@ -525,7 +576,14 @@ final class AppModel {
             nanoleaf: nanoleafEnabled
                 ? nanoleafDevices.map { NanoleafDevice(host: $0.host, key: nanoleafKeys[$0.id] ?? "") }
                 : [],
-            robobloq: robobloqEnabled
+            robobloq: robobloqEnabled,
+            mqttHost: mqttEnabled ? mqttHost : "",
+            mqttPort: UInt16(clamping: mqttPort),
+            mqttTls: mqttTls,
+            mqttUser: mqttUser,
+            mqttPassword: mqttPassword,
+            mqttDeviceId: mqttDeviceId,
+            mqttDeviceName: mqttDeviceName
         )
     }
 
@@ -559,6 +617,11 @@ final class AppModel {
         defaults.set(cameraEnabled, forKey: Key.cameraEnabled)
         defaults.set(cameraHex, forKey: Key.cameraColor)
         defaults.set(onAirUrl, forKey: Key.onAirUrl)
+        defaults.set(mqttEnabled, forKey: Key.mqttEnabled)
+        defaults.set(mqttHost, forKey: Key.mqttHost)
+        defaults.set(mqttPort, forKey: Key.mqttPort)
+        defaults.set(mqttTls, forKey: Key.mqttTls)
+        defaults.set(mqttUser, forKey: Key.mqttUser)
         defaults.set(remindersEnabled, forKey: Key.remindersEnabled)
         defaults.set(reminderHex, forKey: Key.reminderColor)
         defaults.set(reminderLeadMinutes, forKey: Key.reminderLead)
@@ -678,6 +741,12 @@ final class AppModel {
         static let cameraEnabled = "cameraEnabled"
         static let cameraColor = "cameraColor"
         static let onAirUrl = "onAirUrl"
+        static let mqttEnabled = "mqttEnabled"
+        static let mqttHost = "mqttHost"
+        static let mqttPort = "mqttPort"
+        static let mqttTls = "mqttTls"
+        static let mqttUser = "mqttUser"
+        static let mqttDeviceId = "mqttDeviceId"
         static let remindersEnabled = "remindersEnabled"
         static let reminderColor = "reminderColor"
         static let reminderLead = "reminderLeadMinutes"

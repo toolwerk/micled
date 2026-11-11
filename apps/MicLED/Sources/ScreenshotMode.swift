@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Screenshot-Modus für die README (`scripts/screenshots.sh`): Beispieldaten
-/// statt echter, kein Rust-Kern, also keine Lampe, kein Slack, kein Nextcloud.
+/// statt echter, kein Rust-Kern, also keine Lampe, kein Slack, kein Nextcloud, kein MQTT.
 /// Nur in Debug-Builds; im Release ist der Modus immer aus.
 enum ScreenshotMode {
     static var isActive: Bool {
@@ -28,7 +28,7 @@ enum ScreenshotMode {
     /// (und nicht ausgegraut) aufgenommen wird
     static var window: String { argument("--window") ?? "menu" }
 
-    /// `--scroll network|strip`: Einstellungen bis zu Govee und Nanoleaf bzw. zum Lichtstreifen scrollen
+    /// `--scroll network|strip|mqtt`: Einstellungen bis zu Govee und Nanoleaf, zum Lichtstreifen bzw. zu MQTT scrollen
     static var scroll: String? { isActive ? argument("--scroll") : nil }
 
     static let suiteName = "net.staude.micled.screenshots"
@@ -40,6 +40,9 @@ enum ScreenshotMode {
         d.set(["ff0000", "00ff00", "ffff00", "0000ff", "ffffff"], forKey: "favorites")
         d.set([["key": "com.plaud.mac", "hex": "ff8800"]], forKey: "appColors")
         d.set(true, forKey: "slackEnabled")
+        d.set(true, forKey: "mqttEnabled")
+        d.set("homeassistant.local", forKey: "mqttHost")
+        d.set("micled", forKey: "mqttUser")
         d.set(true, forKey: "dimEnabled")
         d.set(true, forKey: "remindersEnabled")
         d.set(true, forKey: "pixooEnabled")
