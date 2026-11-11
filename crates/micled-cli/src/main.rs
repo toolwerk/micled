@@ -150,7 +150,7 @@ enum StripCmd {
 /// Fünf Sekunden Rot, dann zurückstellen (auch nach einem Fehler, die Farbe
 /// kann trotzdem angekommen sein)
 fn show_red<D: Device>(device: &mut D, cfg: &D::Cfg) -> Result<(), String> {
-    let shown = device.apply(Some(cfg), &Scene::Live { camera: false, color: Rgb::RED });
+    let shown = device.apply(Some(cfg), &Scene::Live { camera: false, color: Rgb::RED, until: None });
     if shown.is_ok() {
         std::thread::sleep(Duration::from_secs(5));
     }
@@ -230,7 +230,7 @@ fn hue_cmd(cmd: &HueCmd) -> Result<(), String> {
                 target: hue::Target { kind: if *room { hue::Kind::Room } else { hue::Kind::Light }, id: id.clone() },
             };
             let mut session = hue::Session::default();
-            let shown = session.apply(Some(&cfg), &Scene::Live { camera: false, color: Rgb::RED });
+            let shown = session.apply(Some(&cfg), &Scene::Live { camera: false, color: Rgb::RED, until: None });
             if shown.is_ok() {
                 std::thread::sleep(Duration::from_secs(5));
             }
@@ -305,12 +305,14 @@ fn main() {
             let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
             caldav::check(&nc).and_then(|n| {
                 println!("{n} Kalender mit Terminen gefunden.");
-                let starts = caldav::fetch(&nc, now)?;
-                if starts.is_empty() {
+                let events = caldav::fetch(&nc, now)?;
+                if events.is_empty() {
                     println!("Keine Termine in der nächsten Stunde.");
                 }
-                for s in starts {
-                    println!("{}  in {} min", caldav::format_utc(s), s.saturating_sub(now) / 60);
+                for e in events {
+                    let end = e.end.map(|t| format!(" bis {}", caldav::format_utc(t))).unwrap_or_default();
+                    let when = if e.start <= now { "läuft".to_string() } else { format!("in {} min", (e.start - now) / 60) };
+                    println!("{}{end}  {when}", caldav::format_utc(e.start));
                 }
                 Ok(())
             })
@@ -319,7 +321,7 @@ fn main() {
             None => Err("Adresse des Pixoo fehlt".to_string()),
             Some(h) => pixoo::check(&h).and_then(|()| {
                 let mut session = pixoo::Session::default();
-                let shown = session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED });
+                let shown = session.apply(Some(&h), &Scene::Live { camera: false, color: Rgb::RED, until: None });
                 if shown.is_ok() {
                     std::thread::sleep(Duration::from_secs(5));
                 }

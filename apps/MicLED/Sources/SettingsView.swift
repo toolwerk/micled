@@ -124,7 +124,7 @@ struct SettingsView: View {
             } header: {
                 Text("Nextcloud").id("nextcloud")
             } footer: {
-                Text("Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
+                Text("Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -144,7 +144,7 @@ struct SettingsView: View {
             } header: {
                 Text("Pixoo 64")
             } footer: {
-                Text("Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.")
+                Text("Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -164,7 +164,7 @@ struct SettingsView: View {
             } header: {
                 Text("AWTRIX")
             } footer: {
-                Text("Auf Sendung zeigt die Uhr „ON AIR“, beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.")
+                Text("Auf Sendung zeigt die Uhr „ON AIR“, während eines Termins als Lauftext mit dessen Ende („ON AIR BIS 14:30“, Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -312,11 +312,12 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!model.remindersEnabled)
+                Toggle("Ende des Termins auf Pixoo und AWTRIX zeigen", isOn: $model.meetingEndEnabled)
                 Toggle("Kalender von macOS", isOn: $model.useSystemCalendar)
             } header: {
                 Text("Termine")
             } footer: {
-                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.")
+                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
