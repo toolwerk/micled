@@ -8,7 +8,7 @@
 
 **Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
 
-Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Philips Hue, Govee, Nanoleaf, einem USB-Lichtstreifen oder auf einem Pixoo- bzw. AWTRIX-Display, einzeln oder zusammen.
+Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Philips Hue, Govee, Nanoleaf, WLED, einem USB-Lichtstreifen oder auf einem Pixoo- bzw. AWTRIX-Display, einzeln oder zusammen.
 
 <p align="center">
   <img src="docs/images/lamp.gif" alt="Luxafor Flag am Monitor: grün, beim Call rot, danach wieder grün" width="340">
@@ -30,7 +30,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
-- 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
+- 🌈 **Govee, Nanoleaf und WLED**: Lampen und LED-Streifen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
 - 📺 **Lichtstreifen am Monitor**: ein USB-Streifen mit Robobloq-Controller (z. B. Meewata) leuchtet bei Call, Timer und Fokus in der Farbe.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
@@ -250,14 +250,35 @@ Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten sie in deren Farbe
 
 Eine neue Adresse oder „Entfernen“ löscht die Kopplung. Steht im Menü „Schlüssel ungültig, neu koppeln“, Schritt 2 wiederholen.
 
-Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
-
 ### Nicht unterstützt
 
 - **Nanoleaf Essentials** (Glühbirnen und Lichtstreifen mit Matter oder HomeKit über Thread) haben keine Schnittstelle im eigenen Netz.
 - **Govee ohne Steuerung im eigenen Netz**, etwa die AI Sync Box H6603/H6604, und Govee-Geräte, die nur Bluetooth haben.
 
 Für diese Geräte: in Home Assistant einbinden und dort per Automation mit dem Webhook aus [„Auf Sendung“ an Home Assistant](#auf-sendung-an-home-assistant) schalten.
+
+## WLED
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-wled-dark.png">
+    <img src="docs/images/settings-wled-light.png" alt="Einstellungen von MicLED: Abschnitt WLED mit eingetragenem und gefundenem Gerät" width="400">
+  </picture>
+</p>
+
+LED-Streifen und -Lampen mit der freien Firmware [WLED](https://kno.wled.ge/) zeigen den Status über deren Schnittstelle im eigenen Netz, ohne Konto, ohne Koppeln und ohne Cloud. Mehrere Geräte sind möglich.
+
+Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten alle Segmente einfarbig in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und je Segment Farbe und Effekt von vorher.
+
+- Lief ein **Preset**, stellt MicLED dessen Aussehen zurück, lädt das Preset aber nicht neu. So bleibt etwa eine danach gedimmte Helligkeit erhalten. In der WLED-App ist das Preset danach nicht mehr markiert, das Licht sieht aber gleich aus.
+- Lief eine **Playlist**, startet sie danach von vorn.
+- Empfängt das Gerät gerade **Live-Daten** einer anderen Steuerung, etwa Bildschirm-Sync über Hyperion, hat MicLED für die Dauer des Calls Vorrang und gibt danach wieder frei.
+
+1. Dem Gerät im Router eine **feste IP-Adresse** geben.
+2. In MicLED unter Einstellungen › WLED „Status auf WLED-Geräten zeigen“ einschalten und „Suchen“ drücken. Gefundene Geräte mit „Hinzufügen“ übernehmen oder mit „Adresse hinzufügen“ die IP von Hand eintragen, bei einem anderen Port als 80 mit Port (`192.168.1.45:8080`).
+3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
+Ist eine Govee- oder Nanoleaf-Lampe oder ein WLED-Gerät nicht erreichbar, steht ein Fehler mit der Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
 
 ## Lichtstreifen (USB)
 
@@ -304,7 +325,7 @@ Farbwechsel aus der Luxafor-App bekommt MicLED nicht mit.
 
 - macOS 14 oder neuer
 - Xcode (wird nur zum Bauen gebraucht, nicht geöffnet), `xcodegen`, Rust über `rustup`
-- Luxafor Flag, Orb oder Bluetooth (USB-Kennung 04d8:f372) oder eines der anderen Geräte: Philips Hue, Govee, Nanoleaf, Lichtstreifen mit Robobloq-Controller, Pixoo 64 oder AWTRIX-Uhr. Ohne Luxafor unter Einstellungen › Verbindung zur Lampe „Keine Lampe“ wählen (siehe [Einrichten](#einrichten)); das reicht auch, wenn MicLED nur den Slack-Status setzen oder den Webhook auslösen soll.
+- Luxafor Flag, Orb oder Bluetooth (USB-Kennung 04d8:f372) oder eines der anderen Geräte: Philips Hue, Govee, Nanoleaf, WLED, Lichtstreifen mit Robobloq-Controller, Pixoo 64 oder AWTRIX-Uhr. Ohne Luxafor unter Einstellungen › Verbindung zur Lampe „Keine Lampe“ wählen (siehe [Einrichten](#einrichten)); das reicht auch, wenn MicLED nur den Slack-Status setzen oder den Webhook auslösen soll.
 
 ## Einrichten
 
@@ -340,6 +361,8 @@ cargo run -p micled-cli -- govee test 192.168.1.31   # 5 s Rot, dann zurück
 cargo run -p micled-cli -- nanoleaf scan       # Nanoleaf per Bonjour suchen
 cargo run -p micled-cli -- nanoleaf pair 192.168.1.40   # nach 5–7 s Einschaltknopf: Schlüssel
 MICLED_NANOLEAF_KEY=<schlüssel> cargo run -p micled-cli -- nanoleaf test 192.168.1.40   # 5 s Rot, dann zurück
+cargo run -p micled-cli -- wled scan           # WLED per Bonjour suchen
+cargo run -p micled-cli -- wled test 192.168.1.45    # 5 s Rot, dann zurück
 cargo run -p micled-cli -- strip info          # Lichtstreifen per USB: LEDs, Monitorgröße, Firmware
 cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ```
@@ -347,7 +370,7 @@ cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, Lichtstreifen (USB)
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, WLED, Lichtstreifen (USB)
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
@@ -363,7 +386,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Govee/Nanoleaf, bei WLED und beim Lichtstreifen) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Updates
 
