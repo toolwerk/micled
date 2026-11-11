@@ -16,6 +16,7 @@ pub mod lamp;
 pub mod mic;
 pub mod monitor;
 pub mod nanoleaf;
+pub mod nc_status;
 pub mod onair;
 pub mod output;
 pub mod pixoo;
