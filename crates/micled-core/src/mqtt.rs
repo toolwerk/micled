@@ -278,7 +278,8 @@ pub fn connack(header: u8, body: &[u8]) -> Result<(), String> {
     match body[1] {
         0 => Ok(()),
         4 => Err("MQTT: Benutzer oder Passwort falsch".into()),
-        5 => Err("MQTT: nicht berechtigt".into()),
+        // Mosquitto (auch das Add-on in Home Assistant) meldet ein falsches Passwort mit 5
+        5 => Err("MQTT: Benutzer oder Passwort falsch oder nicht berechtigt".into()),
         c => Err(format!("MQTT: Broker lehnt ab ({c})")),
     }
 }
@@ -709,7 +710,7 @@ mod tests {
     fn connack_codes() {
         assert_eq!(connack(0x20, &[0, 0]), Ok(()));
         assert_eq!(connack(0x20, &[0, 4]).unwrap_err(), "MQTT: Benutzer oder Passwort falsch");
-        assert_eq!(connack(0x20, &[0, 5]).unwrap_err(), "MQTT: nicht berechtigt");
+        assert_eq!(connack(0x20, &[0, 5]).unwrap_err(), "MQTT: Benutzer oder Passwort falsch oder nicht berechtigt");
         assert_eq!(connack(0x20, &[0, 3]).unwrap_err(), "MQTT: Broker lehnt ab (3)");
         assert!(connack(0xD0, &[]).is_err());
     }
@@ -1042,3 +1043,4 @@ mod tests {
         assert!(e.starts_with("MQTT: Broker nicht erreichbar"), "{e}");
     }
 }
+
