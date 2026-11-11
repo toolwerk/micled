@@ -11,7 +11,7 @@ use crate::display::Scene;
 use crate::slack::Slack;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
-use crate::reminder::Event;
+use crate::reminder::{self, Event, Reminders};
 
 /// Längere Termine (mehrtägige Einträge) liefern keine Endzeit
 const MEETING_END_MAX: u64 = 12 * 3600;
@@ -175,6 +175,8 @@ pub struct Engine {
     focus_suspended: bool,
     /// Termine rund um jetzt, auch schon begonnene
     events: Vec<Event>,
+    /// Vorwarnung vor den kommenden Terminen
+    reminders: Reminders,
 }
 
 impl Engine {
@@ -194,6 +196,7 @@ impl Engine {
             focus: false,
             focus_suspended: false,
             events: Vec::new(),
+            reminders: Reminders::default(),
         }
     }
 
@@ -263,7 +266,14 @@ impl Engine {
 
     /// Termine aus den Kalendern ersetzen
     pub fn set_events(&mut self, events: Vec<Event>) {
+        self.reminders.set(reminder::starts(&events));
         self.events = events;
+    }
+
+    /// `true`, wenn jetzt vor einem Termin gewarnt werden soll. Bei
+    /// ausgeschalteter Vorwarnung nie, auch wenn für die Endzeit Termine da sind.
+    pub fn reminder_due(&mut self, now: u64) -> bool {
+        self.cfg.reminders && self.reminders.due(now, self.cfg.reminder_lead.as_secs())
     }
 
     /// Ende des Termins, zu dem der laufende Call gehört (Unix-Sekunden), oder
@@ -1070,6 +1080,32 @@ mod tests {
         let cfg = Config { meeting_end: false, ..e.config().clone() };
         e.set_config(cfg);
         assert_eq!(e.meeting_end(NOW), None);
+    }
+
+    #[test]
+    fn reminder_due_before_an_event() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        e.set_events(vec![meeting(NOW + 600, NOW + 1800)]);
+        assert!(!e.reminder_due(NOW), "zu früh");
+        assert!(e.reminder_due(NOW + 500));
+        assert!(!e.reminder_due(NOW + 510), "nur einmal");
+    }
+
+    #[test]
+    fn no_reminder_when_switched_off() {
+        let cfg = Config { reminders: false, ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        e.set_events(vec![meeting(NOW + 60, NOW + 1800)]);
+        assert!(!e.reminder_due(NOW));
+    }
+
+    #[test]
+    fn no_reminder_for_declined_or_all_day_events() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        let declined = Event { declined: true, ..meeting(NOW + 60, NOW + 600) };
+        let all_day = Event { all_day: true, ..meeting(NOW + 60, NOW + 86400) };
+        e.set_events(vec![declined, all_day]);
+        assert!(!e.reminder_due(NOW));
     }
 
     #[test]
