@@ -99,6 +99,8 @@ pub struct Config {
     pub nanoleaf: Vec<crate::nanoleaf::Nanoleaf>,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
+    /// „Auf Sendung“ per MQTT an Home Assistant (`None` = aus)
+    pub mqtt: Option<crate::mqtt::Mqtt>,
 }
 
 impl Default for Config {
@@ -130,6 +132,7 @@ impl Default for Config {
             govee: Vec::new(),
             nanoleaf: Vec::new(),
             robobloq: false,
+            mqtt: None,
         }
     }
 }
@@ -205,7 +208,12 @@ impl Engine {
     /// Auf Sendung: Mikro oder Kamera aktiv, kurze Pausen eingeschlossen.
     /// Im Ruhezustand nie, sonst zählt ein vor dem Zuklappen laufender Call weiter.
     pub fn live(&self) -> bool {
-        self.on_air && self.away & Away::Sleep.bit() == 0
+        self.on_air && !self.asleep()
+    }
+
+    /// Der Mac ist im Ruhezustand (Sperre und Bildschirm aus zählen nicht)
+    pub fn asleep(&self) -> bool {
+        self.away & Away::Sleep.bit() != 0
     }
 
     fn is_ignored(&self, u: &MicUser) -> bool {
@@ -699,6 +707,19 @@ mod tests {
         assert!(e.live());
         e.set_away(Away::Sleep, true);
         assert!(!e.live());
+    }
+
+    #[test]
+    fn asleep_only_in_sleep() {
+        let (mut e, _) = engine(AfterMic::Restore);
+        assert!(!e.asleep());
+        e.set_away(Away::Locked, true);
+        e.set_away(Away::DisplaySleep, true);
+        assert!(!e.asleep(), "Sperre und Bildschirm aus sind kein Ruhezustand");
+        e.set_away(Away::Sleep, true);
+        assert!(e.asleep());
+        e.set_away(Away::Sleep, false);
+        assert!(!e.asleep());
     }
 
     // --- Farbe je Programm ------------------------------------------------

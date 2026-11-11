@@ -15,6 +15,7 @@ pub mod hue_net;
 pub mod lamp;
 pub mod mic;
 pub mod monitor;
+pub mod mqtt;
 pub mod nanoleaf;
 pub mod onair;
 pub mod output;
