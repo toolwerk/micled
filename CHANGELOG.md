@@ -12,7 +12,12 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Govee und Nanoleaf im eigenen Netz, je mehrere Geräte: Sie zeigen die Farbe für Call, Timer und Fokus und bekommen danach An/Aus, Helligkeit und Farbe von vorher zurück, Nanoleaf auch einen gespeicherten Effekt. Suche im eigenen Netz oder Adresse von Hand, Nanoleaf-Schlüssel im Schlüsselbund. Kommandozeile `micled govee scan|test` und `micled nanoleaf scan|pair|test`.
 - Automatische Updates mit Sparkle: MicLED sucht täglich nach einer neuen Version und fragt vor der Installation nach. „Nach Updates suchen …“ im Menü und Kontextmenü, abschaltbar in den Einstellungen. `scripts/release.sh` signiert das ZIP und schreibt den Appcast.
 - Lichtstreifen per USB mit Robobloq-Controller (`1A86:FE07`, z. B. Meewata): Der ganze Streifen zeigt die Farbe für Call, Timer und Fokus, sonst ist er aus. Erkennt das Wiederanstecken, Fehler im Menü bei fehlendem oder anderem Controller, „Testen“ in den Einstellungen lässt den Streifen etwa zwei Sekunden rot leuchten, zeigt danach wieder den aktuellen Zustand und nennt LEDs und Firmware. Kommandozeile `micled strip info|test`.
-- „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack und am Webhook.
+- „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack, in Nextcloud und am Webhook.
+- Nextcloud-Status: Während du auf Sendung bist, steht im Benutzerstatus z. B. 🔴 „Im Call“, auf Wunsch mit „Nicht stören“; danach kommt der vorherige Status zurück. Eine vorhandene Nachricht überschreibt MicLED nicht, Fehler stehen im Menü.
+
+### Geändert
+
+- Der Nextcloud-Zugang steht in einem eigenen Abschnitt „Nextcloud“ mit den Schaltern „Termine lesen“ (bisher „Nextcloud direkt“ unter Termine) und „Status setzen“. Wer „Nextcloud direkt“ an hatte, behält Zugang und Vorwarnung.
 
 ## [0.1.0] - 2026-11-05
 

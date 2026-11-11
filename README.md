@@ -27,6 +27,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - 🌙 **Fokus und Abend**: eigene Farbe, solange ein Fokus von macOS an ist, abends gedimmt.
 - 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
+- ☁️ **Nextcloud-Status** „Im Call“, auf Wunsch mit „Nicht stören“.
 - 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
@@ -75,6 +76,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - Farbe je Programm, z. B. Orange für eine Aufnahme mit Plaud und Rot für Calls. Bei mehreren Programmen gilt der oberste Eintrag, die Kamerafarbe hat Vorrang.
 - „Auf Sendung“ nach außen melden: Bei jedem Wechsel geht ein POST mit JSON an eine Adresse, etwa einen Home-Assistant-Webhook für ein Türschild.
 - Slack-Status: Während du auf Sendung bist, steht z. B. 🔴 „Im Call“ in deinem Slack-Profil, danach kommt der vorherige Status zurück.
+- Nextcloud-Status: Dasselbe im Benutzerstatus von Nextcloud, auf Wunsch mit „Nicht stören“; danach kommt der vorherige Status zurück.
 - Vorwarnung vor Terminen: Die Lampe blinkt kurz vor jedem Termin (Vorlauf einstellbar, ab Werk aus). Termine kommen aus den Kalendern von macOS und auf Wunsch direkt aus Nextcloud.
 - Konzentrations-Timer: Die Lampe zeigt 15 bis 90 Minuten lang eine eigene Farbe und blinkt am Ende. Start im Menü, per Rechtsklick auf das Symbol, über `micled://timer/25` oder Kurzbefehle.
 - Fokus von macOS: Solange ein Fokus an ist, leuchtet die Lampe in der Fokusfarbe. Gibt macOS den Fokus nicht frei, meldet ihn eine Kurzbefehle-Automation („Fokus an MicLED melden“).
@@ -154,6 +156,27 @@ Die Szene `vor_dem_call` entsteht zur Laufzeit und braucht keine eigene Konfigur
 4. In MicLED unter Einstellungen › Slack einfügen und „Verbindung prüfen“ drücken.
 
 MicLED setzt den Status nur, wenn gerade keiner gesetzt ist. Ändert sich der Status während des Calls, bleibt er danach stehen. Der eigene Status läuft nach vier Stunden von selbst ab, falls MicLED ihn nicht mehr zurücksetzen kann.
+
+## Nextcloud-Status
+
+Während du auf Sendung bist, steht in deinem Nextcloud-Benutzerstatus (Avatar oben rechts) z. B. 🔴 „Im Call“, danach ist die Nachricht wieder leer.
+
+1. In Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ ein App-Passwort anlegen.
+2. In MicLED unter Einstellungen › Nextcloud Server (z. B. `https://cloud.example.org`), Benutzer und App-Passwort eintragen und „Verbindung prüfen“ drücken.
+3. „Status setzen“ einschalten, Statustext und Emoji nach Wunsch anpassen.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-nextcloud-dark.png">
+    <img src="docs/images/settings-nextcloud-light.png" alt="Einstellungen von MicLED: Abschnitt Nextcloud mit Zugang, Schaltern „Termine lesen“ und „Status setzen“, Statustext, Emoji und „Nicht stören“" width="400">
+  </picture>
+</p>
+
+MicLED setzt die Nachricht nur, wenn gerade keine gesetzt ist. Eine eigene Nachricht („Homeoffice“) oder die von Talk während eines Anrufs bleibt stehen. Ändert sich die Nachricht während des Calls, bleibt sie danach stehen. Als Emoji passt nur ein einzelnes Zeichen, der Text darf höchstens 80 Zeichen lang sein; sonst lehnt Nextcloud ab, und im Menü steht „Nextcloud: Statustext oder Emoji ungültig“.
+
+Mit **„Auch ‚Nicht stören‘ setzen“** (ab Werk aus) steht während des Calls zusätzlich „Nicht stören“. Das schaltet auch die Benachrichtigungen von Talk und der Nextcloud-App auf dem Handy stumm. Danach kommt ein selbst gewählter Status „Abwesend“, „Unsichtbar“ oder „Nicht stören“ zurück, sonst „Online“. Hast du den Status während des Calls selbst geändert, bleibt er.
+
+Die Nachricht läuft nach vier Stunden von selbst ab, „Nicht stören“ nicht. Stürzt MicLED im Call ab, räumt der nächste Start beides auf; ist die Nachricht bis dahin schon abgelaufen, bleibt „Nicht stören“ stehen.
 
 ## Pixoo 64
 
@@ -287,7 +310,7 @@ Die Seriennummer ist bei allen Streifen gleich. Hängen zwei Streifen am Mac, ze
 Für die Vorwarnung gibt es zwei Wege:
 
 1. **Über macOS** (empfohlen, wenn du den Kalender ohnehin auf dem Mac nutzt): Systemeinstellungen › Internet-Accounts › Account hinzufügen › Andere › CalDAV-Account, Accounttyp „Manuell“, Server `https://<deine-nextcloud>/remote.php/dav`. MicLED liest alle Kalender, die in der Kalender-App erscheinen.
-2. **Direkt in MicLED**: Einstellungen › Termine › „Nextcloud direkt“ einschalten, Server (z. B. `https://cloud.example.org`), Benutzer und ein App-Passwort eintragen. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ an. MicLED speichert es im Schlüsselbund und fragt alle zwei Minuten die Termine der nächsten Stunde ab, Serientermine eingeschlossen. „Verbindung prüfen“ zeigt, wie viele Kalender gefunden wurden.
+2. **Direkt in MicLED**: Einstellungen › Nextcloud › Server (z. B. `https://cloud.example.org`), Benutzer und ein App-Passwort eintragen und „Termine lesen“ einschalten; dazu muss unter Termine „Vor Terminen blinken“ an sein. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ an. MicLED speichert es im Schlüsselbund und fragt alle zwei Minuten die Termine der nächsten Stunde ab, Serientermine eingeschlossen. „Verbindung prüfen“ zeigt, wie viele Kalender gefunden wurden.
 
 Beide Wege lassen sich kombinieren, ein Termin in beiden Quellen blinkt nur einmal. Wer nur Nextcloud direkt nutzt, schaltet „Kalender von macOS“ aus; dann fragt MicLED auch nicht nach dem Kalenderzugriff. Beim direkten Abruf wird nicht ausgewertet, ob du einen Termin abgelehnt hast.
 
@@ -315,7 +338,7 @@ open apps/MicLED/MicLED.xcodeproj
 
 Vor dem ersten signierten Build die Team-ID in `apps/MicLED/project.yml` unter `DEVELOPMENT_TEAM` eintragen.
 
-Unter Einstellungen › Verbindung zur Lampe wählst du „USB direkt“, „Webhook“ (über die Luxafor-App) oder **„Keine Lampe“**. Ohne Lampe zeigt MicLED den Status nur auf dem [Pixoo 64](#pixoo-64), der [AWTRIX-Uhr](#awtrix-uhr), in Slack und am Webhook, und im Menü steht kein Lampenfehler.
+Unter Einstellungen › Verbindung zur Lampe wählst du „USB direkt“, „Webhook“ (über die Luxafor-App) oder **„Keine Lampe“**. Ohne Lampe zeigt MicLED den Status nur auf dem [Pixoo 64](#pixoo-64), der [AWTRIX-Uhr](#awtrix-uhr), in Slack, in Nextcloud und am Webhook, und im Menü steht kein Lampenfehler.
 
 ## Kommandozeile
 
@@ -347,7 +370,7 @@ cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, Lichtstreifen (USB)
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender und -Status, Slack-Status, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, Lichtstreifen (USB)
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
@@ -363,7 +386,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Nextcloud, bei Govee/Nanoleaf und beim Lichtstreifen) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Updates
 
