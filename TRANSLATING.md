@@ -14,7 +14,7 @@ With Poedit: *File › New from POT/PO file…*, choose `template.pot` and your 
 Every text shows:
 
 - the **English original** (translate this one),
-- the **German original** as context (MicLED was written in German, so it can help with the meaning),
+- as context, mostly the **German original** (MicLED was written in German, so it can help with the meaning); for the permission prompts of macOS it is the name of the setting,
 - a **note** where the text appears, e.g. “Settings window”, “Menu” or “Error message: Philips Hue”.
 
 Please keep in mind:

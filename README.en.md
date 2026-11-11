@@ -513,7 +513,7 @@ Both files belong to the release `v<version>`, which GitHub lists as “Latest�
 MicLED is available in German and English. More languages come from users, without Xcode and without programming:
 
 1. Download [`translations/template.pot`](translations/template.pot), or `translations/<code>.po` for an existing language.
-2. Fill it in with [Poedit](https://poedit.net) (free) or a text editor. Every text comes with the English original, the German original and a note where it appears. Whatever is missing, MicLED shows in English.
+2. Fill it in with [Poedit](https://poedit.net) (free) or a text editor. Every text comes with the English original, mostly the German original and a note where it appears. Whatever is missing, MicLED shows in English.
 3. Send it as a pull request (`translations/<code>.po`) or as an issue with the template “New translation” and the file attached.
 
 The full guide is in [TRANSLATING.md](TRANSLATING.md). After a text change in the app or the core, `scripts/translations.sh` updates the template and the languages, and `scripts/translations.sh import <file.po>` takes over a translation that was sent in.

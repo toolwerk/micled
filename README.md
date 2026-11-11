@@ -511,7 +511,7 @@ Beide Dateien gehören an den Release `v<Version>`, den GitHub als „Latest“ 
 MicLED gibt es auf Deutsch und Englisch. Weitere Sprachen kommen von Nutzerinnen und Nutzern, ohne Xcode und ohne Programmierkenntnisse:
 
 1. [`translations/template.pot`](translations/template.pot) herunterladen, für eine vorhandene Sprache `translations/<code>.po`.
-2. Mit [Poedit](https://poedit.net) (kostenlos) oder einem Texteditor ausfüllen. Jeder Text steht mit englischem Original, deutschem Original und einem Hinweis, wo er erscheint. Was fehlt, zeigt MicLED auf Englisch.
+2. Mit [Poedit](https://poedit.net) (kostenlos) oder einem Texteditor ausfüllen. Jeder Text steht mit englischem Original, meist dem deutschen Original und einem Hinweis, wo er erscheint. Was fehlt, zeigt MicLED auf Englisch.
 3. Als Pull Request (`translations/<code>.po`) einschicken oder als Issue mit der Vorlage „New translation“ und der Datei im Anhang.
 
 Die ausführliche Anleitung auf Englisch steht in [TRANSLATING.md](TRANSLATING.md). Nach einer Textänderung in App oder Kern bringt `scripts/translations.sh` Vorlage und Sprachen auf den Stand, `scripts/translations.sh import <datei.po>` übernimmt eine eingeschickte Übersetzung.
