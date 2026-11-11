@@ -33,11 +33,11 @@ pub fn from_code(code: &str) -> Lang {
     }
 }
 
-/// Wählt den Text zur Sprache
-pub fn pick<T>(lang: Lang, de: T, en: T) -> T {
+/// Wählt den Text zur Sprache; nur der gewählte wird erzeugt
+pub fn pick<T>(lang: Lang, de: impl FnOnce() -> T, en: impl FnOnce() -> T) -> T {
     match lang {
-        Lang::De => de,
-        Lang::En => en,
+        Lang::De => de(),
+        Lang::En => en(),
     }
 }
 
@@ -46,10 +46,7 @@ pub fn pick<T>(lang: Lang, de: T, en: T) -> T {
 #[macro_export]
 macro_rules! tr {
     ($de:literal, $en:literal $(, $arg:expr)* $(,)?) => {
-        match $crate::lang::current() {
-            $crate::lang::Lang::De => format!($de $(, $arg)*),
-            $crate::lang::Lang::En => format!($en $(, $arg)*),
-        }
+        $crate::lang::pick($crate::lang::current(), || format!($de $(, $arg)*), || format!($en $(, $arg)*))
     };
 }
 
@@ -73,8 +70,10 @@ mod tests {
 
     #[test]
     fn pick_follows_the_language() {
-        assert_eq!(pick(Lang::De, "Fehler", "Error"), "Fehler");
-        assert_eq!(pick(Lang::En, "Fehler", "Error"), "Error");
+        // derselbe Weg wie in `tr!`
+        let code = 7;
+        assert_eq!(pick(Lang::De, || format!("Fehler {code}"), || format!("Error {code}")), "Fehler 7");
+        assert_eq!(pick(Lang::En, || format!("Fehler {code}"), || format!("Error {code}")), "Error 7");
     }
 
     #[test]
