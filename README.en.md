@@ -29,6 +29,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - 🌙 **Focus and evening**: a custom color while a macOS Focus is on, dimmed in the evening.
 - 📅 **Warning before events** from the macOS calendars or directly from Nextcloud.
 - 💬 **Slack status** “In a call” while you are on air.
+- ☁️ **Nextcloud status** “In a call”, optionally with “Do not disturb”.
 - 🖼️ **Pixoo 64**: “ON AIR” (during an event with its end, e.g. “TIL 14:30”), the remaining timer time or Focus on a Divoom display in your own network, even without any light.
 - 🕒 **AWTRIX clock**: the same display on an Ulanzi pixel clock with AWTRIX 3, for example at the office door.
 - 💡 **Philips Hue**: a Hue light or a whole room lights up in the status color and returns to its previous light afterwards.
@@ -77,6 +78,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - Color per app, e.g. orange for a recording with Plaud and red for calls. With several apps, the top entry wins; the camera color takes precedence.
 - Report “on air” to the outside: on every change, a POST with JSON goes to an address, for example a Home Assistant webhook for a door sign.
 - Slack status: while you are on air, e.g. 🔴 “In a call” appears in your Slack profile, afterwards the previous status comes back.
+- Nextcloud status: the same in your Nextcloud user status, optionally with “Do not disturb”; afterwards the previous status comes back.
 - Warning before events: the light flashes shortly before every event (lead time adjustable, off by default). Events come from the macOS calendars and, if you want, directly from Nextcloud.
 - Timer: the light shows its own color for 15 to 90 minutes and flashes at the end. Start it from the menu, by right-clicking the icon, via `micled://timer/25` or Shortcuts.
 - macOS Focus: while a Focus is on, the light shows the Focus color. If macOS doesn't share the Focus, a Shortcuts automation reports it (“Report Focus to MicLED”).
@@ -156,6 +158,33 @@ The scene `vor_dem_call` is created at runtime and needs no configuration of its
 4. In MicLED, paste it under Settings › Slack and press “Check connection”.
 
 MicLED only sets the status when none is set at the moment. If the status changes during the call, it stays afterwards. Its own status expires by itself after four hours, in case MicLED can no longer reset it.
+
+## Nextcloud status
+
+While you are on air, your Nextcloud user status (avatar at the top right) shows e.g. 🔴 “In a call”; afterwards the message is empty again.
+
+1. In Nextcloud, create an app password under Settings › Security › “Create new app password”.
+2. In MicLED, under Settings › Nextcloud, enter the server (e.g. `https://cloud.example.org`), user and app password and press “Check connection”.
+3. Turn on “Set status” and adjust the status text and emoji as you like.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/settings-nextcloud-dark.png">
+    <img src="docs/images/en/settings-nextcloud-light.png" alt="MicLED settings: Nextcloud section with access, the switches “Read events” and “Set status”, status text, emoji and “Do not disturb”" width="400">
+  </picture>
+</p>
+
+MicLED only sets the message if none is set right now. Your own message (“Working from home”) or the one Talk sets during a call stays. If the message changes during the call, it stays afterwards. Only a single character fits as emoji, and the text may be at most 80 characters long; otherwise Nextcloud refuses, and the menu shows “Nextcloud: status text or emoji invalid”.
+
+With **“Also set ‘Do not disturb’”** (off by default), “Do not disturb” is also set during the call. That also mutes the notifications of Talk and the Nextcloud app on your phone. If you are “Invisible”, you stay invisible during the call. Afterwards a status you chose yourself, “Away”, “Invisible” or “Do not disturb”, comes back, otherwise “Online”. If you changed the status yourself during the call, it stays. This also applies if the message expired or was replaced during the call.
+
+The message expires by itself after four hours, “Do not disturb” doesn't. If MicLED crashes during a call, the next start cleans up both; the status is then “Online”, because MicLED no longer knows the previous one. If the message has already expired by then, “Do not disturb” stays.
+
+## Which states a device shows
+
+Pixoo 64, AWTRIX, Hue, Govee, Nanoleaf, WLED and the light strip have the row “Show for” with the checkboxes “Call”, “Timer” and “Focus” in their section of the settings. By default all three are set, also after an update. That way, for example, a Hue light in the living room stays as it is during the timer and Focus and only changes color during a call.
+
+A deselected state counts as free for this device. If a state below it is running that the device may show, it shows that one: a light strip without “Call” stays in the Focus color during a call if “Focus” is set. Otherwise the device has its state from before. “Focus” only works if “Show macOS Focus” is on, otherwise the checkbox is greyed out. The Luxafor light, Slack, Nextcloud and the webhook don't follow the checkboxes.
 
 ## Pixoo 64
 
@@ -301,7 +330,7 @@ Known devices: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (Vort
 2. In MicLED, under Settings › Light strip (USB), turn on “Show status on the light strip”.
 3. Press “Test”. The strip lights up red for about two seconds and then shows again what MicLED is showing right now (off or the color of call, timer or Focus). Below, e.g. “Found: 78 LEDs, firmware 1.9.4 ✓” appears. If MicLED doesn't find the strip or it doesn't reply, an error appears there, and the strip stays unchanged.
 
-During a call, timer and Focus the whole strip lights up in their color, dimmed in the evening. When you are free, it is off; MicLED doesn't bring back its built-in effect. After a power loss the built-in effect runs again until MicLED turns the strip off. MicLED checks for the strip every five seconds; after plugging it back in, it gets the current color again. If it is missing or has a different USB ID, an error appears in the menu. Like DX-Light, MicLED limits the sum of red, green and blue so the USB port isn't overloaded; white and mixed colors therefore look a little darker.
+During a call, timer and Focus the whole strip lights up in their color, dimmed in the evening; the checkboxes decide which of them it shows ([Which states a device shows](#which-states-a-device-shows)). When you are free, it is off; MicLED doesn't bring back its built-in effect. After a power loss the built-in effect runs again until MicLED turns the strip off. MicLED checks for the strip every five seconds; after plugging it back in, it gets the current color again. If it is missing or has a different USB ID, an error appears in the menu. Like DX-Light, MicLED limits the sum of red, green and blue so the USB port isn't overloaded; white and mixed colors therefore look a little darker.
 
 **Only one app at a time can talk to the controller.** If you run DX-Light, SyncLight, backlit or another app for the strip, quit it so MicLED can control the strip.
 
@@ -323,9 +352,9 @@ For this, MicLED also reads the calendars when “Flash before events” is off,
 There are two ways to get the warning and the event end:
 
 1. **Via macOS** (recommended if you use the calendar on the Mac anyway): System Settings › Internet Accounts › Add Account › Other › CalDAV Account, account type “Manual”, server `https://<your-nextcloud>/remote.php/dav`. MicLED reads all calendars that appear in the Calendar app.
-2. **Directly in MicLED**: turn on Settings › Events › “Nextcloud directly”, enter the server (e.g. `https://cloud.example.org`), user and an app password. You create the app password in Nextcloud under Settings › Security › “Create new app password”. MicLED stores it in the keychain and fetches the running events and those of the next hour every two minutes, recurring events included. “Check connection” shows how many calendars were found.
+2. **Directly in MicLED**: under Settings › Nextcloud, enter the server (e.g. `https://cloud.example.org`), user and an app password and turn on “Read events”; that works with “Flash before events” and with the event end on Pixoo and AWTRIX. You create the app password in Nextcloud under Settings › Security › “Create new app password”. MicLED stores it in the keychain and fetches the running events and those of the next hour every two minutes, recurring events included. “Check connection” shows how many calendars were found.
 
-Both ways can be combined; an event in both sources flashes only once. If you only use Nextcloud directly, turn off “macOS calendars”; then MicLED doesn't ask for calendar access either. When fetching directly, MicLED doesn't evaluate whether you declined an event.
+Both ways can be combined; an event in both sources flashes only once. If you only use “Read events” in Nextcloud, turn off “macOS calendars”; then MicLED doesn't ask for calendar access either. When fetching directly, MicLED doesn't evaluate whether you declined an event.
 
 ## How does MicLED know the previous color?
 
@@ -351,7 +380,7 @@ open apps/MicLED/MicLED.xcodeproj
 
 Before the first signed build, enter the team ID in `apps/MicLED/project.yml` under `DEVELOPMENT_TEAM`.
 
-Under Settings › Connection to the light you choose “USB directly”, “Webhook” (via the Luxafor app) or **“No light”**. Without a light, MicLED shows the status only on the [Pixoo 64](#pixoo-64), the [AWTRIX clock](#awtrix-clock), in Slack and at the webhook, and the menu shows no light error.
+Under Settings › Connection to the light you choose “USB directly”, “Webhook” (via the Luxafor app) or **“No light”**. Without a light, MicLED shows the status only on the [Pixoo 64](#pixoo-64), the [AWTRIX clock](#awtrix-clock), in Slack, in Nextcloud and at the webhook, and the menu shows no light error.
 
 ## Command line
 
@@ -385,7 +414,7 @@ cargo run -p micled-cli -- strip test          # 5 s red, then off
 ## Structure
 
 ```
-crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB)
+crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar and status, Slack status, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB)
 crates/micled-cli    command line `micled`
 crates/micled-ffi    UniFFI layer for Swift
 apps/MicLED          SwiftUI menu bar app, project.yml for xcodegen
@@ -401,7 +430,7 @@ The Xcode target `RustCore` (a dependency of the app) calls `scripts/build-rust.
 scripts/screenshots.sh
 ```
 
-The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Govee/Nanoleaf, at WLED and at the light strip) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
+The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Nextcloud, at Govee/Nanoleaf, at WLED and at the light strip) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
 
 ## Updates
 

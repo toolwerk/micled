@@ -312,6 +312,22 @@
         }
       }
     },
+    "Auch „Nicht stören“ setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch „Nicht stören“ setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also set “Do not disturb”"
+          }
+        }
+      }
+    },
     "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.": {
       "localizations": {
         "de": {
@@ -574,6 +590,22 @@
         }
       }
     },
+    "Call": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call"
+          }
+        }
+      }
+    },
     "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.": {
       "localizations": {
         "de": {
@@ -606,18 +638,18 @@
         }
       }
     },
-    "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
+    "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
+            "value": "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The light flashes shortly before every event once “Flash before events” is on, except all-day and cancelled events. Not during a call and only via USB. If a call runs during an event, Pixoo and AWTRIX show its end, e.g. “TIL 14:30”, never the title. A Nextcloud calendar already added to macOS doesn’t need “Nextcloud directly”. Create the app password in Nextcloud under Settings › Security; MicLED stores it in the keychain."
+            "value": "The light flashes shortly before every event once “Flash before events” is on, except all-day and cancelled events. Not during a call and only via USB. If a call runs during an event, Pixoo and AWTRIX show its end, e.g. “TIL 14:30”, never the title. Events directly from Nextcloud: section Nextcloud › Read events. A Nextcloud calendar already added to macOS doesn’t need that."
           }
         }
       }
@@ -1005,6 +1037,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hallway – Door"
+          }
+        }
+      }
+    },
+    "Fokus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus"
           }
         }
       }
@@ -1821,18 +1869,18 @@
         }
       }
     },
-    "MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook.": {
+    "MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook."
+            "value": "MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "MicLED shows the status only on the display, in Slack and at the webhook."
+            "value": "MicLED shows the status only on the display, in Slack, in Nextcloud and at the webhook."
           }
         }
       }
@@ -2016,21 +2064,8 @@
     "Nanoleaf": {
       "shouldTranslate": false
     },
-    "Nextcloud direkt": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nextcloud direkt"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nextcloud directly"
-          }
-        }
-      }
+    "Nextcloud": {
+      "shouldTranslate": false
     },
     "Nicht gekoppelt": {
       "localizations": {
@@ -2380,6 +2415,22 @@
         }
       }
     },
+    "Status setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set status"
+          }
+        }
+      }
+    },
     "Statustext": {
       "localizations": {
         "de": {
@@ -2412,18 +2463,18 @@
         }
       }
     },
-    "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.": {
+    "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu."
+            "value": "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Strips with a Robobloq controller (USB 1A86:FE07), e.g. Meewata. During a call, timer and Focus the whole strip lights up in the color, otherwise it is off. After plugging it back in, it gets the color again within a few seconds."
+            "value": "Strips with a Robobloq controller (USB 1A86:FE07), e.g. Meewata. In the selected states the whole strip lights up in the color, otherwise it is off. After plugging it back in, it gets the color again within a few seconds."
           }
         }
       }
@@ -2508,6 +2559,22 @@
         }
       }
     },
+    "Termine lesen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine lesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read events"
+          }
+        }
+      }
+    },
     "Teste …": {
       "localizations": {
         "de": {
@@ -2536,6 +2603,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Test"
+          }
+        }
+      }
+    },
+    "Timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
           }
         }
       }
@@ -2811,6 +2894,22 @@
     "WLED": {
       "shouldTranslate": false
     },
+    "Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While you are on air, the text appears in your Nextcloud status, afterwards the previous one comes back. MicLED doesn’t overwrite a message you set yourself. “Read events” works with “Flash before events” and the event end on Pixoo and AWTRIX. Create the app password in Nextcloud under Settings › Security; MicLED stores it in the keychain."
+          }
+        }
+      }
+    },
     "Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.": {
       "localizations": {
         "de": {
@@ -2829,6 +2928,22 @@
     },
     "xoxp-…": {
       "shouldTranslate": false
+    },
+    "Zeigen bei": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigen bei"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show for"
+          }
+        }
+      }
     },
     "Zeigt die Timerfarbe für die gewählte Zeit, am Ende blinkt die Lampe.": {
       "localizations": {
@@ -2973,6 +3088,9 @@
           }
         }
       }
+    },
+    "🔴": {
+      "shouldTranslate": false
     }
   },
   "version": "1.0"
