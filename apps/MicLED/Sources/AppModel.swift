@@ -409,11 +409,13 @@ final class AppModel {
         return "Gekoppelt ✓"
     }
 
-    /// Lichtstreifen per USB suchen und Geräteinfo lesen, liefert eine Meldung
-    /// für die Einstellungen
+    /// Lichtstreifen per USB testen: Geräteinfo lesen und zwei Sekunden rot,
+    /// danach zeigt er wieder den Zustand von MicLED. Liefert eine Meldung für
+    /// die Einstellungen.
     func checkRobobloq() async -> String {
-        let result = await Task.detached { robobloqCheck() }.value
-        return result.error ?? "Gefunden: \(result.leds) LEDs, Firmware \(result.firmware)"
+        let controller = controller
+        let result = await Task.detached { controller?.testStrip() ?? robobloqCheck() }.value
+        return result.error ?? "Gefunden: \(result.leds) LEDs, Firmware \(result.firmware) ✓"
     }
 
     func nanoleafPaired(_ id: UUID) -> Bool {

@@ -272,7 +272,7 @@ Bekannte Geräte: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (V
 
 1. Streifen per USB an den Mac stecken.
 2. In MicLED unter Einstellungen › Lichtstreifen (USB) „Status auf dem Lichtstreifen zeigen“ einschalten.
-3. „Testen“ drücken. Es erscheint z. B. „Gefunden: 78 LEDs, Firmware 1.9.4“.
+3. „Testen“ drücken. Der Streifen leuchtet etwa zwei Sekunden rot und zeigt danach wieder, was MicLED gerade zeigt (aus oder die Farbe von Call, Timer oder Fokus). Darunter erscheint z. B. „Gefunden: 78 LEDs, Firmware 1.9.4 ✓“. Findet MicLED den Streifen nicht oder antwortet er nicht, steht dort ein Fehler, und er bleibt unverändert.
 
 Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt. Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
 

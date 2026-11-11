@@ -28,10 +28,15 @@ pub trait Device: Default + Send + 'static {
     fn current(&self) -> Option<&Self::Cfg>;
 }
 
-enum Msg<C> {
-    Update(Option<C>, Scene),
+/// Auftrag, der im Ausgabe-Thread mit dem Gerät und dem gewünschten Ziel läuft
+type Job<D> = Box<dyn FnOnce(&mut D, Option<&<D as Device>::Cfg>) + Send>;
+
+enum Msg<D: Device> {
+    Update(Option<D::Cfg>, Scene),
     /// Zustand zurückstellen und bestätigen (beim Beenden der App)
     Shutdown(Sender<()>),
+    /// Auftrag ausführen, danach den gewünschten Zustand wieder herstellen
+    Run(Job<D>),
 }
 
 /// Wartezeit nach einer Änderung des Ziels (Tippen nicht senden)
@@ -41,13 +46,13 @@ const RETRY: Duration = Duration::from_secs(30);
 /// Schickt Szenen in einem eigenen Thread an ein [`Device`]. Ein Erfolg leert
 /// den Fehler-Slot.
 pub struct Updater<D: Device> {
-    tx: Sender<Msg<D::Cfg>>,
+    tx: Sender<Msg<D>>,
     _device: PhantomData<fn() -> D>,
 }
 
 impl<D: Device> Updater<D> {
     pub fn start(name: &str, error: Arc<Mutex<Option<String>>>) -> Updater<D> {
-        let (tx, rx) = channel::<Msg<D::Cfg>>();
+        let (tx, rx) = channel::<Msg<D>>();
         std::thread::Builder::new()
             .name(format!("micled-{name}"))
             .spawn(move || {
@@ -76,6 +81,11 @@ impl<D: Device> Updater<D> {
                             shutdown(&mut device, ack);
                             break;
                         }
+                        Ok(Msg::Run(job)) => {
+                            job(&mut device, wanted.0.as_ref());
+                            dirty = true;
+                            continue;
+                        }
                         Err(RecvTimeoutError::Disconnected) => break,
                         Err(RecvTimeoutError::Timeout) if !dirty => continue,
                         Err(RecvTimeoutError::Timeout) => {}
@@ -90,6 +100,7 @@ impl<D: Device> Updater<D> {
                         // nach einer Pause erneut versuchen, neue Wechsel kommen vorher an
                         match rx.recv_timeout(RETRY) {
                             Ok(Msg::Update(cfg, scene)) => wanted = (cfg, scene),
+                            Ok(Msg::Run(job)) => job(&mut device, wanted.0.as_ref()),
                             Ok(Msg::Shutdown(ack)) => {
                                 shutdown(&mut device, ack);
                                 break;
@@ -107,6 +118,12 @@ impl<D: Device> Updater<D> {
     /// Gewünschter Zustand: Ziel (`None` = aus) und Szene
     pub fn send(&self, cfg: Option<D::Cfg>, scene: Scene) {
         let _ = self.tx.send(Msg::Update(cfg, scene));
+    }
+
+    /// Auftrag im Ausgabe-Thread ausführen, zwischen zwei `apply`. Danach
+    /// stellt `apply` den gewünschten Zustand sofort wieder her.
+    pub fn run(&self, job: impl FnOnce(&mut D, Option<&D::Cfg>) + Send + 'static) {
+        let _ = self.tx.send(Msg::Run(Box::new(job)));
     }
 
     /// Zurückstellen anstoßen, ohne zu warten. Die Rückgabe meldet das Ende
@@ -452,6 +469,55 @@ mod tests {
     fn same_error_is_shown_once() {
         assert_eq!(joined(vec!["Port belegt".into(), "x".into(), "Port belegt".into()]).unwrap_err(), "Port belegt; x");
         assert_eq!(joined(vec![]), Ok(()));
+    }
+
+    /// Gerät, das jedes `apply` über einen Kanal meldet
+    #[derive(Default)]
+    struct Probe {
+        cfg: Option<Cfg>,
+        tx: Option<Sender<String>>,
+    }
+
+    impl Device for Probe {
+        type Cfg = Cfg;
+
+        fn apply(&mut self, cfg: Option<&Cfg>, scene: &Scene) -> Result<(), String> {
+            self.cfg = cfg.cloned();
+            if let Some(tx) = &self.tx {
+                let _ = tx.send(format!("apply {:?} {scene:?}", cfg.map(|c| c.0)));
+            }
+            Ok(())
+        }
+
+        fn restore(&mut self) -> Result<(), String> {
+            Ok(())
+        }
+
+        fn current(&self) -> Option<&Cfg> {
+            self.cfg.as_ref()
+        }
+    }
+
+    #[test]
+    fn run_is_followed_by_the_wanted_state() {
+        let u = Updater::<Probe>::start("probe", Arc::new(Mutex::new(None)));
+        let (tx, rx) = channel();
+        let t = tx.clone();
+        u.run(move |d, cfg| {
+            d.tx = Some(t.clone());
+            let _ = t.send(format!("run {:?}", cfg.map(|c| c.0)));
+        });
+        let wait = Duration::from_secs(5);
+        assert_eq!(rx.recv_timeout(wait).unwrap(), "run None");
+        assert_eq!(rx.recv_timeout(wait).unwrap(), "apply None Idle", "auch ohne neues Ziel");
+        u.send(Some(Cfg("a")), LIVE);
+        assert!(rx.recv_timeout(wait).unwrap().starts_with("apply Some(\"a\") Live"));
+        u.run(move |_, cfg| {
+            let _ = tx.send(format!("run {:?}", cfg.map(|c| c.0)));
+        });
+        assert_eq!(rx.recv_timeout(wait).unwrap(), "run Some(\"a\")", "mit dem gewünschten Ziel");
+        assert!(rx.recv_timeout(wait).unwrap().starts_with("apply Some(\"a\") Live"), "Szene wieder hergestellt");
+        u.shutdown(wait);
     }
 
     #[test]

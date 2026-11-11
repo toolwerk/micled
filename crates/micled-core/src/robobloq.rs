@@ -46,6 +46,9 @@ const READ_TRIES: usize = 8;
 const READ_TIMEOUT_MS: i32 = 400;
 
 pub const NOT_FOUND: &str = "Kein Lichtstreifen mit USB 1A86:FE07 gefunden (angesteckt?)";
+pub const NO_REPLY: &str = "Lichtstreifen antwortet nicht (läuft DX-Light oder ein anderes Programm?)";
+/// So lange leuchtet der Streifen bei „Testen“ in den Einstellungen rot
+pub const TEST_RED: Duration = Duration::from_secs(2);
 
 /// Zähler der Pakete; das Schloss hält außerdem zwei Vorgänge (Updater,
 /// „Testen“) auseinander, damit Antworten nicht beim falschen landen
@@ -248,7 +251,7 @@ pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
 
 /// Geräteinfo des ersten Streifens (für „Testen“ und `micled strip info`)
 pub fn check() -> Result<Info, String> {
-    execute(Cmd::ReadInfo)?.ok_or_else(|| "Lichtstreifen antwortet nicht (läuft DX-Light oder ein anderes Programm?)".into())
+    execute(Cmd::ReadInfo)?.ok_or_else(|| NO_REPLY.into())
 }
 
 /// Ziel in den Einstellungen. `connection` zählt das Anstecken: Ein neuer Wert
@@ -355,6 +358,38 @@ impl Session {
         send(Cmd::Color(color, info.map(|i| i.leds)))?;
         self.shown = Some(color);
         Ok(())
+    }
+
+    /// „Testen“ in den Einstellungen: Geräteinfo lesen und [`TEST_RED`] lang
+    /// rot leuchten. Zurückgestellt wird danach vom nächsten `apply`, das den
+    /// Zustand von MicLED wieder herstellt.
+    pub fn test(&mut self, cfg: Option<&Strip>) -> Result<Info, String> {
+        self.test_with(cfg, &mut execute, &mut || sleep(TEST_RED))
+    }
+
+    /// Antwortet der Streifen nicht, wird nichts geschaltet: Ein Rot ohne
+    /// Antwort täuschte einen funktionierenden Streifen vor. Bei einem Fehler
+    /// entfällt die Pause.
+    fn test_with(&mut self, cfg: Option<&Strip>, send: &mut SendFn<'_>, pause: &mut dyn FnMut()) -> Result<Info, String> {
+        if let Some(strip) = cfg {
+            if self.cfg.as_ref() != Some(strip) {
+                *self = Session { cfg: Some(strip.clone()), ..Session::default() };
+            }
+        }
+        let info = send(Cmd::ReadInfo)?.ok_or_else(|| NO_REPLY.to_string())?;
+        self.info = Some(Some(info));
+        if !self.bright {
+            send(Cmd::Brightness)?;
+            self.bright = true;
+        }
+        // vor dem Senden: Kommt die Farbe trotz Fehler an, schaltet `apply` sie aus
+        self.lit = true;
+        self.off = false;
+        self.shown = None;
+        send(Cmd::Color(Rgb::RED, Some(info.leds)))?;
+        self.shown = Some(Rgb::RED);
+        pause();
+        Ok(info)
     }
 
     fn info(&mut self, send: &mut SendFn<'_>) -> Result<Option<Info>, String> {
@@ -613,5 +648,82 @@ mod tests {
         assert!(s.apply_with(Some(&strip(0)), &LIVE, &mut flaky).is_err());
         assert!(s.lit, "die Farbe kann trotzdem angekommen sein");
         assert_eq!(s.shown, None);
+    }
+
+    /// Zählt die Pausen des Tests
+    fn test(s: &mut Session, cfg: Option<&Strip>, f: &mut Fake) -> (Result<Info, String>, usize) {
+        let mut pauses = 0;
+        let r = s.test_with(cfg, &mut f.send(), &mut || pauses += 1);
+        (r, pauses)
+    }
+
+    #[test]
+    fn test_lights_red_then_apply_restores_the_scene() {
+        let mut f = Fake::new();
+        let mut s = Session::default();
+        s.apply_with(Some(&strip(0)), &Scene::Focus { color: Rgb::GREEN }, &mut f.send()).unwrap();
+        f.take();
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Ok(MEEWATA), 1));
+        assert_eq!(f.take(), [Cmd::ReadInfo, Cmd::Color(Rgb::RED, Some(78))], "Helligkeit schon gesetzt");
+        s.apply_with(Some(&strip(0)), &Scene::Focus { color: Rgb::GREEN }, &mut f.send()).unwrap();
+        assert_eq!(f.take(), [Cmd::Color(Rgb::GREEN, Some(78))], "zurück zum Fokus");
+
+        test(&mut s, Some(&strip(0)), &mut f).0.unwrap();
+        f.take();
+        s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
+        assert!(f.take().is_empty(), "Call ist schon rot");
+
+        test(&mut s, Some(&strip(0)), &mut f).0.unwrap();
+        f.take();
+        s.apply_with(Some(&strip(0)), &Scene::Idle, &mut f.send()).unwrap();
+        assert_eq!(f.take(), [Cmd::Off(Some(MEEWATA))], "frei: wieder aus");
+    }
+
+    #[test]
+    fn test_sets_brightness_when_needed() {
+        let mut f = Fake::new();
+        let mut s = Session::default();
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Ok(MEEWATA), 1));
+        assert_eq!(f.take(), [Cmd::ReadInfo, Cmd::Brightness, Cmd::Color(Rgb::RED, Some(78))], "frische Session");
+        s.apply_with(Some(&strip(0)), &Scene::Idle, &mut f.send()).unwrap();
+        assert_eq!(f.take(), [Cmd::Off(Some(MEEWATA))]);
+        test(&mut s, Some(&strip(0)), &mut f).0.unwrap();
+        assert_eq!(f.take(), [Cmd::ReadInfo, Cmd::Brightness, Cmd::Color(Rgb::RED, Some(78))], "nach dem Ausschalten");
+    }
+
+    #[test]
+    fn test_on_a_newly_plugged_strip_starts_anew() {
+        let mut f = Fake::new();
+        let mut s = Session::default();
+        s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
+        f.take();
+        test(&mut s, Some(&strip(1)), &mut f).0.unwrap();
+        assert_eq!(f.take(), [Cmd::ReadInfo, Cmd::Brightness, Cmd::Color(Rgb::RED, Some(78))]);
+        assert_eq!(s.current(), Some(&strip(1)));
+    }
+
+    #[test]
+    fn test_while_disabled_goes_off_afterwards() {
+        let mut f = Fake::new();
+        let mut s = Session::default();
+        test(&mut s, None, &mut f).0.unwrap();
+        f.take();
+        s.apply_with(None, &Scene::Idle, &mut f.send()).unwrap();
+        assert_eq!(f.take(), [Cmd::Off(Some(MEEWATA))]);
+        assert_eq!(s.current(), None);
+    }
+
+    #[test]
+    fn failed_test_switches_nothing() {
+        let mut f = Fake::new();
+        f.fail = true;
+        let mut s = Session::default();
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(NOT_FOUND.into()), 0));
+        assert!(!s.lit);
+
+        let mut f = Fake::default();
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(NO_REPLY.into()), 0));
+        assert_eq!(f.take(), [Cmd::ReadInfo], "ohne Antwort kein Rot");
+        assert!(!s.lit);
     }
 }

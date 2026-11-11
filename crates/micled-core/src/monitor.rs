@@ -71,8 +71,13 @@ enum Cmd {
     /// Timer bis zu dieser Zeit (Unix-Sekunden), `None` beendet ihn
     Timer(Option<u64>),
     Focus(bool),
+    /// „Testen“ beim Lichtstreifen, Ergebnis an den Sender
+    TestStrip(Sender<Result<robobloq::Info, String>>),
     Stop,
 }
+
+/// So lange wartet „Testen“ beim Lichtstreifen höchstens auf das Ergebnis
+const STRIP_TEST_WAIT: Duration = Duration::from_secs(15);
 
 pub struct Monitor {
     tx: Sender<Cmd>,
@@ -181,6 +186,9 @@ impl Monitor {
                                 w.push(c);
                             }
                         }
+                        Ok(Cmd::TestStrip(reply)) => w.robobloq.run(move |session, cfg| {
+                            let _ = reply.send(session.test(cfg));
+                        }),
                         Ok(Cmd::Upcoming(s)) => {
                             w.local_starts = s;
                             w.update_reminders();
@@ -214,7 +222,8 @@ impl Monitor {
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
                     (nanoleaf, HUE_SHUTDOWN),
-                    (strip, Duration::from_secs(3)),
+                    // ein laufender „Testen“ (bis gut 5 s) kommt vor dem Zurückstellen dran
+                    (strip, Duration::from_secs(3) + robobloq::TEST_RED + Duration::from_secs(4)),
                 ] {
                     if let Some(done) = done {
                         let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
@@ -254,6 +263,14 @@ impl Monitor {
     /// Fokus von macOS beginnt oder endet
     pub fn set_focus(&self, on: bool) {
         let _ = self.tx.send(Cmd::Focus(on));
+    }
+
+    /// Lichtstreifen testen: Geräteinfo lesen und kurz rot leuchten, danach
+    /// zeigt er wieder den Zustand von MicLED. Blockiert einige Sekunden.
+    pub fn test_strip(&self) -> Result<robobloq::Info, String> {
+        let (reply, result) = channel();
+        let _ = self.tx.send(Cmd::TestStrip(reply));
+        result.recv_timeout(STRIP_TEST_WAIT).unwrap_or_else(|_| Err("Lichtstreifen: Test ohne Antwort".into()))
     }
 
     /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen

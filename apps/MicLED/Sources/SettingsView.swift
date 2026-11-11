@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var goveeResult = ""
     @State private var nanoleafResult = ""
     @State private var robobloqResult = ""
+    @State private var robobloqTesting = false
     /// Meldung vom Koppeln je Nanoleaf-Eintrag
     @State private var nanoleafPairResults: [UUID: String] = [:]
 
@@ -256,9 +257,14 @@ struct SettingsView: View {
                 if model.robobloqEnabled {
                     HStack {
                         Button("Testen") {
-                            robobloqResult = "Suche …"
-                            Task { robobloqResult = await model.checkRobobloq() }
+                            robobloqResult = "Teste …"
+                            robobloqTesting = true
+                            Task {
+                                robobloqResult = await model.checkRobobloq()
+                                robobloqTesting = false
+                            }
                         }
+                        .disabled(robobloqTesting)
                         Text(robobloqResult).font(.caption).foregroundStyle(.secondary)
                     }
                 }
