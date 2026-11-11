@@ -616,36 +616,37 @@ impl Worker {
 
         // 8. Display, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen: nur bei einer Änderung (oder neuem Ziel) senden
         let brightness = self.brightness;
-        let scene = self.engine.scene(now).map_color(|c| dim::apply(c, brightness));
-        let wanted = (self.engine.config().hue.clone(), scene.clone());
+        let scene_for = |states| self.engine.scene_for(now, states).map_color(|c| dim::apply(c, brightness));
+        let cfg = self.engine.config();
+        let wanted = (cfg.hue.clone(), scene_for(cfg.hue_states));
         if self.last_hue.as_ref() != Some(&wanted) {
             self.hue.send(wanted.0.clone(), wanted.1.clone());
             self.last_hue = Some(wanted);
         }
-        let govee = &self.engine.config().govee;
-        let wanted = ((!govee.is_empty()).then(|| govee.clone()), scene.clone());
+        let govee = &cfg.govee;
+        let wanted = ((!govee.is_empty()).then(|| govee.clone()), scene_for(cfg.govee_states));
         if self.last_govee.as_ref() != Some(&wanted) {
             self.govee.send(wanted.0.clone(), wanted.1.clone());
             self.last_govee = Some(wanted);
         }
-        let leaves = &self.engine.config().nanoleaf;
-        let wanted = ((!leaves.is_empty()).then(|| leaves.clone()), scene.clone());
+        let leaves = &cfg.nanoleaf;
+        let wanted = ((!leaves.is_empty()).then(|| leaves.clone()), scene_for(cfg.nanoleaf_states));
         if self.last_nanoleaf.as_ref() != Some(&wanted) {
             self.nanoleaf.send(wanted.0.clone(), wanted.1.clone());
             self.last_nanoleaf = Some(wanted);
         }
-        let strip = self.engine.config().robobloq.then_some(robobloq::Strip { connection: self.watch.connection });
-        let wanted = (strip, scene.clone());
+        let strip = cfg.robobloq.then_some(robobloq::Strip { connection: self.watch.connection });
+        let wanted = (strip, scene_for(cfg.robobloq_states));
         if self.last_robobloq.as_ref() != Some(&wanted) {
             self.robobloq.send(wanted.0.clone(), wanted.1.clone());
             self.last_robobloq = Some(wanted);
         }
-        let wanted = (self.engine.config().awtrix.clone(), scene.clone());
+        let wanted = (cfg.awtrix.clone(), scene_for(cfg.awtrix_states));
         if self.last_awtrix.as_ref() != Some(&wanted) {
             self.awtrix.send(wanted.0.clone(), wanted.1.clone());
             self.last_awtrix = Some(wanted);
         }
-        let wanted = (self.engine.config().pixoo.clone(), scene);
+        let wanted = (cfg.pixoo.clone(), scene_for(cfg.pixoo_states));
         if self.last_scene.as_ref() != Some(&wanted) {
             self.pixoo.send(wanted.0.clone(), wanted.1.clone());
             self.last_scene = Some(wanted);
