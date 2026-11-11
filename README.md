@@ -181,7 +181,7 @@ Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht 
 
 Eine Ulanzi-Pixeluhr (TC001) mit der Firmware [AWTRIX 3](https://blueforcer.github.io/awtrix3/) im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr. Die Firmware muss schon auf der Uhr sein; MicLED spricht über deren lokale HTTP-API, ein MQTT-Broker ist nicht nötig.
 
-Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen:
+Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen, mit Endzeit läuft er durch:
 
 - auf Sendung: „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe; läuft gerade ein Termin, läuft „ON AIR BIS 14:30“ als Lauftext durch (siehe [Ende des Termins](#ende-des-termins)),
 - Konzentrations-Timer: die restlichen Minuten, z. B. „25 MIN“, jede Minute neu,
