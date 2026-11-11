@@ -174,7 +174,7 @@ Während du auf Sendung bist, steht in deinem Nextcloud-Benutzerstatus (Avatar o
 
 MicLED setzt die Nachricht nur, wenn gerade keine gesetzt ist. Eine eigene Nachricht („Homeoffice“) oder die von Talk während eines Anrufs bleibt stehen. Ändert sich die Nachricht während des Calls, bleibt sie danach stehen. Als Emoji passt nur ein einzelnes Zeichen, der Text darf höchstens 80 Zeichen lang sein; sonst lehnt Nextcloud ab, und im Menü steht „Nextcloud: Statustext oder Emoji ungültig“.
 
-Mit **„Auch ‚Nicht stören‘ setzen“** (ab Werk aus) steht während des Calls zusätzlich „Nicht stören“. Das schaltet auch die Benachrichtigungen von Talk und der Nextcloud-App auf dem Handy stumm. Danach kommt ein selbst gewählter Status „Abwesend“, „Unsichtbar“ oder „Nicht stören“ zurück, sonst „Online“. Hast du den Status während des Calls selbst geändert, bleibt er. Das gilt auch, wenn die Nachricht im Call abgelaufen oder ersetzt ist.
+Mit **„Auch ‚Nicht stören‘ setzen“** (ab Werk aus) steht während des Calls zusätzlich „Nicht stören“. Das schaltet auch die Benachrichtigungen von Talk und der Nextcloud-App auf dem Handy stumm. Wer „Unsichtbar“ ist, bleibt es auch im Call. Danach kommt ein selbst gewählter Status „Abwesend“, „Unsichtbar“ oder „Nicht stören“ zurück, sonst „Online“. Hast du den Status während des Calls selbst geändert, bleibt er. Das gilt auch, wenn die Nachricht im Call abgelaufen oder ersetzt ist.
 
 Die Nachricht läuft nach vier Stunden von selbst ab, „Nicht stören“ nicht. Stürzt MicLED im Call ab, räumt der nächste Start beides auf; der Status ist danach „Online“, weil MicLED den von vorher nicht mehr kennt. Ist die Nachricht bis dahin schon abgelaufen, bleibt „Nicht stören“ stehen.
 
