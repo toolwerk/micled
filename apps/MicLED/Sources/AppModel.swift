@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Observation
 import ServiceManagement
+import SystemConfiguration
 
 /// Bindeglied zwischen Oberfläche und Rust-Kern. Hält die Einstellungen
 /// (UserDefaults) und den zuletzt gemeldeten Status.
@@ -240,7 +241,11 @@ final class AppModel {
             mqttDeviceId = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(12))
             d.set(mqttDeviceId, forKey: Key.mqttDeviceId)
         }
-        mqttDeviceName = ScreenshotMode.isActive ? "MacBook Pro" : (Host.current().localizedName ?? "Mac")
+        // Computername aus den Systemeinstellungen; Host.current() kann bei
+        // gestörtem DNS den Start aufhalten
+        mqttDeviceName = ScreenshotMode.isActive
+            ? "MacBook Pro"
+            : (SCDynamicStoreCopyComputerName(nil, nil) as String?) ?? "Mac"
         remindersEnabled = d.bool(forKey: Key.remindersEnabled)
         reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
         reminderLeadMinutes = d.double(forKey: Key.reminderLead)
