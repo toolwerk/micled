@@ -31,6 +31,9 @@ enum ScreenshotMode {
     /// `--scroll network|strip`: Einstellungen bis zu Govee und Nanoleaf bzw. zum Lichtstreifen scrollen
     static var scroll: String? { isActive ? argument("--scroll") : nil }
 
+    /// `--stats week`: Statistik in der Ansicht „Wochen“ öffnen
+    static var stats: String? { isActive ? argument("--stats") : nil }
+
     static let suiteName = "net.staude.micled.screenshots"
 
     /// Eigene, beim Start geleerte Einstellungen
@@ -82,6 +85,30 @@ enum ScreenshotMode {
         let day = Calendar.current.ordinality(of: .day, in: .era, for: start) ?? 0
         let minutes = [95, 140, 60, 220, 130, 40, 175, 110][day % 8]
         return UInt64(minutes * 60)
+    }
+
+    /// Feste Wochensummen: Auf Sendung 4–8 h, Fokus 5–10 h, laufende Woche bis Mittwoch
+    static func weeklyStats(weeks: Int) -> WeeklyStats {
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = .current
+        let monday = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        let live = [6.5, 5.0, 7.2, 4.1, 6.0, 7.8, 5.3, 4.6, 6.9, 5.8, 7.1, 5.1]
+        let focus = [8.0, 6.5, 9.1, 5.2, 7.4, 9.6, 6.1, 7.7, 8.3, 7.0, 7.1, 9.1]
+        let calls: [UInt32] = [15, 12, 18, 9, 14, 19, 13, 11, 16, 14, 17, 14]
+        func week(_ back: Int, _ i: Int, share: Double = 1) -> WeekStats {
+            let start = cal.date(byAdding: .weekOfYear, value: -back, to: monday) ?? monday
+            return WeekStats(
+                start: UInt64(start.timeIntervalSince1970),
+                year: Int32(cal.component(.yearForWeekOfYear, from: start)),
+                week: UInt32(cal.component(.weekOfYear, from: start)),
+                liveSeconds: UInt64(live[i % live.count] * share * 3600),
+                calls: UInt32(Double(calls[i % calls.count]) * share),
+                focusSeconds: UInt64(focus[i % focus.count] * share * 3600)
+            )
+        }
+        let list = (0..<weeks).map { i in week(weeks - 1 - i, i) }
+        let last = weeks - 1
+        return WeeklyStats(weeks: list, lastWeekToDate: week(1, last - 1, share: 0.75))
     }
 
     /// Das gewählte Fenster öffnen (aus dem Symbol heraus, das die Aktionen kennt)

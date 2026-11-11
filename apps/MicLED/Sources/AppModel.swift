@@ -444,6 +444,16 @@ final class AppModel {
         controller?.callsCsv() ?? "start,end,seconds\n"
     }
 
+    /// Summen der letzten `weeks` Kalenderwochen und die Vorwoche bis jetzt
+    func weeklyStats(weeks: UInt32) -> WeeklyStats? {
+        if ScreenshotMode.isActive { return ScreenshotMode.weeklyStats(weeks: Int(weeks)) }
+        return controller?.weeklyStats(weeks: weeks)
+    }
+
+    func weeksCsv() -> String {
+        controller?.weeksCsv() ?? "week,start,live_seconds,calls,focus_seconds\n"
+    }
+
     /// Sekunden auf Sendung seit Mitternacht
     func liveSecondsToday() -> UInt64 {
         if ScreenshotMode.isActive { return 2 * 3600 + 10 * 60 }
