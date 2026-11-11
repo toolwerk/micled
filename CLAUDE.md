@@ -19,7 +19,7 @@ Menüleisten-App für macOS: schaltet eine Luxafor-Lampe bei aktivem Mikrofon um
 - Rust baut im Aggregate-Target `RustCore` (nicht `MicLEDCore` nennen). Bibliothek und Header direkt einbinden, kein XCFramework, und explizite Module aus lassen. Sonst baut Xcode nach einer API-Änderung gegen den alten Header.
 - `apps/MicLED/Generated/` und `build/` sind generiert und nicht eingecheckt.
 - Updates laufen über Sparkle in `UpdaterController.swift`, nicht im Rust-Kern, weil Sparkle ein AppKit-Framework ist. Den EdDSA-Schlüssel (Schlüsselbund, Konto `micled`) nie ersetzen, sonst nehmen installierte Apps keine Updates mehr an. Sparkle vergleicht `CFBundleVersion`, jedes Release braucht eine höhere Build-Nummer.
-- Texte: Deutsch ist die Quellsprache, Englisch die einzige Übersetzung; was nicht Deutsch ist, zeigt Englisch. Neue Texte der App kommen mit englischer Übersetzung (und ausdrücklichem `de`-Eintrag) in `Resources/Localizable.xcstrings`. Ein `String`, der angezeigt wird, kommt aus `String(localized:)`, weil SwiftUI `Text(variable)` nicht übersetzt. Fehlertexte im Kern laufen über `tr!("deutsch", "english")` aus `lang.rs`, die App stellt die Sprache beim Start mit `setLanguage` ein.
+- Texte: Deutsch ist die Quellsprache, Englisch die einzige eigene Übersetzung; was weder Deutsch noch eine eingereichte Sprache ist, zeigt Englisch. Neue Texte der App kommen mit englischer Übersetzung (und ausdrücklichem `de`-Eintrag) in `Resources/Localizable.xcstrings`. Ein `String`, der angezeigt wird, kommt aus `String(localized:)`, weil SwiftUI `Text(variable)` nicht übersetzt. Fehlertexte im Kern laufen über `tr!("deutsch", "english", name = wert)` aus `lang.rs` (nur benannte Platzhalter, Formatangaben ins Argument; Text auf Pixoo und AWTRIX über `tr_fixed!`), die App stellt die Sprache beim Start mit `setLanguage` ein. Weitere Sprachen kommen als `translations/<code>.po` von außen (`TRANSLATING.md`).
 - Swift 6, macOS 14. Statusmeldungen aus Rust kommen auf einem Hintergrund-Thread und werden per `Task { @MainActor in }` übergeben.
 
 ## Prüfen
@@ -29,5 +29,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p micled-cli -- mic
 ```
+
+Nach jeder Textänderung in App (`*.xcstrings`) oder Kern (`tr!`) `scripts/translations.sh` laufen lassen und `translations/`, `locales.json` und die Kataloge mit einchecken; sonst schlägt `cargo test` fehl.
 
 Nach sichtbaren Änderungen an Menü, Einstellungen oder Statistik `scripts/screenshots.sh` laufen lassen und die Bilder in `docs/images/` mit einchecken.
