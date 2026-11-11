@@ -238,10 +238,28 @@ fn template_file(entries: &[Entry]) -> po::File {
     }
 }
 
+/// Wo ein Kontext hingehört: Katalog (oder Kern) und Pluralform
+fn slot(ctxt: &str) -> (&str, &str) {
+    let catalog = app::CATALOGS.iter().map(|(n, _)| *n).find(|n| ctxt.strip_prefix(n).is_some_and(|r| r.starts_with('/'))).unwrap_or("core");
+    let plural = if catalog == "core" { "" } else { ctxt.rsplit_once('#').map_or("", |(_, p)| p) };
+    (catalog, plural)
+}
+
 /// Führt eine Übersetzung auf den Stand der Vorlage: neue Texte leer,
-/// geänderte als `fuzzy` mit dem alten Englisch in `#|`, entfallene raus
+/// geänderte als `fuzzy` mit dem alten Englisch in `#|`, entfallene raus.
+/// Hat sich nur das Deutsche (der Kontext) geändert, wird die Übersetzung mit
+/// gleichem Englisch übernommen und als `fuzzy` zur Prüfung markiert.
 pub fn merge(entries: &[Entry], old: &po::File, lang: &str) -> po::File {
     let by_ctxt: BTreeMap<&str, &po::Entry> = old.entries.iter().filter_map(|e| e.ctxt.as_deref().map(|c| (c, e))).collect();
+    let current: std::collections::BTreeSet<&str> = entries.iter().map(|e| e.ctxt.as_str()).collect();
+    // entfallene Übersetzungen nach Ort und Englisch, je eine nur einmal vergeben
+    let mut orphans: BTreeMap<((&str, &str), &str), &po::Entry> = BTreeMap::new();
+    for o in &old.entries {
+        let Some(c) = o.ctxt.as_deref() else { continue };
+        if !current.contains(c) && !o.text.is_empty() {
+            orphans.entry((slot(c), o.id.as_str())).or_insert(o);
+        }
+    }
     let mut header = old.header.clone().unwrap_or_else(|| header(lang));
     header.flags.retain(|f| f != "fuzzy");
     let mut file = po::File { header: Some(header), entries: Vec::new() };
@@ -261,6 +279,12 @@ pub fn merge(entries: &[Entry], old: &po::File, lang: &str) -> po::File {
                     e.prev_id = o.prev_id.clone();
                 }
             }
+        } else if let Some(o) = orphans.remove(&(slot(&t.ctxt), t.id.as_str())) {
+            e.translator = o.translator.clone();
+            e.text = o.text.clone();
+            e.flags = o.flags.iter().filter(|f| *f != "fuzzy").cloned().collect();
+            e.set_fuzzy(true);
+            e.prev_id = o.prev_id.clone();
         }
         file.entries.push(e);
     }
@@ -516,6 +540,25 @@ mod tests {
         // ein zweiter Durchlauf behält fuzzy und das erste alte Englisch
         let again = merge(&tpl, &f, "fr");
         assert_eq!(again, f);
+    }
+
+    /// Nur das Deutsche korrigiert: Übersetzung bleibt, aber zur Prüfung
+    #[test]
+    fn changed_german_keeps_translation_as_fuzzy() {
+        let mut moved = entry("Pixoo meldet einen Fehler {code}", "Pixoo reports error {code}");
+        let app = Entry { kind: Kind::App, ..entry("Localizable/Beenden!", "Quit") };
+        let other_catalog = Entry { kind: Kind::App, ..entry("InfoPlist/Neu", "Quit") };
+        moved.kind = Kind::Core;
+        let tpl = vec![moved.clone(), app.clone(), other_catalog.clone()];
+        let old = po::File {
+            header: None,
+            entries: vec![po_entry("Pixoo meldet Fehler {code}", "Pixoo reports error {code}", "Erreur {code}"), po_entry("Localizable/Beenden", "Quit", "Quitter")],
+        };
+        let f = merge(&tpl, &old, "fr");
+        assert_eq!((f.entries[0].text.as_str(), f.entries[0].fuzzy()), ("Erreur {code}", true));
+        assert_eq!(status(&moved, Some(&f.entries[0])), Status::Fuzzy);
+        assert_eq!((f.entries[1].text.as_str(), f.entries[1].fuzzy()), ("Quitter", true));
+        assert_eq!(f.entries[2].text, "", "nur im selben Katalog und nur einmal");
     }
 
     #[test]
