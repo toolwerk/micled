@@ -11,7 +11,7 @@ use crate::color::Rgb;
 use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
-use crate::reminder::{self, Event, Reminders};
+use crate::reminder::{self, Event};
 use crate::stats::{self, CallLog, WeekSum};
 use crate::display::Scene;
 use crate::presence;
@@ -137,7 +137,6 @@ impl Monitor {
                     shown: base,
                     lamp_error: None,
                     mic_error: None,
-                    reminders: Reminders::default(),
                     flash_left: 0,
                     flash_color: Rgb::OFF,
                     live: false,
@@ -349,7 +348,6 @@ struct Worker {
     shown: Option<Rgb>,
     lamp_error: Option<String>,
     mic_error: Option<String>,
-    reminders: Reminders,
     /// Verbleibende Wechsel beim Blinken (Vorwarnung, Ende des Timers)
     flash_left: u8,
     flash_color: Rgb,
@@ -507,9 +505,7 @@ impl Worker {
     }
 
     fn update_reminders(&mut self) {
-        let merged = reminder::merge(&self.local_events, &self.remote_events);
-        self.reminders.set(reminder::starts(&merged));
-        self.engine.set_events(merged);
+        self.engine.set_events(reminder::merge(&self.local_events, &self.remote_events));
     }
 
     /// Termine aus Nextcloud abrufen (eigener Thread) und Ergebnisse übernehmen
@@ -628,8 +624,7 @@ impl Worker {
             }
         }
         self.poll_nextcloud();
-        let lead = self.engine.config().reminder_lead.as_secs();
-        if self.engine.config().reminders && self.reminders.due(now, lead) && self.pending.is_none() {
+        if self.engine.reminder_due(now) && self.pending.is_none() {
             self.flash(self.engine.config().reminder_color);
         }
 
