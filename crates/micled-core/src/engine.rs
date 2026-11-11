@@ -97,6 +97,8 @@ pub struct Config {
     pub govee: Vec<crate::govee::Govee>,
     /// Gekoppelte Nanoleaf-Lampen (leer = aus)
     pub nanoleaf: Vec<crate::nanoleaf::Nanoleaf>,
+    /// WLED-Geräte im eigenen Netz (leer = aus)
+    pub wled: Vec<crate::wled::Wled>,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
 }
@@ -129,6 +131,7 @@ impl Default for Config {
             hue: None,
             govee: Vec::new(),
             nanoleaf: Vec::new(),
+            wled: Vec::new(),
             robobloq: false,
         }
     }
