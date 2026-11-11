@@ -345,7 +345,7 @@ mod tests {
         }
     }
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
 
     #[test]
     fn address_without_port() {
