@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn gif_command_format() {
-        let live = Scene::Live { camera: false, color: Rgb::RED };
+        let live = Scene::Live { camera: false, color: Rgb::RED, until: None };
         let v = gif(&live, 3);
         assert_eq!(v["Command"], "Draw/SendHttpGif");
         assert_eq!(v["PicWidth"], 64);
@@ -228,8 +228,8 @@ mod tests {
         }
     }
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
-    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
+    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA, until: None };
 
     #[test]
     fn first_image_saves_channel_and_resets_ids() {

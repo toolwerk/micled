@@ -53,6 +53,8 @@ final class AppModel {
     var remindersEnabled: Bool { didSet { persist(); updateCalendar() } }
     var reminderHex: String { didSet { persist() } }
     var reminderLeadMinutes: Double { didSet { persist() } }
+    /// Während eines Calls das Ende des laufenden Termins auf Pixoo und AWTRIX zeigen
+    var meetingEndEnabled: Bool { didSet { persist(); updateCalendar() } }
     /// Termine aus den Kalendern von macOS (EventKit)
     var useSystemCalendar: Bool { didSet { persist(); updateCalendar() } }
     /// Termine zusätzlich direkt aus Nextcloud
@@ -68,10 +70,10 @@ final class AppModel {
     var slackText: String { didSet { persist() } }
     var slackEmoji: String { didSet { persist() } }
     /// Status auf einem Pixoo 64 im eigenen Netz zeigen
-    var pixooEnabled: Bool { didSet { persist() } }
+    var pixooEnabled: Bool { didSet { persist(); updateCalendar() } }
     var pixooHost: String { didSet { persist() } }
     /// Status auf einer Pixeluhr mit AWTRIX 3 im eigenen Netz zeigen
-    var awtrixEnabled: Bool { didSet { persist() } }
+    var awtrixEnabled: Bool { didSet { persist(); updateCalendar() } }
     var awtrixHost: String { didSet { persist() } }
     /// Status auf einer Hue-Lampe oder in einem Raum über die Hue Bridge zeigen
     var hueEnabled: Bool { didSet { persist() } }
@@ -184,6 +186,7 @@ final class AppModel {
             Key.remindersEnabled: false,
             Key.reminderColor: "ffff00",
             Key.reminderLead: 2.0,
+            Key.meetingEndEnabled: true,
             Key.useSystemCalendar: true,
             Key.nextcloudEnabled: false,
             Key.nextcloudServer: "",
@@ -249,6 +252,7 @@ final class AppModel {
         remindersEnabled = d.bool(forKey: Key.remindersEnabled)
         reminderHex = d.string(forKey: Key.reminderColor) ?? "ffff00"
         reminderLeadMinutes = d.double(forKey: Key.reminderLead)
+        meetingEndEnabled = d.bool(forKey: Key.meetingEndEnabled)
         useSystemCalendar = d.bool(forKey: Key.useSystemCalendar)
         nextcloudEnabled = d.bool(forKey: Key.nextcloudEnabled)
         nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
@@ -554,11 +558,13 @@ final class AppModel {
             cameraEnabled: cameraEnabled,
             cameraColor: cameraHex,
             onAirUrl: onAirUrl,
+            remindersEnabled: remindersEnabled,
             reminderColor: reminderHex,
             reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60),
             nextcloudServer: nextcloudActive ? nextcloudServer : "",
             nextcloudUser: nextcloudActive ? nextcloudUser : "",
             nextcloudPassword: nextcloudActive ? nextcloudPassword : "",
+            meetingEndEnabled: meetingEndEnabled,
             appColors: appColors,
             timerColor: timerHex,
             focusEnabled: focusEnabled,
@@ -593,7 +599,12 @@ final class AppModel {
     }
 
     private var nextcloudActive: Bool {
-        remindersEnabled && nextcloudEnabled
+        calendarNeeded && nextcloudEnabled
+    }
+
+    /// Termine werden gebraucht für die Vorwarnung oder für die Endzeit auf Pixoo und AWTRIX
+    private var calendarNeeded: Bool {
+        remindersEnabled || (meetingEndEnabled && (pixooEnabled || awtrixEnabled))
     }
 
     /// Unterdrückt `persist()` während `batch`, damit der Kern keine halb
@@ -630,6 +641,7 @@ final class AppModel {
         defaults.set(remindersEnabled, forKey: Key.remindersEnabled)
         defaults.set(reminderHex, forKey: Key.reminderColor)
         defaults.set(reminderLeadMinutes, forKey: Key.reminderLead)
+        defaults.set(meetingEndEnabled, forKey: Key.meetingEndEnabled)
         defaults.set(useSystemCalendar, forKey: Key.useSystemCalendar)
         defaults.set(nextcloudEnabled, forKey: Key.nextcloudEnabled)
         defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
@@ -685,16 +697,16 @@ final class AppModel {
         }
     }
 
-    /// Kalender von macOS nur lesen, wenn Vorwarnung und Quelle eingeschaltet sind
+    /// Kalender von macOS nur lesen, wenn Vorwarnung oder Endzeit und die Quelle eingeschaltet sind
     private func updateCalendar() {
-        guard remindersEnabled, useSystemCalendar else {
+        guard calendarNeeded, useSystemCalendar else {
             calendar?.stop()
             calendar = nil
             return
         }
         guard calendar == nil else { return }
-        let watcher = CalendarWatcher { [weak self] starts in
-            self?.controller?.setUpcoming(starts: starts)
+        let watcher = CalendarWatcher { [weak self] events in
+            self?.controller?.setEvents(events: events)
         } denied: { [weak self] in
             self?.error = "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender"
         }
@@ -755,6 +767,7 @@ final class AppModel {
         static let remindersEnabled = "remindersEnabled"
         static let reminderColor = "reminderColor"
         static let reminderLead = "reminderLeadMinutes"
+        static let meetingEndEnabled = "meetingEndEnabled"
         static let useSystemCalendar = "useSystemCalendar"
         static let nextcloudEnabled = "nextcloudEnabled"
         static let nextcloudServer = "nextcloudServer"

@@ -11,7 +11,7 @@ use crate::color::Rgb;
 use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
-use crate::reminder::{self, Reminders};
+use crate::reminder::{self, Event, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
 use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
@@ -36,7 +36,7 @@ type GoveeFleet = output::Fleet<govee::Session>;
 type NanoleafFleet = output::Fleet<nanoleaf::Session>;
 
 /// Ergebnis eines Abrufs aus Nextcloud, gekennzeichnet mit der Runde
-type Fetched = Arc<Mutex<Option<(u64, Result<Vec<u64>, String>)>>>;
+type Fetched = Arc<Mutex<Option<(u64, Result<Vec<Event>, String>)>>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Status {
@@ -67,7 +67,7 @@ enum Cmd {
     Config(Box<Config>),
     Color(Rgb),
     Away(Away, bool),
-    Upcoming(Vec<u64>),
+    Upcoming(Vec<Event>),
     /// Timer bis zu dieser Zeit (Unix-Sekunden), `None` beendet ihn
     Timer(Option<u64>),
     Focus(bool),
@@ -141,8 +141,8 @@ impl Monitor {
                     calls: log,
                     calls_path,
                     on_air_error: Arc::new(Mutex::new(None)),
-                    local_starts: vec![],
-                    remote_starts: vec![],
+                    local_events: vec![],
+                    remote_events: vec![],
                     next_fetch: Some(Instant::now()),
                     round: 0,
                     fetched: Arc::new(Mutex::new(None)),
@@ -193,8 +193,8 @@ impl Monitor {
                         Ok(Cmd::TestStrip(reply)) => w.robobloq.run(move |session, cfg| {
                             let _ = reply.send(session.test(cfg));
                         }),
-                        Ok(Cmd::Upcoming(s)) => {
-                            w.local_starts = s;
+                        Ok(Cmd::Upcoming(events)) => {
+                            w.local_events = events;
                             w.update_reminders();
                         }
                         Err(RecvTimeoutError::Timeout) => {}
@@ -256,9 +256,10 @@ impl Monitor {
         let _ = self.tx.send(Cmd::Away(reason, on));
     }
 
-    /// Startzeiten der nächsten Termine (Unix-Sekunden) für die Vorwarnung
-    pub fn set_upcoming(&self, starts: Vec<u64>) {
-        let _ = self.tx.send(Cmd::Upcoming(starts));
+    /// Termine aus den Kalendern von macOS, laufende und kommende, für
+    /// Vorwarnung und Endzeit
+    pub fn set_events(&self, events: Vec<Event>) {
+        let _ = self.tx.send(Cmd::Upcoming(events));
     }
 
     /// Konzentrations-Timer für `minutes` Minuten starten, 0 beendet ihn
@@ -335,9 +336,9 @@ struct Worker {
     calls_path: Option<PathBuf>,
     on_air_error: Arc<Mutex<Option<String>>>,
     /// Termine aus den Kalendern von macOS (von der App)
-    local_starts: Vec<u64>,
+    local_events: Vec<Event>,
     /// Termine aus Nextcloud
-    remote_starts: Vec<u64>,
+    remote_events: Vec<Event>,
     /// Nächster Abruf aus Nextcloud (`None` = aus)
     next_fetch: Option<Instant>,
     /// Zählt Änderungen der Zugangsdaten; ältere Ergebnisse werden verworfen
@@ -427,7 +428,7 @@ impl Worker {
             self.round += 1;
             self.fetching = false;
             self.calendar_error = None;
-            self.remote_starts.clear();
+            self.remote_events.clear();
             self.next_fetch = cfg.nextcloud.as_ref().map(|_| Instant::now() + NEXTCLOUD_SETTLE);
             self.update_reminders();
         }
@@ -444,7 +445,9 @@ impl Worker {
     }
 
     fn update_reminders(&mut self) {
-        self.reminders.set(reminder::merge(&self.local_starts, &self.remote_starts));
+        let merged = reminder::merge(&self.local_events, &self.remote_events);
+        self.reminders.set(reminder::starts(&merged));
+        self.engine.set_events(merged);
     }
 
     /// Termine aus Nextcloud abrufen (eigener Thread) und Ergebnisse übernehmen
@@ -454,8 +457,8 @@ impl Worker {
             if round == self.round {
                 self.fetching = false;
                 match result {
-                    Ok(starts) => {
-                        self.remote_starts = starts;
+                    Ok(events) => {
+                        self.remote_events = events;
                         self.calendar_error = None;
                     }
                     Err(e) => {
@@ -564,7 +567,7 @@ impl Worker {
         }
         self.poll_nextcloud();
         let lead = self.engine.config().reminder_lead.as_secs();
-        if self.reminders.due(now, lead) && self.pending.is_none() {
+        if self.engine.config().reminders && self.reminders.due(now, lead) && self.pending.is_none() {
             self.flash(self.engine.config().reminder_color);
         }
 
@@ -664,12 +667,15 @@ impl Worker {
             self.robobloq.send(wanted.0.clone(), wanted.1.clone());
             self.last_robobloq = Some(wanted);
         }
-        let wanted = (self.engine.config().awtrix.clone(), scene.clone());
+        // nur Pixoo und AWTRIX zeigen das Ende des Termins
+        let until = self.engine.meeting_end(now).map(dim::local_minute_at);
+        let display = scene.clone().with_until(until);
+        let wanted = (self.engine.config().awtrix.clone(), display.clone());
         if self.last_awtrix.as_ref() != Some(&wanted) {
             self.awtrix.send(wanted.0.clone(), wanted.1.clone());
             self.last_awtrix = Some(wanted);
         }
-        let wanted = (self.engine.config().pixoo.clone(), scene);
+        let wanted = (self.engine.config().pixoo.clone(), display);
         if self.last_scene.as_ref() != Some(&wanted) {
             self.pixoo.send(wanted.0.clone(), wanted.1.clone());
             self.last_scene = Some(wanted);
