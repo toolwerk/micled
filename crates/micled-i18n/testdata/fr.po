@@ -1,0 +1,22 @@
+# Testübersetzung für den Import-Test in sync.rs
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "Pixoo meldet Fehler {code}"
+msgid "Pixoo reports error {code}"
+msgstr "Le Pixoo signale l’erreur {code}"
+
+# Platzhalter falsch geschrieben
+msgctxt "Pixoo nicht erreichbar: {e}"
+msgid "Pixoo unreachable: {e}"
+msgstr "Pixoo injoignable : {erreur}"
+
+msgctxt "InfoPlist/NSFocusStatusUsageDescription"
+msgid "MicLED shows its own color on the light while a Focus is on."
+msgstr "MicLED affiche sa propre couleur sur la lampe tant qu’un mode Concentration est actif."
+
+msgctxt "Localizable/Beenden"
+msgid "Quit"
+msgstr "Quitter"
