@@ -281,7 +281,7 @@ impl State {
             if status != "dnd" && status != "invisible" {
                 api.set_status(&cfg.nc, "dnd")?;
                 self.dnd = true;
-            } else if self.saved.as_ref().is_some_and(|s| s.status != "dnd") {
+            } else if status == "dnd" && self.saved.as_ref().is_some_and(|s| s.status != "dnd") {
                 // ein vorher gescheitertes Setzen ist doch angekommen
                 self.dnd = true;
             }
@@ -569,6 +569,18 @@ mod tests {
         st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
         assert_eq!(api.log, ["message Im Call", "clear"]);
         assert_eq!(api.now.status, "invisible");
+    }
+
+    #[test]
+    fn invisible_then_own_dnd_in_the_call_stays() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current { status: "invisible".into(), user_defined: true, ..Current::default() });
+        let mut st = State::default();
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        api.now.status = "dnd".into();
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!(api.log, ["message Im Call", "clear"]);
+        assert_eq!(api.now.status, "dnd", "selbst gesetzt, bleibt");
     }
 
     #[test]
