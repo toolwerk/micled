@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Intents
 import Observation
 import ServiceManagement
 
@@ -644,11 +645,15 @@ final class AppModel {
         watcher.start()
     }
 
-    /// Fokus nur abfragen, wenn er angezeigt werden soll
+    /// Fokus abfragen, wenn er angezeigt werden soll oder die Freigabe schon
+    /// besteht (für die Fokuszeit in der Statistik). Ohne Anzeige wird nicht
+    /// nach der Freigabe gefragt.
     private func updateFocus() {
-        guard focusEnabled else {
+        guard focusEnabled || INFocusStatusCenter.default.authorizationStatus == .authorized else {
             focusWatcher?.stop()
             focusWatcher = nil
+            // sonst zählte ein beim Abschalten laufender Fokus in der Statistik weiter
+            controller?.setFocus(on: false)
             return
         }
         guard focusWatcher == nil else { return }
