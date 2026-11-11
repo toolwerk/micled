@@ -196,36 +196,89 @@ impl Api for Http {
 pub struct State {
     /// Einstellung, mit der die eigene Nachricht gesetzt wurde
     ours: Option<NcStatus>,
-    /// Status von vorher
+    /// Status von vorher (`None` nach einem Absturz: unbekannt)
     saved: Option<Saved>,
+    /// Eigene Nachricht steht noch und wird beim Zurückstellen gelöscht
+    message: bool,
+    /// MicLED hat „Nicht stören“ gesetzt und stellt es danach zurück
+    dnd: bool,
+    /// „Nicht stören“ steht noch aus (z. B. nach einem Fehler)
+    dnd_todo: bool,
+}
+
+/// Steht die eigene Nachricht von `cfg`?
+fn shows_ours(current: &Current, cfg: &NcStatus) -> bool {
+    matches!(decide(false, current, &cfg.text, None), Action::Restore(_))
 }
 
 impl State {
     fn apply_with(&mut self, api: &mut impl Api, wanted: Option<&NcStatus>, live: bool, now: u64, startup: bool) -> Result<(), String> {
         let (restore, set) = plan(self.ours.as_ref(), wanted, live);
-        let restore = restore.or_else(|| wanted.filter(|_| startup && !live).cloned());
-        if let Some(cfg) = restore {
+        let leftover = restore.is_none() && startup && !live;
+        if let Some(mut cfg) = restore.or_else(|| wanted.filter(|_| leftover).cloned()) {
+            // ein im Call neu eingetragenes App-Passwort desselben Kontos gilt auch fürs Zurückstellen
+            if let Some(w) = wanted.filter(|w| normalize(&w.nc.server) == normalize(&cfg.nc.server) && w.nc.user.trim() == cfg.nc.user.trim()) {
+                cfg.nc = w.nc.clone();
+            }
             let current = api.current(&cfg.nc)?;
-            if let Action::Restore(saved) = decide(false, &current, &cfg.text, self.saved.as_ref()) {
+            if leftover {
+                // nach einem Absturz: nur aufräumen, was sicher von MicLED stammt
+                if !shows_ours(&current, &cfg) {
+                    return Ok(());
+                }
+                self.ours = Some(cfg.clone());
+                self.message = true;
+                self.dnd = cfg.dnd;
+            }
+            if self.message && shows_ours(&current, &cfg) {
                 api.clear_message(&cfg.nc)?;
-                if let Some(s) = restore_status(cfg.dnd, &current, saved.as_ref()) {
+            }
+            self.message = false;
+            self.dnd_todo = false;
+            // auch wenn die Nachricht inzwischen abgelaufen oder ersetzt ist
+            if self.dnd {
+                if let Some(s) = restore_status(true, &current, self.saved.as_ref()) {
                     api.set_status(&cfg.nc, &s)?;
                 }
             }
+            self.dnd = false;
             self.ours = None;
             self.saved = None;
         }
+        let mut current = None;
         if let Some(cfg) = set {
-            let current = api.current(&cfg.nc)?;
-            if let Action::Set { save } = decide(true, &current, &cfg.text, None) {
-                api.set_message(&cfg, now)?;
-                // ab hier ist die Nachricht gesetzt und wird beim Zurückstellen gelöscht
-                self.saved = Some(save);
-                self.ours = Some(cfg.clone());
-                if cfg.dnd && current.status != "dnd" {
-                    api.set_status(&cfg.nc, "dnd")?;
+            let now_status = api.current(&cfg.nc)?;
+            match decide(true, &now_status, &cfg.text, None) {
+                Action::Set { save } => {
+                    api.set_message(&cfg, now)?;
+                    // ab hier ist die Nachricht gesetzt und wird beim Zurückstellen gelöscht
+                    self.saved = Some(save);
+                    self.message = true;
+                    self.dnd_todo = cfg.dnd;
+                    self.ours = Some(cfg);
                 }
+                // Neustart nach einem Absturz mitten im Call: eigene Nachricht übernehmen
+                Action::Nothing if startup && shows_ours(&now_status, &cfg) => {
+                    self.saved = None;
+                    self.message = true;
+                    self.dnd = cfg.dnd && now_status.status == "dnd";
+                    self.dnd_todo = cfg.dnd && !self.dnd;
+                    self.ours = Some(cfg);
+                }
+                _ => {}
             }
+            current = Some(now_status);
+        }
+        if let Some(cfg) = self.ours.clone().filter(|_| self.dnd_todo) {
+            let status = match current {
+                Some(c) => c.status,
+                None => api.current(&cfg.nc)?.status,
+            };
+            if status != "dnd" {
+                api.set_status(&cfg.nc, "dnd")?;
+                self.dnd = true;
+            }
+            self.dnd_todo = false;
         }
         Ok(())
     }
@@ -336,11 +389,13 @@ mod tests {
     struct Fake {
         now: Current,
         log: Vec<String>,
+        /// nächstes `set_status` scheitert
+        fail_status: bool,
     }
 
     impl Fake {
         fn new(now: Current) -> Fake {
-            Fake { now, log: vec![] }
+            Fake { now, log: vec![], fail_status: false }
         }
     }
 
@@ -361,6 +416,9 @@ mod tests {
             Ok(())
         }
         fn set_status(&mut self, _: &Nextcloud, status: &str) -> Result<(), String> {
+            if std::mem::take(&mut self.fail_status) {
+                return Err("Nextcloud nicht erreichbar".into());
+            }
             self.now.status = status.into();
             self.now.user_defined = true;
             self.log.push(format!("status {status}"));
@@ -418,5 +476,102 @@ mod tests {
         st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
         st.apply_with(&mut api, None, true, 0, false).unwrap();
         assert_eq!(api.log, ["message Im Call", "clear"]);
+    }
+
+    #[test]
+    fn dnd_is_restored_even_if_the_message_is_gone() {
+        let cfg = config(true);
+        for after in ["", "Mittag"] {
+            let mut api = Fake::new(Current::default());
+            let mut st = State::default();
+            st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+            api.now.message = after.into();
+            st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+            assert_eq!(api.log, ["message Im Call", "status dnd", "status online"], "Nachricht „{after}“");
+            assert_eq!(api.now.message, after, "fremde Nachricht bleibt");
+        }
+    }
+
+    #[test]
+    fn failed_status_reset_is_retried() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current::default());
+        let mut st = State::default();
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        api.fail_status = true;
+        assert!(st.apply_with(&mut api, Some(&cfg), false, 0, false).is_err());
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!(api.log, ["message Im Call", "status dnd", "clear", "status online"]);
+    }
+
+    #[test]
+    fn failed_dnd_is_retried() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current::default());
+        api.fail_status = true;
+        let mut st = State::default();
+        assert!(st.apply_with(&mut api, Some(&cfg), true, 0, false).is_err());
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        assert_eq!(api.log, ["message Im Call", "status dnd"]);
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!(api.now.status, "online");
+    }
+
+    #[test]
+    fn own_dnd_before_the_call_stays() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current { status: "dnd".into(), user_defined: true, ..Current::default() });
+        let mut st = State::default();
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!(api.log, ["message Im Call", "clear"]);
+        assert_eq!(api.now.status, "dnd");
+    }
+
+    #[test]
+    fn restart_during_a_call_takes_over_the_leftover() {
+        let cfg = config(true);
+        let mut api = Fake::new(cur("dnd", "Im Call"));
+        let mut st = State::default();
+        st.apply_with(&mut api, Some(&cfg), true, 0, true).unwrap();
+        assert!(api.log.is_empty(), "{:?}", api.log);
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!(api.log, ["clear", "status online"]);
+    }
+
+    #[test]
+    fn startup_without_leftover_leaves_own_dnd() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current { status: "dnd".into(), user_defined: true, ..Current::default() });
+        State::default().apply_with(&mut api, Some(&cfg), false, 0, true).unwrap();
+        assert!(api.log.is_empty(), "{:?}", api.log);
+    }
+
+    #[test]
+    fn new_password_of_the_same_account_is_used_for_restore() {
+        struct Pw(Vec<String>);
+        impl Api for Pw {
+            fn current(&mut self, nc: &Nextcloud) -> Result<Current, String> {
+                self.0.push(nc.password.clone());
+                Ok(cur("online", "Im Call"))
+            }
+            fn set_message(&mut self, _: &NcStatus, _: u64) -> Result<(), String> {
+                Ok(())
+            }
+            fn clear_message(&mut self, nc: &Nextcloud) -> Result<(), String> {
+                self.0.push(format!("clear {}", nc.password));
+                Ok(())
+            }
+            fn set_status(&mut self, _: &Nextcloud, _: &str) -> Result<(), String> {
+                Ok(())
+            }
+        }
+        let old = config(false);
+        let mut new = old.clone();
+        new.nc.password = "neu".into();
+        let mut st = State { ours: Some(old), message: true, ..State::default() };
+        let mut api = Pw(vec![]);
+        st.apply_with(&mut api, Some(&new), false, 0, false).unwrap();
+        assert_eq!(api.0, ["neu", "clear neu"]);
     }
 }
