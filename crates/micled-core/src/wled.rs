@@ -10,7 +10,9 @@
 //! nicht das Preset selbst: Spätere Änderungen (etwa eine gedimmte
 //! Helligkeit) bleiben so erhalten. Eine Playlist startet neu. Live-Daten
 //! einer anderen Steuerung überschreibt MicLED für die Dauer des Calls
-//! (`lor`) und gibt sie danach wieder frei.
+//! (`lor`) und gibt sie danach wieder frei. Ein laufendes Nachtlicht hält
+//! MicLED an, damit es die Farbe nicht dimmt, und startet es danach neu.
+//! Befehle von MicLED gehen nicht per WLED-Sync an andere Geräte (`udpn.nn`).
 
 use std::time::Duration;
 
@@ -53,17 +55,18 @@ pub fn normalize(host: &str) -> Option<String> {
 }
 
 /// Befehl für die Farbe `c` auf den Segmenten `ids` (`OFF` schaltet aus),
-/// einfarbig, ohne Überblendung und vor Live-Daten anderer Steuerungen.
-/// `tt` statt `transition`, weil `transition` im Gerät gespeichert bliebe.
+/// einfarbig, ohne Überblendung, ohne Nachtlicht, ohne Sync an andere Geräte
+/// und vor Live-Daten anderer Steuerungen. `tt` statt `transition`, weil
+/// `transition` im Gerät gespeichert bliebe.
 fn color_body(c: Rgb, ids: &[u64]) -> Value {
     if c == Rgb::OFF {
-        return json!({ "on": false, "tt": 0, "lor": 1 });
+        return json!({ "on": false, "tt": 0, "lor": 1, "nl": { "on": false }, "udpn": { "nn": true } });
     }
     let seg: Vec<Value> = ids
         .iter()
         .map(|id| json!({ "id": id, "on": true, "bri": 255, "col": [[c.r, c.g, c.b, 0]], "fx": 0, "frz": false }))
         .collect();
-    json!({ "on": true, "bri": 255, "tt": 0, "lor": 1, "seg": seg })
+    json!({ "on": true, "bri": 255, "tt": 0, "lor": 1, "nl": { "on": false }, "udpn": { "nn": true }, "seg": seg })
 }
 
 /// Zustand von vor dem Call
@@ -75,6 +78,8 @@ struct Saved {
     lor: u64,
     /// Laufende Playlist
     playlist: Option<i64>,
+    /// Nachtlicht lief
+    nightlight: bool,
     /// Je Segment genau die Schlüssel aus [`SEG_KEYS`], die es gab
     segs: Vec<Map<String, Value>>,
 }
@@ -96,6 +101,7 @@ impl Saved {
             bri: v["bri"].as_u64(),
             lor: v["lor"].as_u64().unwrap_or(0),
             playlist: v["pl"].as_i64().filter(|p| *p >= 0),
+            nightlight: v["nl"]["on"].as_bool().unwrap_or(false),
             segs,
         }
     }
@@ -112,23 +118,34 @@ impl Saved {
 
     /// Rümpfe für `POST /json/state`, die den Zustand wiederherstellen. Eine
     /// Playlist startet neu, ein vorher ausgeschaltetes Gerät wird danach
-    /// ausgeschaltet.
+    /// ausgeschaltet, ein Nachtlicht startet zuletzt neu.
     fn requests(&self) -> Vec<Value> {
-        if let Some(pl) = self.playlist {
-            let mut out = vec![json!({ "ps": pl, "lor": self.lor, "tt": 0 })];
-            if !self.on {
-                out.push(json!({ "on": false }));
+        let mut out = match self.playlist {
+            Some(pl) => {
+                let mut out = vec![json!({ "ps": pl, "lor": self.lor, "tt": 0 })];
+                if !self.on {
+                    out.push(json!({ "on": false }));
+                }
+                out
             }
-            return out;
+            None => {
+                let mut body = json!({ "on": self.on, "lor": self.lor, "tt": 0 });
+                if let Some(b) = self.bri {
+                    body["bri"] = json!(b);
+                }
+                if !self.segs.is_empty() {
+                    body["seg"] = json!(self.segs);
+                }
+                vec![body]
+            }
+        };
+        if self.nightlight {
+            out.push(json!({ "nl": { "on": true } }));
         }
-        let mut body = json!({ "on": self.on, "lor": self.lor, "tt": 0 });
-        if let Some(b) = self.bri {
-            body["bri"] = json!(b);
+        for body in &mut out {
+            body["udpn"] = json!({ "nn": true });
         }
-        if !self.segs.is_empty() {
-            body["seg"] = json!(self.segs);
-        }
-        vec![body]
+        out
     }
 }
 
@@ -328,11 +345,12 @@ mod tests {
 
     #[test]
     fn color_on_every_segment() {
-        assert_eq!(color_body(Rgb::OFF, &[0]), json!({"on": false, "tt": 0, "lor": 1}));
+        let quiet = json!({"nl": {"on": false}, "udpn": {"nn": true}});
+        assert_eq!(color_body(Rgb::OFF, &[0]), json!({"on": false, "tt": 0, "lor": 1, "nl": quiet["nl"], "udpn": quiet["udpn"]}));
         let seg = |id: u64| json!({"id": id, "on": true, "bri": 255, "col": [[0, 255, 0, 0]], "fx": 0, "frz": false});
         assert_eq!(
             color_body(Rgb::GREEN, &[0, 2]),
-            json!({"on": true, "bri": 255, "tt": 0, "lor": 1, "seg": [seg(0), seg(2)]})
+            json!({"on": true, "bri": 255, "tt": 0, "lor": 1, "nl": quiet["nl"], "udpn": quiet["udpn"], "seg": [seg(0), seg(2)]})
         );
     }
 
@@ -346,7 +364,7 @@ mod tests {
         );
         assert_eq!(
             s.requests(),
-            [json!({"on": true, "bri": 128, "lor": 0, "tt": 0, "seg": [s.segs[0].clone()]})],
+            [json!({"on": true, "bri": 128, "lor": 0, "tt": 0, "udpn": {"nn": true}, "seg": [s.segs[0].clone()]})],
             "Preset 3 wird nicht neu geladen, sondern sein Aussehen zurückgestellt"
         );
         let partial = Saved::from_state(&json!({"on": true, "seg": [{"id": 1, "fx": 2}, {"fx": 3}]}));
@@ -358,9 +376,9 @@ mod tests {
     #[test]
     fn empty_reply_means_off_without_segments() {
         let s = Saved::from_state(&json!({}));
-        assert_eq!(s, Saved { on: false, bri: None, lor: 0, playlist: None, segs: vec![] });
+        assert_eq!(s, Saved { on: false, bri: None, lor: 0, playlist: None, nightlight: false, segs: vec![] });
         assert_eq!(s.ids(), [0]);
-        assert_eq!(s.requests(), [json!({"on": false, "lor": 0, "tt": 0})]);
+        assert_eq!(s.requests(), [json!({"on": false, "lor": 0, "tt": 0, "udpn": {"nn": true}})]);
     }
 
     #[test]
@@ -368,9 +386,25 @@ mod tests {
         let mut v = state(true, 128, 5);
         v["lor"] = json!(2);
         let s = Saved::from_state(&v);
-        assert_eq!(s.requests(), [json!({"ps": 5, "lor": 2, "tt": 0})]);
+        let nn = json!({"nn": true});
+        assert_eq!(s.requests(), [json!({"ps": 5, "lor": 2, "tt": 0, "udpn": nn})]);
         let off = Saved::from_state(&state(false, 128, 5));
-        assert_eq!(off.requests(), [json!({"ps": 5, "lor": 0, "tt": 0}), json!({"on": false})], "erst Playlist, dann aus");
+        assert_eq!(
+            off.requests(),
+            [json!({"ps": 5, "lor": 0, "tt": 0, "udpn": nn}), json!({"on": false, "udpn": nn})],
+            "erst Playlist, dann aus"
+        );
+    }
+
+    #[test]
+    fn nightlight_is_paused_and_started_again() {
+        let mut v = state(true, 128, -1);
+        v["nl"]["on"] = json!(true);
+        let s = Saved::from_state(&v);
+        let out = s.requests();
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[1], json!({"nl": {"on": true}, "udpn": {"nn": true}}), "Nachtlicht zuletzt neu starten");
+        assert!(Saved::from_state(&state(true, 128, -1)).requests().iter().all(|b| b.get("nl").is_none()));
     }
 
     #[test]
