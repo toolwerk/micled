@@ -14,6 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
+use crate::presence;
 use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
@@ -148,7 +149,7 @@ impl Monitor {
                     fetching: false,
                     calendar_error: None,
                     brightness: 100,
-                    slack: slack::Updater::start(slack_error.clone()),
+                    slack: presence::Updater::start("slack", slack_error.clone()),
                     slack_error,
                     pixoo: output::Updater::start("pixoo", pixoo_error.clone()),
                     pixoo_error,
@@ -229,7 +230,9 @@ impl Monitor {
                         let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
                     }
                 }
-                w.slack.shutdown(Duration::from_secs(3));
+                if let Some(done) = w.slack.begin_shutdown() {
+                    let _ = done.recv_timeout(Duration::from_secs(3));
+                }
             })
             .expect("Monitor-Thread");
         Monitor { tx, status, calls, thread: Mutex::new(Some(thread)) }
@@ -340,7 +343,7 @@ struct Worker {
     calendar_error: Option<String>,
     /// Zuletzt angewandte Helligkeit in Prozent
     brightness: u8,
-    slack: slack::Updater,
+    slack: presence::Updater<slack::State>,
     slack_error: Arc<Mutex<Option<String>>>,
     pixoo: output::Updater<pixoo::Session>,
     pixoo_error: Arc<Mutex<Option<String>>>,

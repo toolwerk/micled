@@ -19,6 +19,7 @@ pub mod nanoleaf;
 pub mod onair;
 pub mod output;
 pub mod pixoo;
+pub mod presence;
 pub mod reminder;
 pub mod robobloq;
 pub mod shared;
