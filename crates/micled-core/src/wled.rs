@@ -10,8 +10,9 @@
 //! nicht das Preset selbst: Spätere Änderungen (etwa eine gedimmte
 //! Helligkeit) bleiben so erhalten. Eine Playlist startet neu. Live-Daten
 //! einer anderen Steuerung überschreibt MicLED für die Dauer des Calls
-//! (`lor`) und gibt sie danach wieder frei. Ein laufendes Nachtlicht hält
-//! MicLED an, damit es die Farbe nicht dimmt, und startet es danach neu.
+//! (`lor`) und gibt sie danach wieder frei. Ein laufendes Nachtlicht beendet
+//! der Call, damit es die Farbe nicht dimmt; danach startet es nicht neu,
+//! weil ein Neustart aus einem Sonnenaufgang einen Sonnenuntergang machte.
 //! Befehle von MicLED gehen nicht per WLED-Sync an andere Geräte (`udpn.nn`).
 
 use std::time::Duration;
@@ -78,8 +79,6 @@ struct Saved {
     lor: u64,
     /// Laufende Playlist
     playlist: Option<i64>,
-    /// Nachtlicht lief
-    nightlight: bool,
     /// Je Segment genau die Schlüssel aus [`SEG_KEYS`], die es gab
     segs: Vec<Map<String, Value>>,
 }
@@ -101,7 +100,6 @@ impl Saved {
             bri: v["bri"].as_u64(),
             lor: v["lor"].as_u64().unwrap_or(0),
             playlist: v["pl"].as_i64().filter(|p| *p >= 0),
-            nightlight: v["nl"]["on"].as_bool().unwrap_or(false),
             segs,
         }
     }
@@ -118,7 +116,7 @@ impl Saved {
 
     /// Rümpfe für `POST /json/state`, die den Zustand wiederherstellen. Eine
     /// Playlist startet neu, ein vorher ausgeschaltetes Gerät wird danach
-    /// ausgeschaltet, ein Nachtlicht startet zuletzt neu.
+    /// ausgeschaltet.
     fn requests(&self) -> Vec<Value> {
         let mut out = match self.playlist {
             Some(pl) => {
@@ -139,9 +137,6 @@ impl Saved {
                 vec![body]
             }
         };
-        if self.nightlight {
-            out.push(json!({ "nl": { "on": true } }));
-        }
         for body in &mut out {
             body["udpn"] = json!({ "nn": true });
         }
@@ -376,7 +371,7 @@ mod tests {
     #[test]
     fn empty_reply_means_off_without_segments() {
         let s = Saved::from_state(&json!({}));
-        assert_eq!(s, Saved { on: false, bri: None, lor: 0, playlist: None, nightlight: false, segs: vec![] });
+        assert_eq!(s, Saved { on: false, bri: None, lor: 0, playlist: None, segs: vec![] });
         assert_eq!(s.ids(), [0]);
         assert_eq!(s.requests(), [json!({"on": false, "lor": 0, "tt": 0, "udpn": {"nn": true}})]);
     }
@@ -397,14 +392,12 @@ mod tests {
     }
 
     #[test]
-    fn nightlight_is_paused_and_started_again() {
+    fn nightlight_is_not_started_again() {
         let mut v = state(true, 128, -1);
         v["nl"]["on"] = json!(true);
-        let s = Saved::from_state(&v);
-        let out = s.requests();
-        assert_eq!(out.len(), 2);
-        assert_eq!(out[1], json!({"nl": {"on": true}, "udpn": {"nn": true}}), "Nachtlicht zuletzt neu starten");
-        assert!(Saved::from_state(&state(true, 128, -1)).requests().iter().all(|b| b.get("nl").is_none()));
+        let out = Saved::from_state(&v).requests();
+        assert_eq!(out.len(), 1);
+        assert!(out[0].get("nl").is_none(), "der Call hat das Nachtlicht beendet");
     }
 
     #[test]
