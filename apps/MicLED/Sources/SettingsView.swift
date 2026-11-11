@@ -115,6 +115,7 @@ struct SettingsView: View {
                         }
                         Text(pixooResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.pixooStates)
                 }
             } header: {
                 Text("Pixoo 64")
@@ -135,6 +136,7 @@ struct SettingsView: View {
                         }
                         Text(awtrixResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.awtrixStates)
                 }
             } header: {
                 Text("AWTRIX")
@@ -174,6 +176,7 @@ struct SettingsView: View {
                             Text(error).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    states($model.hueStates)
                 }
             } header: {
                 Text("Philips Hue")
@@ -206,6 +209,7 @@ struct SettingsView: View {
                         Text(goveeResult).font(.caption).foregroundStyle(.secondary)
                     }
                     found(model.goveeFound, in: model.goveeDevices, nanoleaf: false)
+                    states($model.goveeStates)
                 }
             } header: {
                 Text("Govee").id("network")
@@ -244,6 +248,7 @@ struct SettingsView: View {
                         Text(nanoleafResult).font(.caption).foregroundStyle(.secondary)
                     }
                     found(model.nanoleafFound, in: model.nanoleafDevices, nanoleaf: true)
+                    states($model.nanoleafStates)
                 }
             } header: {
                 Text("Nanoleaf")
@@ -267,13 +272,14 @@ struct SettingsView: View {
                         .disabled(robobloqTesting)
                         Text(robobloqResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.robobloqStates)
                 }
                 Text("Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: {
                 Text("Lichtstreifen (USB)").id("strip")
             } footer: {
-                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
+                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -458,6 +464,19 @@ struct SettingsView: View {
         .frame(width: 480)
         .frame(minHeight: 640)
         .onAppear { current = model.currentUsers() }
+    }
+
+    /// Häkchen für die Zustände, die ein Zusatzgerät zeigt
+    private func states(_ binding: Binding<OutputStates>) -> some View {
+        LabeledContent("Zeigen bei") {
+            HStack {
+                Toggle("Call", isOn: binding.call)
+                Toggle("Timer", isOn: binding.timer)
+                Toggle("Fokus", isOn: binding.focus)
+                    .disabled(!model.focusEnabled)
+            }
+            .toggleStyle(.checkbox)
+        }
     }
 
     /// Gefundenes Gerät mit Namen und Adresse, von Hand eingetragenes als Eingabefeld

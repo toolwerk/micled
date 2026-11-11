@@ -51,6 +51,7 @@ enum ScreenshotMode {
         d.set("screenshot", forKey: "hueFingerprint")
         d.set("room", forKey: "hueTargetKind")
         d.set("flur", forKey: "hueTargetId")
+        d.set(["call": true, "timer": false, "focus": false], forKey: "hueStates")
         d.set(true, forKey: "goveeEnabled")
         d.set([
             ["id": UUID().uuidString, "host": "192.168.1.31", "name": "H6609"],
