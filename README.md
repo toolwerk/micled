@@ -27,7 +27,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - 🌙 **Fokus und Abend**: eigene Farbe, solange ein Fokus von macOS an ist, abends gedimmt.
 - 📅 **Vorwarnung vor Terminen** aus den Kalendern von macOS oder direkt aus Nextcloud.
 - 💬 **Slack-Status** „Im Call“, solange du auf Sendung bist.
-- 🖼️ **Pixoo 64**: „ON AIR“, Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
+- 🖼️ **Pixoo 64**: „ON AIR“ (im Termin mit dessen Ende, z. B. „BIS 14:30“), Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
 - 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
@@ -165,7 +165,7 @@ Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder s
 
 Es zeigt:
 
-- auf Sendung: Mikro- oder Kamerasymbol mit „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe,
+- auf Sendung: Mikro- oder Kamerasymbol mit „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe; läuft gerade ein Termin, steht darunter dessen Ende, z. B. „BIS 14:30“ (siehe [Ende des Termins](#ende-des-termins)),
 - Konzentrations-Timer: die restlichen Minuten mit „MIN“, jede Minute neu,
 - Fokus: „FOKUS“ in der Fokusfarbe.
 
@@ -183,7 +183,7 @@ Eine Ulanzi-Pixeluhr (TC001) mit der Firmware [AWTRIX 3](https://blueforcer.gith
 
 Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen:
 
-- auf Sendung: „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe,
+- auf Sendung: „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe; läuft gerade ein Termin, läuft „ON AIR BIS 14:30“ als Lauftext durch (siehe [Ende des Termins](#ende-des-termins)),
 - Konzentrations-Timer: die restlichen Minuten, z. B. „25 MIN“, jede Minute neu,
 - Fokus: „FOKUS“ in der Fokusfarbe.
 
@@ -282,12 +282,23 @@ Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends ged
 
 Die Seriennummer ist bei allen Streifen gleich. Hängen zwei Streifen am Mac, zeigen beide dieselbe Farbe.
 
+## Ende des Termins
+
+Läuft ein Call während eines Termins, zeigen Pixoo 64 und AWTRIX-Uhr zusätzlich, bis wann er voraussichtlich dauert, z. B. „BIS 14:30“ in Ortszeit. Der Titel des Termins erscheint nie, wer vor der Tür steht, sieht nur die Uhrzeit. Lampen, Hue, Govee, Nanoleaf und Lichtstreifen zeigen keine Endzeit.
+
+- Es zählt ein Termin, der schon begonnen hat und noch nicht zu Ende ist. Ganztägige, abgelehnte und abgesagte Termine zählen nicht, ebenso Einträge über 12 Stunden.
+- Laufen mehrere Termine gleichzeitig, gilt das Ende des zuletzt begonnenen.
+- Dauert der Call länger, verschwindet die Zeit mit dem Terminende, „ON AIR“ bleibt.
+- Abschalten unter Einstellungen › Termine › „Ende des Termins auf Pixoo und AWTRIX zeigen“ (ab Werk an).
+
+MicLED liest die Kalender dafür auch, wenn „Vor Terminen blinken“ aus ist, sobald Pixoo oder AWTRIX eingeschaltet sind. macOS fragt dann einmal nach dem Kalenderzugriff. Die Quellen sind dieselben wie bei der Vorwarnung (siehe [Termine aus Nextcloud](#termine-aus-nextcloud)).
+
 ## Termine aus Nextcloud
 
-Für die Vorwarnung gibt es zwei Wege:
+Für die Vorwarnung und das Ende des Termins gibt es zwei Wege:
 
 1. **Über macOS** (empfohlen, wenn du den Kalender ohnehin auf dem Mac nutzt): Systemeinstellungen › Internet-Accounts › Account hinzufügen › Andere › CalDAV-Account, Accounttyp „Manuell“, Server `https://<deine-nextcloud>/remote.php/dav`. MicLED liest alle Kalender, die in der Kalender-App erscheinen.
-2. **Direkt in MicLED**: Einstellungen › Termine › „Nextcloud direkt“ einschalten, Server (z. B. `https://cloud.example.org`), Benutzer und ein App-Passwort eintragen. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ an. MicLED speichert es im Schlüsselbund und fragt alle zwei Minuten die Termine der nächsten Stunde ab, Serientermine eingeschlossen. „Verbindung prüfen“ zeigt, wie viele Kalender gefunden wurden.
+2. **Direkt in MicLED**: Einstellungen › Termine › „Nextcloud direkt“ einschalten, Server (z. B. `https://cloud.example.org`), Benutzer und ein App-Passwort eintragen. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit › „Neues App-Passwort erstellen“ an. MicLED speichert es im Schlüsselbund und fragt alle zwei Minuten die laufenden Termine und die der nächsten Stunde ab, Serientermine eingeschlossen. „Verbindung prüfen“ zeigt, wie viele Kalender gefunden wurden.
 
 Beide Wege lassen sich kombinieren, ein Termin in beiden Quellen blinkt nur einmal. Wer nur Nextcloud direkt nutzt, schaltet „Kalender von macOS“ aus; dann fragt MicLED auch nicht nach dem Kalenderzugriff. Beim direkten Abruf wird nicht ausgewertet, ob du einen Termin abgelehnt hast.
 
