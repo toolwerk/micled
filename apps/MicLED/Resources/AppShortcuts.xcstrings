@@ -1,0 +1,70 @@
+{
+  "sourceLanguage": "de",
+  "strings": {
+    "${applicationName} ausschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName} ausschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off ${applicationName}"
+          }
+        }
+      }
+    },
+    "Lampe aus mit ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe aus mit ${applicationName}"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light off with ${applicationName}"
+          }
+        }
+      }
+    },
+    "Konzentration mit ${applicationName} starten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration mit ${applicationName} starten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a timer with ${applicationName}"
+          }
+        }
+      }
+    },
+    "${applicationName} Automatik umschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName} Automatik umschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle ${applicationName} automatic"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

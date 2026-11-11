@@ -43,6 +43,10 @@ targets:
         optional: true
         createIntermediateGroups: false
       - path: Resources/Assets.xcassets
+      # Texte auf Deutsch (Quellsprache) und Englisch, die Sprache folgt macOS
+      - path: Resources/Localizable.xcstrings
+      - path: Resources/InfoPlist.xcstrings
+      - path: Resources/AppShortcuts.xcstrings   # Siri-Sätze der Kurzbefehle
     dependencies:
       - target: RustCore
       - package: Sparkle
@@ -70,6 +74,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
         DEAD_CODE_STRIPPING: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         # Explizite Module merken nicht, dass RustCore den UniFFI-Header neu schreibt
         # („has been modified since the module file was built“). Implizite Module
         # prüfen den Header bei jedem Build.

@@ -2,6 +2,7 @@
 //! [`Scene`], aus der Szene ein Bild aus 64 × 64 Pixeln. Rein und ohne Ein-/Ausgabe.
 
 use crate::color::Rgb;
+use crate::tr;
 
 /// Kantenlänge des Bildes in Pixeln
 pub const SIZE: usize = 64;
@@ -42,7 +43,7 @@ impl Scene {
 
 /// `BIS 14:30` zu Minuten nach Mitternacht
 pub fn until_text(min: u16) -> String {
-    format!("BIS {:02}:{:02}", min / 60 % 24, min % 60)
+    tr!("BIS {:02}:{:02}", "TIL {:02}:{:02}", min / 60 % 24, min % 60)
 }
 
 /// Bild zur Szene: 64 · 64 · 3 Bytes, Zeilen von oben nach unten, je Pixel R G B,
@@ -67,7 +68,7 @@ pub fn render(scene: &Scene) -> Vec<u8> {
             c.text_centered(&digits, 14, 2, *color);
             c.text_centered("MIN", 40, 1, *color);
         }
-        Scene::Focus { color } => c.text_centered("FOKUS", 25, 2, *color),
+        Scene::Focus { color } => c.text_centered(&tr!("FOKUS", "FOCUS"), 25, 2, *color),
     }
     c.px
 }
@@ -169,14 +170,17 @@ fn glyph(ch: char) -> [u8; 7] {
     match ch {
         'A' => [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
         'B' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+        'C' => [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
         'F' => [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
         'I' => [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
         'K' => [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+        'L' => [0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111],
         'M' => [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
         'N' => [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
         'O' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
         'R' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
         'S' => [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+        'T' => [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
         'U' => [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
         '0' => [0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110],
         '1' => [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
@@ -301,9 +305,12 @@ mod tests {
     #[test]
     fn everything_inside_the_image() {
         // Text am Rand würde abgeschnitten: alle Zeichen passen in die Breite
-        for s in ["ON AIR", "FOKUS", "99+", "MIN", "BIS 23:59"] {
-            let scale = if s == "FOKUS" || s == "99+" { 2 } else { 1 };
+        for s in ["ON AIR", "FOKUS", "FOCUS", "99+", "MIN", "BIS 23:59", "TIL 23:59"] {
+            let scale = if s.starts_with("FO") || s == "99+" { 2 } else { 1 };
             assert!((s.len() as i32 * 6 - 1) * scale <= SIZE as i32, "{s}");
+            for ch in s.chars().filter(|c| *c != ' ') {
+                assert_ne!(glyph(ch), [0; 7], "{ch} fehlt");
+            }
         }
     }
 }

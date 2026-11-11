@@ -20,7 +20,7 @@ enum StatusIcon {
 
             if micActive || cameraOn,
                let mic = NSImage(systemSymbolName: cameraOn ? "video.fill" : "mic.fill",
-                                 accessibilityDescription: cameraOn ? "Kamera aktiv" : "Mikrofon aktiv")?
+                                 accessibilityDescription: cameraOn ? String(localized: "Kamera aktiv") : String(localized: "Mikrofon aktiv"))?
                 .withSymbolConfiguration(.init(pointSize: 9, weight: .bold)
                     .applying(.init(paletteColors: [.white])))
             {
@@ -31,7 +31,9 @@ enum StatusIcon {
             return true
         }
         image.isTemplate = false
-        image.accessibilityDescription = cameraOn ? "MicLED, Kamera aktiv" : micActive ? "MicLED, Mikrofon aktiv" : "MicLED"
+        image.accessibilityDescription = cameraOn
+            ? String(localized: "MicLED, Kamera aktiv")
+            : micActive ? String(localized: "MicLED, Mikrofon aktiv") : "MicLED"
         return image
     }
 }

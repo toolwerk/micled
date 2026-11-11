@@ -32,8 +32,9 @@ struct StatsView: View {
 
     /// Angezeigte Kalenderwochen
     static let weekCount: UInt32 = 12
-    static let live = "Auf Sendung"
-    static let focus = "Fokus"
+    /// Reihen der Wochenansicht (auch Legende)
+    static var live: String { String(localized: "Auf Sendung") }
+    static var focus: String { String(localized: "Fokus") }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -110,7 +111,7 @@ struct StatsView: View {
                     if let label = value.as(String.self) {
                         VStack(spacing: 1) {
                             Text(label)
-                            Text("\(callsByLabel[label] ?? 0) Calls").foregroundStyle(.secondary)
+                            Text("\(Int(callsByLabel[label] ?? 0)) Calls").foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -122,13 +123,13 @@ struct StatsView: View {
 
         if let now = weekly?.weeks.last, let before = weekly?.lastWeekToDate {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Diese Woche (KW \(now.week))").font(.headline)
+                Text("Diese Woche (KW \(Int(now.week)))").font(.headline)
                 HStack(alignment: .top, spacing: 24) {
-                    summary(Self.live, MenuView.duration(now.liveSeconds),
+                    summary("Auf Sendung", MenuView.duration(now.liveSeconds),
                             change: Self.change(now.liveSeconds, before.liveSeconds))
                     summary("Calls", "\(now.calls)",
                             change: Self.signed(Int(now.calls) - Int(before.calls)))
-                    summary(Self.focus, MenuView.duration(now.focusSeconds),
+                    summary("Fokus", MenuView.duration(now.focusSeconds),
                             change: Self.change(now.focusSeconds, before.focusSeconds))
                 }
                 Text("ggü. Vorwoche bis jetzt").font(.caption).foregroundStyle(.secondary)
@@ -139,15 +140,20 @@ struct StatsView: View {
     private var weekBars: [WeekBar] {
         (weekly?.weeks ?? []).flatMap { w in
             [
-                WeekBar(label: "KW \(w.week)", kind: Self.live, seconds: w.liveSeconds),
-                WeekBar(label: "KW \(w.week)", kind: Self.focus, seconds: w.focusSeconds),
+                WeekBar(label: Self.weekLabel(w), kind: Self.live, seconds: w.liveSeconds),
+                WeekBar(label: Self.weekLabel(w), kind: Self.focus, seconds: w.focusSeconds),
             ]
         }
     }
 
+    /// „KW 46“
+    static func weekLabel(_ w: WeekStats) -> String {
+        String(localized: "KW \(Int(w.week))")
+    }
+
     /// Zahl der Calls je Beschriftung „KW <n>“
     private var callsByLabel: [String: UInt32] {
-        Dictionary((weekly?.weeks ?? []).map { ("KW \($0.week)", $0.calls) }, uniquingKeysWith: { a, _ in a })
+        Dictionary((weekly?.weeks ?? []).map { (Self.weekLabel($0), $0.calls) }, uniquingKeysWith: { a, _ in a })
     }
 
     /// Differenz zweier Dauern mit Vorzeichen, z.B. „+1 h 5 min“
@@ -162,7 +168,7 @@ struct StatsView: View {
 
     // MARK: Gemeinsam
 
-    private func summary(_ title: String, _ value: String, change: String? = nil) -> some View {
+    private func summary(_ title: LocalizedStringKey, _ value: String, change: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.title3.monospacedDigit())
@@ -212,9 +218,9 @@ private final class ExportChoice: NSObject {
 
     init(panel: NSSavePanel, weeks: Bool) {
         self.panel = panel
-        popup.addItems(withTitles: ["Alle Calls", "Summen je Woche"])
+        popup.addItems(withTitles: [String(localized: "Alle Calls"), String(localized: "Summen je Woche")])
         popup.selectItem(at: weeks ? 1 : 0)
-        let label = NSTextField(labelWithString: "Inhalt:")
+        let label = NSTextField(labelWithString: String(localized: "Inhalt:"))
         let stack = NSStackView(views: [label, popup])
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
         stack.frame.size = stack.fittingSize
@@ -226,6 +232,6 @@ private final class ExportChoice: NSObject {
     }
 
     @objc private func changed() {
-        panel?.nameFieldStringValue = weeks ? "MicLED-Wochen.csv" : "MicLED-Calls.csv"
+        panel?.nameFieldStringValue = weeks ? String(localized: "MicLED-Wochen.csv") : "MicLED-Calls.csv"
     }
 }

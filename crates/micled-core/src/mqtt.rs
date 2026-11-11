@@ -22,6 +22,8 @@ use rustls::pki_types::ServerName;
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
 use serde_json::{json, Value};
 
+use crate::tr;
+
 /// Standard-Port ohne bzw. mit TLS
 pub const PORT: u16 = 1883;
 pub const TLS_PORT: u16 = 8883;
@@ -277,11 +279,11 @@ pub fn read_packet(r: &mut impl Read) -> std::io::Result<(u8, Vec<u8>)> {
         }
         shift += 7;
         if shift > 21 {
-            return Err(std::io::Error::new(ErrorKind::InvalidData, "Länge ungültig"));
+            return Err(std::io::Error::new(ErrorKind::InvalidData, tr!("Länge ungültig", "invalid length")));
         }
     }
     if len > MAX_PACKET {
-        return Err(std::io::Error::new(ErrorKind::InvalidData, "Paket zu groß"));
+        return Err(std::io::Error::new(ErrorKind::InvalidData, tr!("Paket zu groß", "packet too large")));
     }
     let mut body = vec![0u8; len];
     r.read_exact(&mut body)?;
@@ -291,14 +293,14 @@ pub fn read_packet(r: &mut impl Read) -> std::io::Result<(u8, Vec<u8>)> {
 /// Antwort auf CONNECT auswerten
 pub fn connack(header: u8, body: &[u8]) -> Result<(), String> {
     if header & 0xF0 != CONNACK || body.len() != 2 {
-        return Err("MQTT: unerwartete Antwort des Brokers".into());
+        return Err(tr!("MQTT: unerwartete Antwort des Brokers", "MQTT: unexpected reply from the broker"));
     }
     match body[1] {
         0 => Ok(()),
-        4 => Err("MQTT: Benutzer oder Passwort falsch".into()),
+        4 => Err(tr!("MQTT: Benutzer oder Passwort falsch", "MQTT: wrong user or password")),
         // Mosquitto (auch das Add-on in Home Assistant) meldet ein falsches Passwort mit 5
-        5 => Err("MQTT: Benutzer oder Passwort falsch oder nicht berechtigt".into()),
-        c => Err(format!("MQTT: Broker lehnt ab ({c})")),
+        5 => Err(tr!("MQTT: Benutzer oder Passwort falsch oder nicht berechtigt", "MQTT: wrong user or password, or not authorized")),
+        c => Err(tr!("MQTT: Broker lehnt ab ({c})", "MQTT: broker refuses ({c})")),
     }
 }
 
@@ -320,13 +322,13 @@ struct Net {
 }
 
 fn unreachable(e: &dyn std::fmt::Display) -> String {
-    format!("MQTT: Broker nicht erreichbar ({e})")
+    tr!("MQTT: Broker nicht erreichbar ({e})", "MQTT: broker unreachable ({e})")
 }
 
 impl Net {
     fn io_error(&self, e: std::io::Error) -> String {
         if self.tls && e.kind() == ErrorKind::InvalidData {
-            format!("MQTT: TLS-Verbindung abgelehnt ({e})")
+            tr!("MQTT: TLS-Verbindung abgelehnt ({e})", "MQTT: TLS connection refused ({e})")
         } else {
             unreachable(&e)
         }
@@ -348,7 +350,7 @@ impl Net {
         let tcp = match (tcp, last) {
             (Some(t), _) => t,
             (None, Some(e)) => return Err(unreachable(&e)),
-            (None, None) => return Err(unreachable(&"Adresse unbekannt")),
+            (None, None) => return Err(unreachable(&tr!("Adresse unbekannt", "address unknown"))),
         };
         tcp.set_read_timeout(Some(IO_TIMEOUT)).map_err(|e| unreachable(&e))?;
         tcp.set_write_timeout(Some(IO_TIMEOUT)).map_err(|e| unreachable(&e))?;
@@ -360,7 +362,7 @@ impl Net {
                 .map_err(|e| unreachable(&e))?
                 .with_root_certificates(roots)
                 .with_no_client_auth();
-            let name = ServerName::try_from(cfg.host.clone()).map_err(|_| format!("MQTT: ungültige Adresse {}", cfg.host))?;
+            let name = ServerName::try_from(cfg.host.clone()).map_err(|_| tr!("MQTT: ungültige Adresse {}", "MQTT: invalid address {}", cfg.host))?;
             let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
             Box::new(StreamOwned::new(conn, tcp))
         } else {
@@ -369,7 +371,7 @@ impl Net {
         let mut net = Net { stream, tls: cfg.tls };
         net.write(&connect_packet(client_id, will, &cfg.user, &cfg.password, KEEPALIVE_S))?;
         let (header, body) = read_packet(&mut net.stream).map_err(|e| match e.kind() {
-            ErrorKind::UnexpectedEof => "MQTT: Broker hat die Verbindung geschlossen".to_string(),
+            ErrorKind::UnexpectedEof => tr!("MQTT: Broker hat die Verbindung geschlossen", "MQTT: broker closed the connection"),
             _ => net.io_error(e),
         })?;
         connack(header, &body)?;
@@ -594,14 +596,14 @@ impl Session {
     }
 
     fn publish(&mut self, topic: &str, payload: &[u8], now: Instant) -> Result<(), String> {
-        let (_, link) = self.link.as_mut().ok_or("MQTT: nicht verbunden")?;
+        let (_, link) = self.link.as_mut().ok_or_else(|| tr!("MQTT: nicht verbunden", "MQTT: not connected"))?;
         link.write(&publish_packet(topic, payload))?;
         self.last_send = now;
         Ok(())
     }
 
     fn ping(&mut self, now: Instant) -> Result<(), String> {
-        let (_, link) = self.link.as_mut().ok_or("MQTT: nicht verbunden")?;
+        let (_, link) = self.link.as_mut().ok_or_else(|| tr!("MQTT: nicht verbunden", "MQTT: not connected"))?;
         link.ping()?;
         self.last_send = now;
         Ok(())

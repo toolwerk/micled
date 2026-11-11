@@ -22,6 +22,7 @@ use hidapi::{HidApi, HidDevice};
 use crate::color::Rgb;
 use crate::display::Scene;
 use crate::output::{scene_color, Device};
+use crate::tr;
 
 pub const VENDOR_ID: u16 = 0x1a86;
 pub const PRODUCT_ID: u16 = 0xfe07;
@@ -45,8 +46,12 @@ const OFF_GAP: Duration = Duration::from_millis(20);
 const READ_TRIES: usize = 8;
 const READ_TIMEOUT_MS: i32 = 400;
 
-pub const NOT_FOUND: &str = "Kein Lichtstreifen mit USB 1A86:FE07 gefunden (angesteckt?)";
-pub const NO_REPLY: &str = "Lichtstreifen antwortet nicht (läuft DX-Light oder ein anderes Programm?)";
+pub fn not_found() -> String {
+    tr!("Kein Lichtstreifen mit USB 1A86:FE07 gefunden (angesteckt?)", "No light strip with USB 1A86:FE07 found (plugged in?)")
+}
+pub fn no_reply() -> String {
+    tr!("Lichtstreifen antwortet nicht (läuft DX-Light oder ein anderes Programm?)", "Light strip does not reply (is DX-Light or another program running?)")
+}
 /// So lange leuchtet der Streifen bei „Testen“ in den Einstellungen rot
 pub const TEST_RED: Duration = Duration::from_secs(2);
 
@@ -145,8 +150,8 @@ fn choose<T: PartialEq>(devices: Vec<(u16, u16, T)>) -> Result<Vec<T>, String> {
     }
     match (out.is_empty(), other) {
         (false, _) => Ok(out),
-        (true, Some(pid)) => Err(format!("Controller 1A86:{pid:04X} wird nicht unterstützt (nur 1A86:FE07)")),
-        (true, None) => Err(NOT_FOUND.into()),
+        (true, Some(pid)) => Err(tr!("Controller 1A86:{pid:04X} wird nicht unterstützt (nur 1A86:FE07)", "Controller 1A86:{pid:04X} is not supported (only 1A86:FE07)")),
+        (true, None) => Err(not_found()),
     }
 }
 
@@ -160,7 +165,7 @@ fn find_in(api: &HidApi) -> Result<Vec<CString>, String> {
 }
 
 fn usb_error(e: impl std::fmt::Display) -> String {
-    format!("Lichtstreifen per USB: {e}")
+    tr!("Lichtstreifen per USB: {e}", "Light strip via USB: {e}")
 }
 
 /// Angesteckte Streifen (Pfade der Steuer-Schnittstelle)
@@ -251,7 +256,7 @@ pub fn execute(cmd: Cmd) -> Result<Option<Info>, String> {
 
 /// Geräteinfo des ersten Streifens (für „Testen“ und `micled strip info`)
 pub fn check() -> Result<Info, String> {
-    execute(Cmd::ReadInfo)?.ok_or_else(|| NO_REPLY.into())
+    execute(Cmd::ReadInfo)?.ok_or_else(no_reply)
 }
 
 /// Ziel in den Einstellungen. `connection` zählt das Anstecken: Ein neuer Wert
@@ -376,7 +381,7 @@ impl Session {
                 *self = Session { cfg: Some(strip.clone()), ..Session::default() };
             }
         }
-        let info = send(Cmd::ReadInfo)?.ok_or_else(|| NO_REPLY.to_string())?;
+        let info = send(Cmd::ReadInfo)?.ok_or_else(no_reply)?;
         self.info = Some(Some(info));
         if !self.bright {
             send(Cmd::Brightness)?;
@@ -486,8 +491,8 @@ mod tests {
         assert_eq!(found, Ok(vec!["a"]), "nur die Steuerung, doppelte einmal");
         let other = choose(vec![(0xfe0c, USAGE_PAGE, "x")]);
         assert_eq!(other, Err("Controller 1A86:FE0C wird nicht unterstützt (nur 1A86:FE07)".into()));
-        assert_eq!(choose::<&str>(vec![(PRODUCT_ID, 0x01, "tastatur")]), Err(NOT_FOUND.into()));
-        assert_eq!(choose::<&str>(vec![]), Err(NOT_FOUND.into()));
+        assert_eq!(choose::<&str>(vec![(PRODUCT_ID, 0x01, "tastatur")]), Err(not_found()));
+        assert_eq!(choose::<&str>(vec![]), Err(not_found()));
     }
 
     fn paths(ids: &[&str]) -> Vec<CString> {
@@ -534,7 +539,7 @@ mod tests {
         fn send(&mut self) -> impl FnMut(Cmd) -> Result<Option<Info>, String> + '_ {
             move |cmd| {
                 if self.fail {
-                    return Err(NOT_FOUND.into());
+                    return Err(not_found());
                 }
                 self.log.push(cmd);
                 Ok(if cmd == Cmd::ReadInfo { self.info } else { None })
@@ -624,7 +629,7 @@ mod tests {
         let mut f = Fake::new();
         f.fail = true;
         let mut s = Session::default();
-        assert_eq!(s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap_err(), NOT_FOUND);
+        assert_eq!(s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap_err(), not_found());
         f.fail = false;
         s.apply_with(Some(&strip(0)), &LIVE, &mut f.send()).unwrap();
         assert_eq!(f.take(), [Cmd::ReadInfo, Cmd::Brightness, Cmd::Color(Rgb::RED, Some(78))], "wiederholt");
@@ -718,11 +723,11 @@ mod tests {
         let mut f = Fake::new();
         f.fail = true;
         let mut s = Session::default();
-        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(NOT_FOUND.into()), 0));
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(not_found()), 0));
         assert!(!s.lit);
 
         let mut f = Fake::default();
-        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(NO_REPLY.into()), 0));
+        assert_eq!(test(&mut s, Some(&strip(0)), &mut f), (Err(no_reply()), 0));
         assert_eq!(f.take(), [Cmd::ReadInfo], "ohne Antwort kein Rot");
         assert!(!s.lit);
     }

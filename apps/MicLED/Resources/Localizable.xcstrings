@@ -1,0 +1,3443 @@
+{
+  "sourceLanguage": "de",
+  "strings": {
+    "": {
+      "shouldTranslate": false
+    },
+    "%@ · %@": {
+      "shouldTranslate": false
+    },
+    "%lld": {
+      "shouldTranslate": false
+    },
+    "%lld %%": {
+      "shouldTranslate": false
+    },
+    "%lld Calls": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Call"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Calls"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld call"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld calls"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld gefunden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gefunden"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld found"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld h %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %lld min"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %lld min"
+          }
+        }
+      }
+    },
+    "%lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        }
+      }
+    },
+    "%lld Minuten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Minuten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld minutes"
+          }
+        }
+      }
+    },
+    "%lld s Stille": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s Stille"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s of silence"
+          }
+        }
+      }
+    },
+    "192.168.1.20": {
+      "shouldTranslate": false
+    },
+    "192.168.1.32": {
+      "shouldTranslate": false
+    },
+    "192.168.1.50": {
+      "shouldTranslate": false
+    },
+    "192.168.1.60": {
+      "shouldTranslate": false
+    },
+    "30 Tage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 Tage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
+          }
+        }
+      }
+    },
+    "7 Tage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 Tage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 days"
+          }
+        }
+      }
+    },
+    ":red_circle:": {
+      "shouldTranslate": false
+    },
+    "Abends dimmen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abends dimmen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dim in the evening"
+          }
+        }
+      }
+    },
+    "Adresse": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
+          }
+        }
+      }
+    },
+    "Adresse geändert, bitte erneut koppeln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse geändert, bitte erneut koppeln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address changed, please pair again"
+          }
+        }
+      }
+    },
+    "Adresse hinzufügen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add address"
+          }
+        }
+      }
+    },
+    "Aktualisieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh"
+          }
+        }
+      }
+    },
+    "Alle Calls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Calls"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All calls"
+          }
+        }
+      }
+    },
+    "Allgemein": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allgemein"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
+      }
+    },
+    "Als CSV exportieren …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als CSV exportieren …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export as CSV …"
+          }
+        }
+      }
+    },
+    "An Home Assistant melden (MQTT)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Home Assistant melden (MQTT)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report to Home Assistant (MQTT)"
+          }
+        }
+      }
+    },
+    "Anmeldeobjekt: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmeldeobjekt: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login item: %@"
+          }
+        }
+      }
+    },
+    "Ansteuerung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansteuerung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection"
+          }
+        }
+      }
+    },
+    "App-Passwort": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Passwort"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App password"
+          }
+        }
+      }
+    },
+    "Art": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        }
+      }
+    },
+    "Auch „Nicht stören“ setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch „Nicht stören“ setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also set “Do not disturb”"
+          }
+        }
+      }
+    },
+    "Auf Sendung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Sendung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On air"
+          }
+        }
+      }
+    },
+    "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Sendung zeigt das Display ein Mikro- oder Kamerasymbol mit „ON AIR“, während eines Termins darunter dessen Ende (Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe. Danach läuft wieder, was vorher lief. Feste IP im Router empfohlen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While on air, the display shows a mic or camera symbol with “ON AIR”, during an event its end below it (setting under Events), the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color. Afterwards, whatever ran before comes back. A fixed IP in the router is recommended."
+          }
+        }
+      }
+    },
+    "Auf Sendung zeigt die Uhr „ON AIR“, während eines Termins als Lauftext mit dessen Ende („ON AIR BIS 14:30“, Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Sendung zeigt die Uhr „ON AIR“, während eines Termins als Lauftext mit dessen Ende („ON AIR BIS 14:30“, Einstellung unter Termine), beim Timer die Restminuten und bei Fokus „FOKUS“, jeweils in der eingestellten Farbe und bis zum Ende. Danach läuft wieder ihre normale Anzeige. Feste IP im Router empfohlen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While on air, the clock shows “ON AIR”, during an event as scrolling text with its end (“ON AIR TIL 14:30”, setting under Events), the remaining minutes during the timer and “FOCUS” during a Focus, each in the chosen color and until it ends. Afterwards, its normal display comes back. A fixed IP in the router is recommended."
+          }
+        }
+      }
+    },
+    "Aus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
+    "Automatik": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatik"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        }
+      }
+    },
+    "Automatik ${mode}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatik ${mode}"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic ${mode}"
+          }
+        }
+      }
+    },
+    "Automatisch nach Updates suchen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch nach Updates suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for updates automatically"
+          }
+        }
+      }
+    },
+    "Automatisch umschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch umschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch automatically"
+          }
+        }
+      }
+    },
+    "AWTRIX": {
+      "shouldTranslate": false
+    },
+    "AWTRIX erreichbar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AWTRIX erreichbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AWTRIX reachable"
+          }
+        }
+      }
+    },
+    "Beenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit"
+          }
+        }
+      }
+    },
+    "Bei jedem Wechsel geht ein POST mit {\"on_air\": true, \"camera\": false, \"apps\": […]} an diese Adresse, z. B. an einen Home-Assistant-Webhook für ein Türschild. Leer = aus.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei jedem Wechsel geht ein POST mit {\"on_air\": true, \"camera\": false, \"apps\": […]} an diese Adresse, z. B. an einen Home-Assistant-Webhook für ein Türschild. Leer = aus."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On every change, a POST with {\"on_air\": true, \"camera\": false, \"apps\": […]} goes to this address, e.g. a Home Assistant webhook for a door sign. Empty = off."
+          }
+        }
+      }
+    },
+    "Bei Mikrofon automatisch umschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Mikrofon automatisch umschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch with the microphone"
+          }
+        }
+      }
+    },
+    "Beim Anmelden starten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Anmelden starten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch at login"
+          }
+        }
+      }
+    },
+    "Benutzer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User"
+          }
+        }
+      }
+    },
+    "Bis": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Until"
+          }
+        }
+      }
+    },
+    "Bitte wählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte wählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please choose"
+          }
+        }
+      }
+    },
+    "Bridge": {
+      "shouldTranslate": false
+    },
+    "Broker": {
+      "shouldTranslate": false
+    },
+    "Büro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Büro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Office"
+          }
+        }
+      }
+    },
+    "Call": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call"
+          }
+        }
+      }
+    },
+    "Calls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calls"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calls"
+          }
+        }
+      }
+    },
+    "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afterwards the device gets back its on/off, brightness and color or effect from before. A fixed IP is recommended."
+          }
+        }
+      }
+    },
+    "Den Timer startest du im Menü, per Rechtsklick auf das Symbol, mit micled://timer/25 oder in Kurzbefehlen. Am Ende blinkt die Lampe kurz. Ein Call hat Vorrang, eine gewählte Farbe beendet den Timer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Timer startest du im Menü, per Rechtsklick auf das Symbol, mit micled://timer/25 oder in Kurzbefehlen. Am Ende blinkt die Lampe kurz. Ein Call hat Vorrang, eine gewählte Farbe beendet den Timer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the timer from the menu, by right-clicking the icon, with micled://timer/25 or in Shortcuts. At the end the light flashes briefly. A call takes precedence, choosing a color ends the timer."
+          }
+        }
+      }
+    },
+    "Die Adresse muss mit http:// oder https:// beginnen und einen Server nennen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Adresse muss mit http:// oder https:// beginnen und einen Server nennen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address must start with http:// or https:// and name a server."
+          }
+        }
+      }
+    },
+    "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The light flashes shortly before every event once “Flash before events” is on, except all-day and cancelled events. Not during a call and only via USB. If a call runs during an event, Pixoo and AWTRIX show its end, e.g. “TIL 14:30”, never the title. Events directly from Nextcloud: section Nextcloud › Read events. A Nextcloud calendar already added to macOS doesn’t need that."
+          }
+        }
+      }
+    },
+    "Die Lampe hat keine eigene Helligkeit, MicLED rechnet die Farben herunter. Gilt für alle Farben. „Bis“ vor „Von“ heißt über Mitternacht.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Lampe hat keine eigene Helligkeit, MicLED rechnet die Farben herunter. Gilt für alle Farben. „Bis“ vor „Von“ heißt über Mitternacht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The light has no brightness of its own, MicLED scales the colors down. Applies to all colors. “Until” before “From” means across midnight."
+          }
+        }
+      }
+    },
+    "Die Luxafor-App muss laufen. Sie gibt die Befehle an die Lampe weiter.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Luxafor-App muss laufen. Sie gibt die Befehle an die Lampe weiter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Luxafor app must be running. It passes the commands on to the light."
+          }
+        }
+      }
+    },
+    "Diese Programme schalten die Lampe nicht um, z. B. ein Diktier- oder Aufnahmewerkzeug, das das Mikrofon dauerhaft offen hält.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Programme schalten die Lampe nicht um, z. B. ein Diktier- oder Aufnahmewerkzeug, das das Mikrofon dauerhaft offen hält."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These apps don’t switch the light, e.g. a dictation or recording tool that keeps the microphone open all the time."
+          }
+        }
+      }
+    },
+    "Diese Woche (KW %lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Woche (KW %lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This week (wk %lld)"
+          }
+        }
+      }
+    },
+    "Eigene Farbe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Farbe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom color"
+          }
+        }
+      }
+    },
+    "Ein": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
+    "Einmal am Tag. Vor der Installation fragt MicLED nach.\nInstalliert: MicLED %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal am Tag. Vor der Installation fragt MicLED nach.\nInstalliert: MicLED %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once a day. MicLED asks before installing.\nInstalled: MicLED %@"
+          }
+        }
+      }
+    },
+    "Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold the power button for 5–7 seconds until the lights flash, then “Pair”. Afterwards the light gets back its on/off, brightness and color or effect from before. The key is stored in the keychain."
+          }
+        }
+      }
+    },
+    "Einstellungen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings …"
+          }
+        }
+      }
+    },
+    "Emoji": {
+      "shouldTranslate": false
+    },
+    "Ende des Termins auf Pixoo und AWTRIX zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ende des Termins auf Pixoo und AWTRIX zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the event end on Pixoo and AWTRIX"
+          }
+        }
+      }
+    },
+    "Entfernen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "Entwickler-Builds suchen nicht nach Updates.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwickler-Builds suchen nicht nach Updates."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer builds don’t check for updates."
+          }
+        }
+      }
+    },
+    "Erscheint in Home Assistant als Gerät „MicLED (%@)“ mit Auf Sendung, Kamera und Programm. Endet MicLED oder schläft der Mac, ist es dort nicht verfügbar. TLS prüft das Zertifikat gegen die öffentlichen Zertifizierungsstellen, z. B. Let's Encrypt. Das Passwort liegt im Schlüsselbund; Anleitung in der README.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheint in Home Assistant als Gerät „MicLED (%@)“ mit Auf Sendung, Kamera und Programm. Endet MicLED oder schläft der Mac, ist es dort nicht verfügbar. TLS prüft das Zertifikat gegen die öffentlichen Zertifizierungsstellen, z. B. Let's Encrypt. Das Passwort liegt im Schlüsselbund; Anleitung in der README."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appears in Home Assistant as the device “MicLED (%@)” with on air, camera and app. If MicLED quits or the Mac sleeps, it is unavailable there. TLS checks the certificate against the public certificate authorities, e.g. Let's Encrypt. The password is stored in the keychain; instructions in the README."
+          }
+        }
+      }
+    },
+    "Farbe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color"
+          }
+        }
+      }
+    },
+    "Farbe bei Fokus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe bei Fokus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color during Focus"
+          }
+        }
+      }
+    },
+    "Farbe bei Kamera an": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe bei Kamera an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color when camera is on"
+          }
+        }
+      }
+    },
+    "Farbe bei Mikro an": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe bei Mikro an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color when mic is on"
+          }
+        }
+      }
+    },
+    "Farbe bei Mikro aus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe bei Mikro aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color when mic is off"
+          }
+        }
+      }
+    },
+    "Farbe beim Konzentrations-Timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe beim Konzentrations-Timer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color during the timer"
+          }
+        }
+      }
+    },
+    "Farbe je Programm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe je Programm"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color per app"
+          }
+        }
+      }
+    },
+    "Farbe setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set color"
+          }
+        }
+      }
+    },
+    "Farbe zuweisen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe zuweisen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assign color"
+          }
+        }
+      }
+    },
+    "Farbe, falls keine vorherige bekannt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe, falls keine vorherige bekannt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color if no previous one is known"
+          }
+        }
+      }
+    },
+    "Feste Farbe setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feste Farbe setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a fixed color"
+          }
+        }
+      }
+    },
+    "Flur": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flur"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hallway"
+          }
+        }
+      }
+    },
+    "Flur – Tür": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flur – Tür"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hallway – Door"
+          }
+        }
+      }
+    },
+    "Fokus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus"
+          }
+        }
+      }
+    },
+    "Fokus an": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus on"
+          }
+        }
+      }
+    },
+    "Fokus an MicLED melden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus an MicLED melden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report Focus to MicLED"
+          }
+        }
+      }
+    },
+    "Fokus von macOS anzeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus von macOS anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show macOS Focus"
+          }
+        }
+      }
+    },
+    "Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Works without the Luxafor app. If the Luxafor app is running, it may override the color."
+          }
+        }
+      }
+    },
+    "Für eine Fokus-Automation: zeigt die Fokusfarbe, solange der Fokus an ist.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für eine Fokus-Automation: zeigt die Fokusfarbe, solange der Fokus an ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For a Focus automation: shows the Focus color while the Focus is on."
+          }
+        }
+      }
+    },
+    "Gefunden: %@ · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefunden: %@ · %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found: %@ · %@"
+          }
+        }
+      }
+    },
+    "Gefunden: %u LEDs, Firmware %@ ✓": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefunden: %u LEDs, Firmware %@ ✓"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found: %u LEDs, firmware %@ ✓"
+          }
+        }
+      }
+    },
+    "Gekoppelt ✓": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gekoppelt ✓"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paired ✓"
+          }
+        }
+      }
+    },
+    "Gerade am Mikrofon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerade am Mikrofon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently using the microphone"
+          }
+        }
+      }
+    },
+    "ggü. Vorwoche bis jetzt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ggü. Vorwoche bis jetzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vs. last week to date"
+          }
+        }
+      }
+    },
+    "Gilt auch, wenn der Bildschirm ausgeht. Während eines Calls bleibt die Mikrofarbe. Danach kommt die vorherige Farbe zurück.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gilt auch, wenn der Bildschirm ausgeht. Während eines Calls bleibt die Mikrofarbe. Danach kommt die vorherige Farbe zurück."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also applies when the display turns off. During a call the mic color stays. Afterwards the previous color comes back."
+          }
+        }
+      }
+    },
+    "Govee": {
+      "shouldTranslate": false
+    },
+    "Helligkeit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Helligkeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness"
+          }
+        }
+      }
+    },
+    "Heute %@ auf Sendung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute %@ auf Sendung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On air today: %@"
+          }
+        }
+      }
+    },
+    "Hinzufügen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "Home Assistant (MQTT)": {
+      "shouldTranslate": false
+    },
+    "homeassistant.local": {
+      "shouldTranslate": false
+    },
+    "http://homeassistant.local:8123/api/webhook/…": {
+      "shouldTranslate": false
+    },
+    "https://cloud.example.org": {
+      "shouldTranslate": false
+    },
+    "Ignorieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore"
+          }
+        }
+      }
+    },
+    "Ignorierte Programme": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorierte Programme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignored apps"
+          }
+        }
+      }
+    },
+    "Im Call": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Call"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In a call"
+          }
+        }
+      }
+    },
+    "Inhalt:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inhalt:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content:"
+          }
+        }
+      }
+    },
+    "Kalender von macOS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender von macOS"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS calendars"
+          }
+        }
+      }
+    },
+    "Kamera": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera"
+          }
+        }
+      }
+    },
+    "Kamera aktiv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera aktiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera active"
+          }
+        }
+      }
+    },
+    "Kamera an zählt wie Mikro an, hat aber eine eigene Farbe.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera an zählt wie Mikro an, hat aber eine eigene Farbe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera on counts like mic on, but has its own color."
+          }
+        }
+      }
+    },
+    "Kamera auswerten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera auswerten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch the camera"
+          }
+        }
+      }
+    },
+    "Kamera in Benutzung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera in Benutzung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera in use"
+          }
+        }
+      }
+    },
+    "Kein Programm nutzt das Mikrofon.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Programm nutzt das Mikrofon."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No app is using the microphone."
+          }
+        }
+      }
+    },
+    "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No access to the calendar. System Settings › Privacy › Calendars"
+          }
+        }
+      }
+    },
+    "Keine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "Keine Lampe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Lampe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No light"
+          }
+        }
+      }
+    },
+    "Keine, alle Programme nutzen die Mikrofarbe.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine, alle Programme nutzen die Mikrofarbe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None, all apps use the mic color."
+          }
+        }
+      }
+    },
+    "Knopf an der Bridge drücken, dann „Koppeln“. Die IP-Adresse steht in der Hue-App unter Einstellungen › Bridges. Bei einem Raum werden alle Lampen darin geschaltet. Danach haben die Lampen wieder Farbe, Helligkeit und An/Aus von vorher. Der Schlüssel liegt im Schlüsselbund.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knopf an der Bridge drücken, dann „Koppeln“. Die IP-Adresse steht in der Hue-App unter Einstellungen › Bridges. Bei einem Raum werden alle Lampen darin geschaltet. Danach haben die Lampen wieder Farbe, Helligkeit und An/Aus von vorher. Der Schlüssel liegt im Schlüsselbund."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press the button on the bridge, then “Pair”. The IP address is in the Hue app under Settings › Bridges. For a room, all lights in it are switched. Afterwards the lights get back their color, brightness and on/off from before. The key is stored in the keychain."
+          }
+        }
+      }
+    },
+    "Konzentration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        }
+      }
+    },
+    "Konzentration beenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration beenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop timer"
+          }
+        }
+      }
+    },
+    "Konzentration für ${minutes} Minuten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration für ${minutes} Minuten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer for ${minutes} minutes"
+          }
+        }
+      }
+    },
+    "Konzentration noch %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration noch %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer: %@ left"
+          }
+        }
+      }
+    },
+    "Konzentration starten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration starten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start timer"
+          }
+        }
+      }
+    },
+    "Konzentration und Fokus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration und Fokus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer and Focus"
+          }
+        }
+      }
+    },
+    "Koppeln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koppeln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair"
+          }
+        }
+      }
+    },
+    "Kopple …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopple …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing …"
+          }
+        }
+      }
+    },
+    "KW %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KW %lld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wk %lld"
+          }
+        }
+      }
+    },
+    "Lampe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        }
+      }
+    },
+    "Lampe #%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe #%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light #%@"
+          }
+        }
+      }
+    },
+    "Lampe auf ${color} setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe auf ${color} setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set light to ${color}"
+          }
+        }
+      }
+    },
+    "Lampe aus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light off"
+          }
+        }
+      }
+    },
+    "Lampe aus bei Ruhezustand und Sperre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe aus bei Ruhezustand und Sperre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light off during sleep and lock"
+          }
+        }
+      }
+    },
+    "Lampe ausschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampe ausschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn light off"
+          }
+        }
+      }
+    },
+    "Lampenfarbe noch unbekannt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampenfarbe noch unbekannt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light color not known yet"
+          }
+        }
+      }
+    },
+    "Lampenfarbe setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampenfarbe setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set light color"
+          }
+        }
+      }
+    },
+    "Lichtstreifen (USB)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lichtstreifen (USB)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light strip (USB)"
+          }
+        }
+      }
+    },
+    "Luxafor-App, Tab „Webhook“": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luxafor-App, Tab „Webhook“"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luxafor app, “Webhook” tab"
+          }
+        }
+      }
+    },
+    "Luxafor-ID": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luxafor-ID"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luxafor ID"
+          }
+        }
+      }
+    },
+    "Längster Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Längster Tag"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Longest day"
+          }
+        }
+      }
+    },
+    "macOS gibt den Fokus nicht frei. Lege in Kurzbefehle › Automation je Fokus „Fokus an MicLED melden“ an (an und aus).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS gibt den Fokus nicht frei. Lege in Kurzbefehle › Automation je Fokus „Fokus an MicLED melden“ an (an und aus)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS doesn’t share the Focus. In Shortcuts › Automation, create “Report Focus to MicLED” for each Focus (on and off)."
+          }
+        }
+      }
+    },
+    "micled": {
+      "shouldTranslate": false
+    },
+    "MicLED %@": {
+      "shouldTranslate": false
+    },
+    "MicLED beenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED beenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit MicLED"
+          }
+        }
+      }
+    },
+    "MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED shows the status only on the display, in Slack, in Nextcloud and at the webhook."
+          }
+        }
+      }
+    },
+    "MicLED, Kamera aktiv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED, Kamera aktiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED, camera active"
+          }
+        }
+      }
+    },
+    "MicLED, Mikrofon aktiv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED, Mikrofon aktiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED, microphone active"
+          }
+        }
+      }
+    },
+    "MicLED-Menü": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED-Menü"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED Menu"
+          }
+        }
+      }
+    },
+    "MicLED-Wochen.csv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED-Wochen.csv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED-Weeks.csv"
+          }
+        }
+      }
+    },
+    "Mikro an": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikro an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mic on"
+          }
+        }
+      }
+    },
+    "Mikrofon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone"
+          }
+        }
+      }
+    },
+    "Mikrofon aktiv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon aktiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone active"
+          }
+        }
+      }
+    },
+    "Mikrofon aus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone off"
+          }
+        }
+      }
+    },
+    "Mikrofon-Automatik schalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon-Automatik schalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch microphone automatic"
+          }
+        }
+      }
+    },
+    "min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
+          }
+        }
+      }
+    },
+    "Minuten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minuten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes"
+          }
+        }
+      }
+    },
+    "Nach Updates suchen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Updates suchen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates …"
+          }
+        }
+      }
+    },
+    "Nanoleaf": {
+      "shouldTranslate": false
+    },
+    "Nextcloud": {
+      "shouldTranslate": false
+    },
+    "Nicht gekoppelt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht gekoppelt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not paired"
+          }
+        }
+      }
+    },
+    "Nichts gefunden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts gefunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing found"
+          }
+        }
+      }
+    },
+    "Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only one app at a time can control the controller: quit DX-Light, SyncLight, backlit etc. first."
+          }
+        }
+      }
+    },
+    "Ohne Lampe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Lampe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without a light"
+          }
+        }
+      }
+    },
+    "Passwort": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        }
+      }
+    },
+    "Philips Hue": {
+      "shouldTranslate": false
+    },
+    "Pixoo 64": {
+      "shouldTranslate": false
+    },
+    "Pixoo erreichbar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pixoo erreichbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pixoo reachable"
+          }
+        }
+      }
+    },
+    "Port": {
+      "shouldTranslate": false
+    },
+    "Prüfe …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking …"
+          }
+        }
+      }
+    },
+    "Raum: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raum: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Room: %@"
+          }
+        }
+      }
+    },
+    "Regal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shelf"
+          }
+        }
+      }
+    },
+    "Schnellfarben im Menü": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellfarben im Menü"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick colors in the menu"
+          }
+        }
+      }
+    },
+    "Schreibtisch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreibtisch"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desk"
+          }
+        }
+      }
+    },
+    "Server": {
+      "shouldTranslate": false
+    },
+    "Setzt die Luxafor-Lampe auf eine Farbe, z. B. ff8800, #f80 oder rot.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setzt die Luxafor-Lampe auf eine Farbe, z. B. ff8800, #f80 oder rot."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sets the Luxafor light to a color, e.g. ff8800, #f80 or red."
+          }
+        }
+      }
+    },
+    "Slack": {
+      "shouldTranslate": false
+    },
+    "Slack-Status setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slack-Status setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Slack status"
+          }
+        }
+      }
+    },
+    "Statistik": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistik"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistics"
+          }
+        }
+      }
+    },
+    "Statt der Mikrofarbe, z. B. Orange für eine Aufnahme mit Plaud. Nutzen mehrere Programme das Mikrofon, gilt der oberste Eintrag. Die Kamerafarbe hat Vorrang.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statt der Mikrofarbe, z. B. Orange für eine Aufnahme mit Plaud. Nutzen mehrere Programme das Mikrofon, gilt der oberste Eintrag. Die Kamerafarbe hat Vorrang."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instead of the mic color, e.g. orange for a recording with Plaud. If several apps use the microphone, the top entry wins. The camera color takes precedence."
+          }
+        }
+      }
+    },
+    "Status auf dem Lichtstreifen zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf dem Lichtstreifen zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on the light strip"
+          }
+        }
+      }
+    },
+    "Status auf dem Pixoo 64 zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf dem Pixoo 64 zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on the Pixoo 64"
+          }
+        }
+      }
+    },
+    "Status auf der AWTRIX-Uhr zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf der AWTRIX-Uhr zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on the AWTRIX clock"
+          }
+        }
+      }
+    },
+    "Status auf einer Hue-Lampe zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf einer Hue-Lampe zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on a Hue light"
+          }
+        }
+      }
+    },
+    "Status auf Govee-Lampen zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf Govee-Lampen zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on Govee lights"
+          }
+        }
+      }
+    },
+    "Status auf Nanoleaf-Lampen zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf Nanoleaf-Lampen zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on Nanoleaf lights"
+          }
+        }
+      }
+    },
+    "Status auf WLED-Geräten zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf WLED-Geräten zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on WLED devices"
+          }
+        }
+      }
+    },
+    "Status setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status setzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set status"
+          }
+        }
+      }
+    },
+    "Statustext": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statustext"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status text"
+          }
+        }
+      }
+    },
+    "Stehlampe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stehlampe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floor lamp"
+          }
+        }
+      }
+    },
+    "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strips with a Robobloq controller (USB 1A86:FE07), e.g. Meewata. In the selected states the whole strip lights up in the color, otherwise it is off. After plugging it back in, it gets the color again within a few seconds."
+          }
+        }
+      }
+    },
+    "Stunden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hours"
+          }
+        }
+      }
+    },
+    "Suche …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching …"
+          }
+        }
+      }
+    },
+    "Suchen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "Summe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total"
+          }
+        }
+      }
+    },
+    "Summen je Woche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summen je Woche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totals per week"
+          }
+        }
+      }
+    },
+    "Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day"
+          }
+        }
+      }
+    },
+    "Termine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        }
+      }
+    },
+    "Termine lesen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine lesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read events"
+          }
+        }
+      }
+    },
+    "Teste …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teste …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testing …"
+          }
+        }
+      }
+    },
+    "Testen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test"
+          }
+        }
+      }
+    },
+    "Timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        }
+      }
+    },
+    "TLS": {
+      "shouldTranslate": false
+    },
+    "Umschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle"
+          }
+        }
+      }
+    },
+    "Unbekannter Befehl: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbekannter Befehl: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown command: %@"
+          }
+        }
+      }
+    },
+    "Updates": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        }
+      }
+    },
+    "USB direkt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB direkt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB directly"
+          }
+        }
+      }
+    },
+    "User-Token": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User-Token"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User token"
+          }
+        }
+      }
+    },
+    "Verbindung prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung prüfen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check connection"
+          }
+        }
+      }
+    },
+    "Verbindung zur Lampe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung zur Lampe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection to the light"
+          }
+        }
+      }
+    },
+    "Verbunden als %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbunden als %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected as %@"
+          }
+        }
+      }
+    },
+    "Verbunden ✓": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbunden ✓"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected ✓"
+          }
+        }
+      }
+    },
+    "Verbunden, %lld Kalender": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbunden, %lld Kalender"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Connected, %lld calendar"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Connected, %lld calendars"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Von": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
+          }
+        }
+      }
+    },
+    "Vor Terminen blinken": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vor Terminen blinken"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flash before events"
+          }
+        }
+      }
+    },
+    "vorherige Farbe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vorherige Farbe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "previous color"
+          }
+        }
+      }
+    },
+    "Vorherige Farbe wiederherstellen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorherige Farbe wiederherstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore previous color"
+          }
+        }
+      }
+    },
+    "Vorlauf": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlauf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lead time"
+          }
+        }
+      }
+    },
+    "Webhook": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webhook"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webhook"
+          }
+        }
+      }
+    },
+    "Wenn das Mikro aus geht": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn das Mikro aus geht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the mic turns off"
+          }
+        }
+      }
+    },
+    "WLED": {
+      "shouldTranslate": false
+    },
+    "Woche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
+          }
+        }
+      }
+    },
+    "Wochen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weeks"
+          }
+        }
+      }
+    },
+    "Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While you are on air, the text appears in your Nextcloud status, afterwards the previous one comes back. MicLED doesn’t overwrite a message you set yourself. “Read events” works with “Flash before events” and the event end on Pixoo and AWTRIX. Create the app password in Nextcloud under Settings › Security; MicLED stores it in the keychain."
+          }
+        }
+      }
+    },
+    "Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While you are on air, the text appears in your Slack profile, afterwards the previous status comes back. MicLED doesn’t overwrite a status you set yourself. The token is stored in the keychain; instructions in the README."
+          }
+        }
+      }
+    },
+    "xoxp-…": {
+      "shouldTranslate": false
+    },
+    "Zeigen bei": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigen bei"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show for"
+          }
+        }
+      }
+    },
+    "Zeigt die Timerfarbe für die gewählte Zeit, am Ende blinkt die Lampe.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt die Timerfarbe für die gewählte Zeit, am Ende blinkt die Lampe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows the timer color for the chosen time, at the end the light flashes."
+          }
+        }
+      }
+    },
+    "Zeitraum": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraum"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Period"
+          }
+        }
+      }
+    },
+    "Zurückschalten nach": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurückschalten nach"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch back after"
+          }
+        }
+      }
+    },
+    "Zurücksetzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurücksetzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        }
+      }
+    },
+    "· danach": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· danach"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· then"
+          }
+        }
+      }
+    },
+    "Ø je Arbeitstag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ø je Arbeitstag"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avg. per workday"
+          }
+        }
+      }
+    },
+    "„%@“ ist keine Farbe. Erlaubt sind z. B. ff8800, #f80 oder rot.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist keine Farbe. Erlaubt sind z. B. ff8800, #f80 oder rot."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is not a color. Allowed are e.g. ff8800, #f80 or red."
+          }
+        }
+      }
+    },
+    "„Auf Sendung“ melden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Auf Sendung“ melden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report “on air”"
+          }
+        }
+      }
+    },
+    "„LAN Control“ in der Govee-App je Gerät einschalten. Danach haben die Lampen wieder An/Aus, Helligkeit und Farbe von vorher. Feste IP empfohlen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„LAN Control“ in der Govee-App je Gerät einschalten. Danach haben die Lampen wieder An/Aus, Helligkeit und Farbe von vorher. Feste IP empfohlen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on “LAN Control” for each device in the Govee app. Afterwards the lights get back their on/off, brightness and color from before. A fixed IP is recommended."
+          }
+        }
+      }
+    },
+    "🔴": {
+      "shouldTranslate": false
+    }
+  },
+  "version": "1.0"
+}

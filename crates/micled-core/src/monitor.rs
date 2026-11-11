@@ -16,6 +16,7 @@ use crate::stats::{self, CallLog, WeekSum};
 use crate::display::Scene;
 use crate::presence;
 use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, nc_status, onair, output, pixoo, robobloq, shared, slack, wled};
+use crate::tr;
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -295,7 +296,7 @@ impl Monitor {
     pub fn test_strip(&self) -> Result<robobloq::Info, String> {
         let (reply, result) = channel();
         let _ = self.tx.send(Cmd::TestStrip(reply));
-        result.recv_timeout(STRIP_TEST_WAIT).unwrap_or_else(|_| Err("Lichtstreifen: Test ohne Antwort".into()))
+        result.recv_timeout(STRIP_TEST_WAIT).unwrap_or_else(|_| Err(tr!("Lichtstreifen: Test ohne Antwort", "Light strip: test without reply")))
     }
 
     /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen
@@ -809,6 +810,10 @@ impl Worker {
 
         let url = self.engine.config().on_air_url.trim().to_string();
         if url.is_empty() {
+            return;
+        }
+        if !onair::valid_url(&url) {
+            *self.on_air_error.lock().unwrap() = Some(onair::invalid_url());
             return;
         }
         let apps: Vec<String> = self

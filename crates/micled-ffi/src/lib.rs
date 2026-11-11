@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use micled_core as core;
-use micled_core::Rgb;
+use micled_core::{tr, Rgb};
 
 uniffi::setup_scaffolding!();
 
@@ -653,6 +653,12 @@ impl MicLedController {
     }
 }
 
+/// Ob die Adresse für „Auf Sendung“ die richtige Form hat (nicht, ob der Server antwortet).
+#[uniffi::export]
+pub fn on_air_url_valid(url: String) -> bool {
+    core::onair::valid_url(&url)
+}
+
 /// Programme, die ab Werk ignoriert werden (Vorgabe für die Einstellungen)
 #[uniffi::export]
 pub fn default_ignored() -> Vec<String> {
@@ -671,6 +677,13 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
     })
 }
 
+/// Sprache der Texte aus dem Kern nach dem Sprachcode von macOS (`de`, `en` …);
+/// alles außer Deutsch wird Englisch. Vor dem ersten anderen Aufruf setzen.
+#[uniffi::export]
+pub fn set_language(code: String) {
+    core::lang::set(core::lang::from_code(&code));
+}
+
 /// Farbe aus Text (`ff8800`, `#f80`, `rot`) als `rrggbb`, `None` wenn unlesbar
 #[uniffi::export]
 pub fn parse_color(text: String) -> Option<String> {
@@ -683,7 +696,7 @@ pub fn parse_color(text: String) -> Option<String> {
 pub fn nextcloud_check(server: String, user: String, password: String) -> NextcloudCheck {
     let result = match nextcloud(server, user, password) {
         Some(nc) => core::caldav::check(&nc),
-        None => Err("Server, Benutzer und App-Passwort eintragen".into()),
+        None => Err(tr!("Server, Benutzer und App-Passwort eintragen", "Enter server, user and app password")),
     };
     match result {
         Ok(n) => NextcloudCheck { calendars: n as u32, error: None },
@@ -697,7 +710,7 @@ pub fn nextcloud_check(server: String, user: String, password: String) -> Nextcl
 pub fn mqtt_check(host: String, port: u16, tls: bool, user: String, password: String) -> MqttCheck {
     let result = match mqtt_access(&host, port, tls, &user, password) {
         Some(m) => core::mqtt::check(&m),
-        None => Err("Adresse des Brokers eintragen".into()),
+        None => Err(tr!("Adresse des Brokers eintragen", "Enter the broker address")),
     };
     MqttCheck { error: result.err() }
 }
@@ -717,7 +730,7 @@ pub fn slack_check(token: String) -> SlackCheck {
 pub fn pixoo_check(host: String) -> PixooCheck {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::pixoo::check(&h),
-        None => Err("Adresse des Pixoo eintragen".into()),
+        None => Err(tr!("Adresse des Pixoo eintragen", "Enter the Pixoo address")),
     };
     PixooCheck { error: result.err() }
 }
@@ -728,7 +741,7 @@ pub fn pixoo_check(host: String) -> PixooCheck {
 pub fn awtrix_check(host: String) -> AwtrixCheck {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::awtrix::check(&h),
-        None => Err("Adresse der Uhr eintragen".into()),
+        None => Err(tr!("Adresse der Uhr eintragen", "Enter the clock address")),
     };
     AwtrixCheck { error: result.err() }
 }
@@ -739,7 +752,7 @@ pub fn awtrix_check(host: String) -> AwtrixCheck {
 pub fn hue_pair(host: String) -> HuePair {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::hue::pair(&h),
-        None => Err("Adresse der Bridge eintragen".into()),
+        None => Err(tr!("Adresse der Bridge eintragen", "Enter the bridge address")),
     };
     match result {
         Ok((key, fingerprint)) => HuePair { key, fingerprint, error: None },
@@ -754,7 +767,7 @@ pub fn hue_targets(host: String, key: String, fingerprint: String) -> HueTargets
     // Das Ziel zählt hier nicht, nur der Zugang
     let result = match hue(&host, key, fingerprint, HueTargetKind::Light, "-".into()) {
         Some(h) => core::hue::targets(&h),
-        None => Err("Erst mit der Bridge koppeln".into()),
+        None => Err(tr!("Erst mit der Bridge koppeln", "Pair with the bridge first")),
     };
     match result {
         Ok(list) => HueTargets {
@@ -803,7 +816,7 @@ pub fn wled_discover() -> FoundDevices {
 pub fn nanoleaf_pair(host: String) -> NanoleafPair {
     let result = match core::nanoleaf::normalize(&host) {
         Some(h) => core::nanoleaf::pair(&h),
-        None => Err("Adresse der Nanoleaf-Lampe eintragen".into()),
+        None => Err(tr!("Adresse der Nanoleaf-Lampe eintragen", "Enter the Nanoleaf light address")),
     };
     match result {
         Ok(key) => NanoleafPair { key, error: None },

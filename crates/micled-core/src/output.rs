@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::color::Rgb;
 use crate::display::Scene;
+use crate::tr;
 
 /// Ein Gerät, das eine [`Scene`] zeigt und danach seinen alten Zustand
 /// wiederherstellt
@@ -166,8 +167,8 @@ pub(crate) fn instance_name(fullname: &str, service: &str) -> String {
 /// jedes Gerät einmal.
 pub(crate) fn bonjour(service: &str, what: &str) -> Result<Vec<(Ipv4Addr, u16, String)>, String> {
     use mdns_sd::{ServiceDaemon, ServiceEvent};
-    let daemon = ServiceDaemon::new().map_err(|e| format!("{what}-Suche nicht möglich: {e}"))?;
-    let rx = daemon.browse(service).map_err(|e| format!("{what}-Suche nicht möglich: {e}"))?;
+    let daemon = ServiceDaemon::new().map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
+    let rx = daemon.browse(service).map_err(|e| tr!("{what}-Suche nicht möglich: {e}", "{what} search not possible: {e}"))?;
     let deadline = Instant::now() + SCAN_WAIT;
     let mut found: Vec<(Ipv4Addr, u16, String)> = Vec::new();
     while let Ok(ev) = rx.recv_deadline(deadline) {
@@ -250,7 +251,7 @@ where
                         s.spawn(move || d.apply(cfg.as_ref(), &scene))
                     })
                     .collect();
-                handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err("Ausgabe abgestürzt".into()))).collect()
+                handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(tr!("Ausgabe abgestürzt", "Output crashed")))).collect()
             });
             let mut results = results;
             leaving = results.split_off(wanted.len());

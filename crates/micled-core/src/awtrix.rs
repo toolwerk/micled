@@ -12,6 +12,7 @@ use serde_json::{json, Value};
 
 use crate::display::{until_text, Scene};
 use crate::output::{scene_color, Device};
+use crate::tr;
 
 const TIMEOUT: Duration = Duration::from_secs(3);
 
@@ -33,7 +34,7 @@ fn send(host: &str, call: Call) -> Result<(), String> {
         Call::Notify(body) => agent.post(&format!("http://{host}/api/notify")).send_json(&body),
         Call::Dismiss => agent.post(&format!("http://{host}/api/notify/dismiss")).send_empty(),
     };
-    reply.map(|_| ()).map_err(|e| format!("AWTRIX nicht erreichbar: {e}"))
+    reply.map(|_| ()).map_err(|e| tr!("AWTRIX nicht erreichbar: {e}", "AWTRIX unreachable: {e}"))
 }
 
 /// Antwort von `/api/stats` prüfen
@@ -41,7 +42,7 @@ fn check_reply(v: &Value) -> Result<(), String> {
     if v.get("uid").is_some() {
         Ok(())
     } else {
-        Err("AWTRIX nicht erreichbar: unerwartete Antwort".into())
+        Err(tr!("AWTRIX nicht erreichbar: unerwartete Antwort", "AWTRIX unreachable: unexpected reply"))
     }
 }
 
@@ -50,10 +51,10 @@ pub fn check(host: &str) -> Result<(), String> {
     let v: Value = agent()
         .get(&format!("http://{host}/api/stats"))
         .call()
-        .map_err(|e| format!("AWTRIX nicht erreichbar: {e}"))?
+        .map_err(|e| tr!("AWTRIX nicht erreichbar: {e}", "AWTRIX unreachable: {e}"))?
         .body_mut()
         .read_json()
-        .map_err(|_| "AWTRIX nicht erreichbar: unerwartete Antwort".to_string())?;
+        .map_err(|_| tr!("AWTRIX nicht erreichbar: unerwartete Antwort", "AWTRIX unreachable: unexpected reply"))?;
     check_reply(&v)
 }
 
@@ -66,7 +67,7 @@ fn notification(scene: &Scene) -> Option<Value> {
         Scene::Live { .. } => "ON AIR".to_string(),
         Scene::Timer { minutes, .. } if *minutes > 99 => "99+ MIN".to_string(),
         Scene::Timer { minutes, .. } => format!("{minutes:02} MIN"),
-        Scene::Focus { .. } => "FOKUS".to_string(),
+        Scene::Focus { .. } => tr!("FOKUS", "FOCUS"),
     };
     // „ON AIR“ mit Endzeit passt nicht auf 32 × 8 Pixel und läuft deshalb durch
     let scroll = matches!(scene, Scene::Live { until: Some(_), .. });

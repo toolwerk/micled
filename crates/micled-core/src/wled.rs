@@ -22,6 +22,7 @@ use serde_json::{json, Map, Value};
 use crate::color::Rgb;
 use crate::display::Scene;
 use crate::output::{bonjour, scene_color, Device, Keyed};
+use crate::tr;
 
 const TIMEOUT: Duration = Duration::from_secs(3);
 const SERVICE: &str = "_wled._tcp.local.";
@@ -156,7 +157,7 @@ fn agent() -> ureq::Agent {
 fn parse_state(text: &str) -> Result<Value, String> {
     match serde_json::from_str::<Value>(text) {
         Ok(v) if v.is_object() => Ok(v),
-        _ => Err("Antwort ist kein JSON".into()),
+        _ => Err(tr!("Antwort ist kein JSON", "Reply is not JSON")),
     }
 }
 
@@ -172,11 +173,11 @@ fn send_real(w: &Wled, body: Option<Value>) -> Result<Value, String> {
         // die Antwort auf POST (`{"success":true}`) ist kein Zustand
         Ok(_) if !get => Ok(Value::Null),
         Ok(mut r) => {
-            let text = r.body_mut().read_to_string().map_err(|e| format!("WLED {}: Antwort nicht lesbar: {e}", w.host))?;
+            let text = r.body_mut().read_to_string().map_err(|e| tr!("WLED {}: Antwort nicht lesbar: {e}", "WLED {}: reply unreadable: {e}", w.host))?;
             parse_state(&text).map_err(|e| format!("WLED {}: {e}", w.host))
         }
-        Err(ureq::Error::StatusCode(c)) => Err(format!("WLED {} meldet Fehler {c}", w.host)),
-        Err(e) => Err(format!("WLED {} nicht erreichbar: {e}", w.host)),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("WLED {} meldet Fehler {c}", "WLED {} reports error {c}", w.host)),
+        Err(e) => Err(tr!("WLED {} nicht erreichbar: {e}", "WLED {} unreachable: {e}", w.host)),
     }
 }
 

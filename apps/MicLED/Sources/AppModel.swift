@@ -184,6 +184,8 @@ final class AppModel {
     static let mqttTlsPort = 8883
 
     private init() {
+        // Fehlertexte aus dem Kern in der Sprache der App, vor jedem anderen Aufruf
+        setLanguage(code: Bundle.main.preferredLocalizations.first ?? "en")
         let d = ScreenshotMode.isActive ? ScreenshotMode.defaults() : UserDefaults.standard
         defaults = d
         d.register(defaults: [
@@ -212,7 +214,7 @@ final class AppModel {
             Key.nextcloudServer: "",
             Key.nextcloudUser: "",
             Key.nextcloudStatusEnabled: false,
-            Key.nextcloudStatusText: "Im Call",
+            Key.nextcloudStatusText: String(localized: "Im Call"),
             Key.nextcloudStatusEmoji: "🔴",
             Key.nextcloudStatusDnd: false,
             Key.favorites: AppModel.defaultFavorites,
@@ -221,7 +223,7 @@ final class AppModel {
             Key.focusEnabled: false,
             Key.focusColor: "ff8800",
             Key.slackEnabled: false,
-            Key.slackText: "Im Call",
+            Key.slackText: String(localized: "Im Call"),
             Key.slackEmoji: ":red_circle:",
             Key.pixooEnabled: false,
             Key.pixooHost: "",
@@ -285,12 +287,12 @@ final class AppModel {
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
         nextcloudPassword = ScreenshotMode.isActive ? "" : Keychain.read(.nextcloud)
         nextcloudStatusEnabled = d.bool(forKey: Key.nextcloudStatusEnabled)
-        nextcloudStatusText = d.string(forKey: Key.nextcloudStatusText) ?? "Im Call"
+        nextcloudStatusText = d.string(forKey: Key.nextcloudStatusText) ?? String(localized: "Im Call")
         nextcloudStatusEmoji = d.string(forKey: Key.nextcloudStatusEmoji) ?? "🔴"
         nextcloudStatusDnd = d.bool(forKey: Key.nextcloudStatusDnd)
         slackEnabled = d.bool(forKey: Key.slackEnabled)
         slackToken = ScreenshotMode.isActive ? "" : Keychain.read(.slack)
-        slackText = d.string(forKey: Key.slackText) ?? "Im Call"
+        slackText = d.string(forKey: Key.slackText) ?? String(localized: "Im Call")
         slackEmoji = d.string(forKey: Key.slackEmoji) ?? ":red_circle:"
         pixooEnabled = d.bool(forKey: Key.pixooEnabled)
         pixooHost = d.string(forKey: Key.pixooHost) ?? ""
@@ -391,7 +393,7 @@ final class AppModel {
         case .automatic(let on): enabled = on ?? !enabled
         case .timer(let minutes): startTimer(minutes: Int(minutes))
         case .focus(let on): controller?.setFocus(on: on)
-        case nil: error = "Unbekannter Befehl: \(url.absoluteString)"
+        case nil: error = String(localized: "Unbekannter Befehl: \(url.absoluteString)")
         }
     }
 
@@ -402,7 +404,7 @@ final class AppModel {
             nextcloudCheck(server: server, user: user, password: password)
         }.value
         if let error = result.error { return error }
-        return result.calendars == 1 ? "Verbunden, 1 Kalender" : "Verbunden, \(result.calendars) Kalender"
+        return String(localized: "Verbunden, \(Int(result.calendars)) Kalender")
     }
 
     /// Zugang zum MQTT-Broker prüfen, liefert eine Meldung für die Einstellungen
@@ -411,28 +413,28 @@ final class AppModel {
         let result = await Task.detached {
             mqttCheck(host: host, port: port, tls: tls, user: user, password: password)
         }.value
-        return result.error ?? "Verbunden ✓"
+        return result.error ?? String(localized: "Verbunden ✓")
     }
 
     /// Slack-Token prüfen, liefert eine Meldung für die Einstellungen
     func checkSlack() async -> String {
         let token = slackToken
         let result = await Task.detached { slackCheck(token: token) }.value
-        return result.error ?? "Verbunden als \(result.name ?? "?")"
+        return result.error ?? String(localized: "Verbunden als \(result.name ?? "?")")
     }
 
     /// Pixoo 64 prüfen, liefert eine Meldung für die Einstellungen
     func checkPixoo() async -> String {
         let host = pixooHost
         let result = await Task.detached { pixooCheck(host: host) }.value
-        return result.error ?? "Pixoo erreichbar"
+        return result.error ?? String(localized: "Pixoo erreichbar")
     }
 
     /// AWTRIX-Uhr prüfen, liefert eine Meldung für die Einstellungen
     func checkAwtrix() async -> String {
         let host = awtrixHost
         let result = await Task.detached { awtrixCheck(host: host) }.value
-        return result.error ?? "AWTRIX erreichbar"
+        return result.error ?? String(localized: "AWTRIX erreichbar")
     }
 
     /// Mit der Bridge gekoppelt (Schlüssel und Zertifikat bekannt)
@@ -458,13 +460,13 @@ final class AppModel {
         let result = await Task.detached { huePair(host: host) }.value
         if let error = result.error { return error }
         // Adresse während des Koppelns geändert: Ergebnis gehört zur alten Bridge
-        guard host == hueHost else { return "Adresse geändert, bitte erneut koppeln" }
+        guard host == hueHost else { return String(localized: "Adresse geändert, bitte erneut koppeln") }
         batch {
             hueKey = result.key
             hueFingerprint = result.fingerprint
         }
         await loadHueTargets()
-        return "Gekoppelt ✓"
+        return String(localized: "Gekoppelt ✓")
     }
 
     /// Räume und Lampen der gekoppelten Bridge laden
@@ -482,7 +484,7 @@ final class AppModel {
         let result = await Task.detached { goveeDiscover() }.value
         goveeFound = result.items
         if let error = result.error { return error }
-        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+        return result.items.isEmpty ? String(localized: "Nichts gefunden") : String(localized: "\(result.items.count) gefunden")
     }
 
     /// Nanoleaf-Lampen per Bonjour suchen, liefert eine Meldung für die Einstellungen
@@ -490,7 +492,7 @@ final class AppModel {
         let result = await Task.detached { nanoleafDiscover() }.value
         nanoleafFound = result.items
         if let error = result.error { return error }
-        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+        return result.items.isEmpty ? String(localized: "Nichts gefunden") : String(localized: "\(result.items.count) gefunden")
     }
 
     /// WLED-Geräte per Bonjour suchen, liefert eine Meldung für die Einstellungen
@@ -498,7 +500,7 @@ final class AppModel {
         let result = await Task.detached { wledDiscover() }.value
         wledFound = result.items
         if let error = result.error { return error }
-        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+        return result.items.isEmpty ? String(localized: "Nichts gefunden") : String(localized: "\(result.items.count) gefunden")
     }
 
     /// Mit der Nanoleaf-Lampe koppeln (Einschaltknopf vorher 5–7 Sekunden
@@ -509,12 +511,12 @@ final class AppModel {
         if let error = result.error { return error }
         // Adresse während des Koppelns geändert oder Eintrag entfernt
         guard nanoleafDevices.first(where: { $0.id == id })?.host == host else {
-            return "Adresse geändert, bitte erneut koppeln"
+            return String(localized: "Adresse geändert, bitte erneut koppeln")
         }
         nanoleafKeys[id] = result.key
         Keychain.setNanoleafKey(id, result.key)
         persist()
-        return "Gekoppelt ✓"
+        return String(localized: "Gekoppelt ✓")
     }
 
     /// Lichtstreifen per USB testen: Geräteinfo lesen und zwei Sekunden rot,
@@ -523,7 +525,7 @@ final class AppModel {
     func checkRobobloq() async -> String {
         let controller = controller
         let result = await Task.detached { controller?.testStrip() ?? robobloqCheck() }.value
-        return result.error ?? "Gefunden: \(result.leds) LEDs, Firmware \(result.firmware) ✓"
+        return result.error ?? String(localized: "Gefunden: \(result.leds) LEDs, Firmware \(result.firmware) ✓")
     }
 
     func nanoleafPaired(_ id: UUID) -> Bool {
@@ -605,7 +607,7 @@ final class AppModel {
             do {
                 if newValue { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             } catch {
-                self.error = "Anmeldeobjekt: \(error.localizedDescription)"
+                self.error = String(localized: "Anmeldeobjekt: \(error.localizedDescription)")
             }
         }
     }
@@ -808,7 +810,7 @@ final class AppModel {
         let watcher = CalendarWatcher { [weak self] events in
             self?.controller?.setEvents(events: events)
         } denied: { [weak self] in
-            self?.error = "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender"
+            self?.error = String(localized: "Kein Zugriff auf den Kalender. Systemeinstellungen › Datenschutz › Kalender")
         }
         calendar = watcher
         watcher.start()

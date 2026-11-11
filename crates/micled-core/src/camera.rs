@@ -64,7 +64,7 @@ mod imp {
         let mut size = 0u32;
         let st = unsafe { CMIOObjectGetPropertyDataSize(SYSTEM_OBJECT, &list, 0, null(), &mut size) };
         if st != 0 {
-            return Err(format!("Kameraliste nicht lesbar (OSStatus {st})"));
+            return Err(crate::tr!("Kameraliste nicht lesbar (OSStatus {st})", "Camera list unreadable (OSStatus {st})"));
         }
         let mut ids = vec![0 as ObjectID; size as usize / size_of::<ObjectID>()];
         let mut used = 0u32;
@@ -72,7 +72,7 @@ mod imp {
             CMIOObjectGetPropertyData(SYSTEM_OBJECT, &list, 0, null(), size, &mut used, ids.as_mut_ptr() as *mut c_void)
         };
         if st != 0 {
-            return Err(format!("Kameraliste nicht lesbar (OSStatus {st})"));
+            return Err(crate::tr!("Kameraliste nicht lesbar (OSStatus {st})", "Camera list unreadable (OSStatus {st})"));
         }
         ids.truncate(used as usize / size_of::<ObjectID>());
 
