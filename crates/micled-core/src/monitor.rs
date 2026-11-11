@@ -371,6 +371,32 @@ struct Worker {
     next_watch: Instant,
 }
 
+/// Bild je Zusatzgerät nach dessen Auswahl der Zustände, gedimmt
+#[derive(Debug, PartialEq)]
+struct Scenes {
+    pixoo: Scene,
+    awtrix: Scene,
+    hue: Scene,
+    govee: Scene,
+    nanoleaf: Scene,
+    robobloq: Scene,
+}
+
+impl Scenes {
+    fn new(engine: &Engine, now: u64, brightness: u8) -> Self {
+        let cfg = engine.config();
+        let scene = |states| engine.scene_for(now, states).map_color(|c| dim::apply(c, brightness));
+        Scenes {
+            pixoo: scene(cfg.pixoo_states),
+            awtrix: scene(cfg.awtrix_states),
+            hue: scene(cfg.hue_states),
+            govee: scene(cfg.govee_states),
+            nanoleaf: scene(cfg.nanoleaf_states),
+            robobloq: scene(cfg.robobloq_states),
+        }
+    }
+}
+
 impl Worker {
     fn mtime(&self) -> Option<SystemTime> {
         self.path.as_ref().and_then(|p| std::fs::metadata(p).ok()).and_then(|m| m.modified().ok())
@@ -615,38 +641,37 @@ impl Worker {
         }
 
         // 8. Display, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen: nur bei einer Änderung (oder neuem Ziel) senden
-        let brightness = self.brightness;
-        let scene_for = |states| self.engine.scene_for(now, states).map_color(|c| dim::apply(c, brightness));
+        let scenes = Scenes::new(&self.engine, now, self.brightness);
         let cfg = self.engine.config();
-        let wanted = (cfg.hue.clone(), scene_for(cfg.hue_states));
+        let wanted = (cfg.hue.clone(), scenes.hue);
         if self.last_hue.as_ref() != Some(&wanted) {
             self.hue.send(wanted.0.clone(), wanted.1.clone());
             self.last_hue = Some(wanted);
         }
         let govee = &cfg.govee;
-        let wanted = ((!govee.is_empty()).then(|| govee.clone()), scene_for(cfg.govee_states));
+        let wanted = ((!govee.is_empty()).then(|| govee.clone()), scenes.govee);
         if self.last_govee.as_ref() != Some(&wanted) {
             self.govee.send(wanted.0.clone(), wanted.1.clone());
             self.last_govee = Some(wanted);
         }
         let leaves = &cfg.nanoleaf;
-        let wanted = ((!leaves.is_empty()).then(|| leaves.clone()), scene_for(cfg.nanoleaf_states));
+        let wanted = ((!leaves.is_empty()).then(|| leaves.clone()), scenes.nanoleaf);
         if self.last_nanoleaf.as_ref() != Some(&wanted) {
             self.nanoleaf.send(wanted.0.clone(), wanted.1.clone());
             self.last_nanoleaf = Some(wanted);
         }
         let strip = cfg.robobloq.then_some(robobloq::Strip { connection: self.watch.connection });
-        let wanted = (strip, scene_for(cfg.robobloq_states));
+        let wanted = (strip, scenes.robobloq);
         if self.last_robobloq.as_ref() != Some(&wanted) {
             self.robobloq.send(wanted.0.clone(), wanted.1.clone());
             self.last_robobloq = Some(wanted);
         }
-        let wanted = (cfg.awtrix.clone(), scene_for(cfg.awtrix_states));
+        let wanted = (cfg.awtrix.clone(), scenes.awtrix);
         if self.last_awtrix.as_ref() != Some(&wanted) {
             self.awtrix.send(wanted.0.clone(), wanted.1.clone());
             self.last_awtrix = Some(wanted);
         }
-        let wanted = (cfg.pixoo.clone(), scene_for(cfg.pixoo_states));
+        let wanted = (cfg.pixoo.clone(), scenes.pixoo);
         if self.last_scene.as_ref() != Some(&wanted) {
             self.pixoo.send(wanted.0.clone(), wanted.1.clone());
             self.last_scene = Some(wanted);
@@ -726,5 +751,51 @@ impl Worker {
                 .or_else(|| self.robobloq_error.lock().unwrap().clone())
                 .or_else(|| self.awtrix_error.lock().unwrap().clone()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::OutputStates;
+
+    /// Name, Auswahl abschalten, Szene lesen
+    type Device = (&'static str, fn(&mut Config), fn(&Scenes) -> &Scene);
+
+    const NOTHING: OutputStates = OutputStates { call: false, timer: false, focus: false };
+
+    /// Engine mit laufendem Call; `off` setzt bei einem Gerät alle Zustände ab
+    fn in_call(off: impl FnOnce(&mut Config)) -> Engine {
+        let mut cfg = Config::default();
+        off(&mut cfg);
+        let mut e = Engine::new(cfg, None);
+        e.on_mic(vec![MicUser { pid: 1, bundle_id: "us.zoom.xos".into(), name: "zoom".into() }], Instant::now());
+        e
+    }
+
+    #[test]
+    fn scenes_follow_each_outputs_own_selection() {
+        let live = Scene::Live { camera: false, color: Rgb::RED };
+        let devices: [Device; 6] = [
+            ("pixoo", |c| c.pixoo_states = NOTHING, |s| &s.pixoo),
+            ("awtrix", |c| c.awtrix_states = NOTHING, |s| &s.awtrix),
+            ("hue", |c| c.hue_states = NOTHING, |s| &s.hue),
+            ("govee", |c| c.govee_states = NOTHING, |s| &s.govee),
+            ("nanoleaf", |c| c.nanoleaf_states = NOTHING, |s| &s.nanoleaf),
+            ("robobloq", |c| c.robobloq_states = NOTHING, |s| &s.robobloq),
+        ];
+        for (name, off, _) in devices {
+            let scenes = Scenes::new(&in_call(off), 0, 100);
+            for (other, _, get) in devices {
+                let want = if other == name { &Scene::Idle } else { &live };
+                assert_eq!(get(&scenes), want, "{other}, wenn bei {name} alles abgewählt ist");
+            }
+        }
+    }
+
+    #[test]
+    fn scenes_are_dimmed() {
+        let scenes = Scenes::new(&in_call(|_| {}), 0, 50);
+        assert_eq!(scenes.hue, Scene::Live { camera: false, color: dim::apply(Rgb::RED, 50) });
     }
 }
