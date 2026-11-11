@@ -152,11 +152,10 @@ pub fn ics_events(ics: &str) -> Vec<Event> {
             None => continue,
         };
         let (key, params) = name.split_once(';').unwrap_or((name, ""));
-        match (key.to_ascii_uppercase().as_str(), value.trim()) {
-            ("BEGIN", _) if in_event => nested += 1,
-            ("END", v) if in_event && nested > 0 && !v.eq_ignore_ascii_case("VEVENT") => nested -= 1,
-            (k, v) if nested > 0 && !(k == "END" && v.eq_ignore_ascii_case("VEVENT")) => {}
-            ("BEGIN", "VEVENT") => {
+        let key = key.to_ascii_uppercase();
+        let vevent = value.trim().eq_ignore_ascii_case("VEVENT");
+        match (key.as_str(), value.trim()) {
+            ("BEGIN", _) if vevent => {
                 in_event = true;
                 nested = 0;
                 start = None;
@@ -164,13 +163,17 @@ pub fn ics_events(ics: &str) -> Vec<Event> {
                 duration = None;
                 cancelled = false;
             }
-            ("END", "VEVENT") => {
+            ("END", _) if vevent => {
                 if let (Some(s), false) = (start, cancelled) {
-                    let end = end.or_else(|| duration.map(|d| s + d)).filter(|&e| e > s);
+                    let end = end.or_else(|| duration.and_then(|d| s.checked_add(d))).filter(|&e| e > s);
                     out.push(Event { start: s, end, all_day: false, declined: false });
                 }
                 in_event = false;
+                nested = 0;
             }
+            ("BEGIN", _) if in_event => nested += 1,
+            ("END", _) if in_event && nested > 0 => nested -= 1,
+            _ if nested > 0 => {}
             ("DTSTART", v) if in_event => {
                 let all_day = params.to_ascii_uppercase().contains("VALUE=DATE") && !params.to_ascii_uppercase().contains("VALUE=DATE-TIME");
                 start = if all_day { None } else { parse_utc(v) };
@@ -190,21 +193,21 @@ pub fn parse_duration(v: &str) -> Option<u64> {
     let v = v.strip_prefix('+').unwrap_or(v);
     let rest = v.strip_prefix('P')?;
     if let Some(weeks) = rest.strip_suffix('W') {
-        return weeks.parse::<u64>().ok().map(|w| w * 7 * 86400);
+        return weeks.parse::<u64>().ok()?.checked_mul(7 * 86400);
     }
     let (date, time) = match rest.split_once('T') {
         Some((d, t)) if !t.is_empty() => (d, Some(t)),
         Some(_) => return None,
         None => (rest, None),
     };
-    let mut secs = 0;
+    let mut secs: u64 = 0;
     if !date.is_empty() {
-        secs += date.strip_suffix('D')?.parse::<u64>().ok()? * 86400;
+        secs = date.strip_suffix('D')?.parse::<u64>().ok()?.checked_mul(86400)?;
     }
     if let Some(mut t) = time {
-        for (unit, factor) in [('H', 3600), ('M', 60), ('S', 1)] {
+        for (unit, factor) in [('H', 3600u64), ('M', 60), ('S', 1)] {
             if let Some(i) = t.find(unit) {
-                secs += t[..i].parse::<u64>().ok()? * factor;
+                secs = secs.checked_add(t[..i].parse::<u64>().ok()?.checked_mul(factor)?)?;
                 t = &t[i + 1..];
             }
         }
@@ -476,6 +479,8 @@ END:VCALENDAR
         let ics = "BEGIN:VEVENT\nDTSTART:20261105T140000Z\nDURATION:PT1H\nBEGIN:VALARM\nTRIGGER:-PT10M\nREPEAT:2\nDURATION:PT5M\nEND:VALARM\nEND:VEVENT\n";
         let t = parse_utc("20261105T140000Z").unwrap();
         assert_eq!(ics_events(ics)[0].end, Some(t + 3600));
+        let broken = "BEGIN:VEVENT\nDTSTART:20261105T140000Z\nBEGIN:VALARM\nend:vevent\nBEGIN:VEVENT\nDTSTART:20261105T150000Z\nEND:VEVENT\n";
+        assert_eq!(ics_events(broken).len(), 2, "VALARM ohne Ende schluckt keine weiteren Termine");
     }
 
     #[test]
@@ -488,6 +493,8 @@ END:VCALENDAR
         assert_eq!(parse_duration("PT"), None);
         assert_eq!(parse_duration("PT1X"), None);
         assert_eq!(parse_duration("1H"), None);
+        assert_eq!(parse_duration("P99999999999999999W"), None, "Überlauf");
+        assert_eq!(parse_duration("PT99999999999999999H"), None);
     }
 
     #[test]
