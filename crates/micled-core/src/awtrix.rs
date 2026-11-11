@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 
-use crate::display::Scene;
+use crate::display::{until_text, Scene};
 use crate::output::{scene_color, Device};
 
 const TIMEOUT: Duration = Duration::from_secs(3);
@@ -62,17 +62,20 @@ fn notification(scene: &Scene) -> Option<Value> {
     let c = scene_color(scene)?;
     let text = match scene {
         Scene::Idle => return None,
+        Scene::Live { until: Some(min), .. } => format!("ON AIR {}", until_text(*min)),
         Scene::Live { .. } => "ON AIR".to_string(),
         Scene::Timer { minutes, .. } if *minutes > 99 => "99+ MIN".to_string(),
         Scene::Timer { minutes, .. } => format!("{minutes:02} MIN"),
         Scene::Focus { .. } => "FOKUS".to_string(),
     };
+    // „ON AIR“ mit Endzeit passt nicht auf 32 × 8 Pixel und läuft deshalb durch
+    let scroll = matches!(scene, Scene::Live { until: Some(_), .. });
     let mut body = json!({
         "text": text,
         "color": [c.r, c.g, c.b],
         "hold": true,
         "stack": false,
-        "noScroll": true,
+        "noScroll": !scroll,
         "center": true,
     });
     if matches!(scene, Scene::Live { .. }) {
@@ -165,8 +168,12 @@ mod tests {
     use super::*;
     use crate::color::Rgb;
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
-    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
+    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA, until: None };
+
+    fn live_until(min: u16) -> Scene {
+        Scene::Live { camera: false, color: Rgb::RED, until: Some(min) }
+    }
 
     fn timer(minutes: u32) -> Scene {
         Scene::Timer { minutes, color: Rgb::RED }
@@ -228,6 +235,35 @@ mod tests {
                 "wakeup": true,
             })
         );
+    }
+
+    #[test]
+    fn live_with_meeting_end_scrolls() {
+        let v = notification(&live_until(14 * 60 + 30)).unwrap();
+        assert_eq!(
+            v,
+            json!({
+                "text": "ON AIR BIS 14:30",
+                "color": [Rgb::RED.r, Rgb::RED.g, Rgb::RED.b],
+                "hold": true,
+                "stack": false,
+                "noScroll": false,
+                "center": true,
+                "wakeup": true,
+            })
+        );
+    }
+
+    #[test]
+    fn a_new_meeting_end_is_sent() {
+        let mut f = Fake::default();
+        let mut s = settled(&mut f);
+        s.apply_with(Some("u"), &LIVE, &mut f.send()).unwrap();
+        s.apply_with(Some("u"), &live_until(14 * 60 + 30), &mut f.send()).unwrap();
+        s.apply_with(Some("u"), &live_until(14 * 60 + 30), &mut f.send()).unwrap();
+        s.apply_with(Some("u"), &live_until(15 * 60), &mut f.send()).unwrap();
+        s.apply_with(Some("u"), &LIVE, &mut f.send()).unwrap();
+        assert_eq!(f.take(), ["ON AIR", "ON AIR BIS 14:30", "ON AIR BIS 15:00", "ON AIR"]);
     }
 
     #[test]

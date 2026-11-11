@@ -42,8 +42,14 @@ pub fn apply(c: Rgb, percent: u8) -> Rgb {
 /// Minuten nach Mitternacht in Ortszeit (mit Sommerzeit)
 pub fn local_minute() -> u16 {
     let now = unsafe { libc::time(std::ptr::null_mut()) };
+    local_minute_at(now as u64)
+}
+
+/// Minuten nach Mitternacht in Ortszeit zur Zeit `t` (Unix-Sekunden)
+pub fn local_minute_at(t: u64) -> u16 {
+    let t = t as libc::time_t;
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
-    if unsafe { libc::localtime_r(&now, &mut tm) }.is_null() {
+    if unsafe { libc::localtime_r(&t, &mut tm) }.is_null() {
         return 0;
     }
     (tm.tm_hour * 60 + tm.tm_min) as u16
@@ -78,5 +84,13 @@ mod tests {
         assert_eq!(apply(Rgb { r: 2, g: 0, b: 255 }, 10), Rgb { r: 1, g: 0, b: 26 });
         assert_eq!(apply(Rgb::OFF, 40), Rgb::OFF);
         assert_eq!(apply(Rgb::RED, 100), Rgb::RED);
+    }
+
+    #[test]
+    fn local_minute_at_is_a_time_of_day() {
+        // Ortszeit hängt vom Rechner ab: nur Bereich und Abstand prüfen
+        let t = 1_793_887_200; // 5. 11. 2026, 14:00 UTC
+        assert!(local_minute_at(t) < 24 * 60);
+        assert_eq!((local_minute_at(t + 60) + 24 * 60 - local_minute_at(t)) % (24 * 60), 1);
     }
 }

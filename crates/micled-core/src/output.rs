@@ -415,7 +415,7 @@ mod tests {
         }
     }
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
 
     fn cfg(hosts: &[&'static str]) -> Vec<Cfg> {
         hosts.iter().map(|h| Cfg(h)).collect()

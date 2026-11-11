@@ -72,6 +72,8 @@ pub struct MicLedConfig {
     pub camera_color: String,
     /// POST bei „Auf Sendung“ an/aus, leer = aus
     pub on_air_url: String,
+    /// Vor Terminen blinken
+    pub reminders_enabled: bool,
     pub reminder_color: String,
     pub reminder_lead_s: u32,
     /// Termine direkt aus Nextcloud; ist eines der drei Felder leer, ist es aus
@@ -79,6 +81,8 @@ pub struct MicLedConfig {
     pub nextcloud_user: String,
     /// App-Passwort (liegt in der App im Schlüsselbund)
     pub nextcloud_password: String,
+    /// Während eines Calls das Ende des laufenden Termins auf Pixoo und AWTRIX zeigen
+    pub meeting_end_enabled: bool,
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
     pub app_colors: Vec<AppColor>,
     pub timer_color: String,
@@ -113,6 +117,24 @@ pub struct MicLedConfig {
     pub wled_hosts: Vec<String>,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
+}
+
+/// Termin aus den Kalendern von macOS, ohne Titel
+#[derive(uniffi::Record, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CalendarEvent {
+    /// Beginn in Unix-Sekunden
+    pub start: u64,
+    /// Ende in Unix-Sekunden, 0 = unbekannt
+    pub end: u64,
+    pub all_day: bool,
+    /// Abgelehnt oder abgesagt
+    pub declined: bool,
+}
+
+impl From<CalendarEvent> for core::reminder::Event {
+    fn from(e: CalendarEvent) -> Self {
+        core::reminder::Event { start: e.start, end: (e.end > 0).then_some(e.end), all_day: e.all_day, declined: e.declined }
+    }
 }
 
 /// Nanoleaf-Lampe mit Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
@@ -318,6 +340,8 @@ impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
         core::Config {
             nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
+            meeting_end: c.meeting_end_enabled,
+            reminders: c.reminders_enabled,
             timer_color: color(&c.timer_color, Rgb { r: 0x80, g: 0, b: 0xff }),
             focus_enabled: c.focus_enabled,
             slack: (!c.slack_token.trim().is_empty() && !c.slack_text.trim().is_empty()).then(|| core::slack::Slack {
@@ -430,9 +454,10 @@ impl MicLedController {
         self.monitor.set_away(r, away);
     }
 
-    /// Startzeiten der nächsten Termine (Unix-Sekunden) für die Vorwarnung
-    pub fn set_upcoming(&self, starts: Vec<u64>) {
-        self.monitor.set_upcoming(starts);
+    /// Laufende und kommende Termine aus den Kalendern von macOS, für
+    /// Vorwarnung und Endzeit
+    pub fn set_events(&self, events: Vec<CalendarEvent>) {
+        self.monitor.set_events(events.into_iter().map(Into::into).collect());
     }
 
     /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen

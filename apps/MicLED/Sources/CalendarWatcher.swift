@@ -1,17 +1,18 @@
 import EventKit
 import Foundation
 
-/// Liest die Startzeiten der Termine der nächsten Stunde und gibt sie an den
-/// Kern weiter. Wann die Lampe blinkt, entscheidet der Kern.
+/// Liest die laufenden Termine und die der nächsten Stunde (ohne Titel) und
+/// gibt sie an den Kern weiter. Wann die Lampe blinkt und welches Ende Pixoo
+/// und AWTRIX zeigen, entscheidet der Kern.
 @MainActor
 final class CalendarWatcher {
     private let store = EKEventStore()
-    private let push: ([UInt64]) -> Void
+    private let push: ([CalendarEvent]) -> Void
     private let denied: () -> Void
     private var timer: Timer?
     private var changeObserver: NSObjectProtocol?
 
-    init(push: @escaping ([UInt64]) -> Void, denied: @escaping () -> Void) {
+    init(push: @escaping ([CalendarEvent]) -> Void, denied: @escaping () -> Void) {
         self.push = push
         self.denied = denied
     }
@@ -51,13 +52,25 @@ final class CalendarWatcher {
     private func refresh() {
         let now = Date()
         let predicate = store.predicateForEvents(withStart: now, end: now.addingTimeInterval(3600), calendars: nil)
-        let starts = store.events(matching: predicate)
-            .filter { !$0.isAllDay && $0.startDate > now && !Self.declined($0) }
-            .map { UInt64($0.startDate.timeIntervalSince1970) }
-        push(starts)
+        // schließt schon begonnene Termine ein, die erst in diesem Fenster enden
+        let events = store.events(matching: predicate).map { event in
+            CalendarEvent(
+                start: Self.unix(event.startDate),
+                end: Self.unix(event.endDate),
+                allDay: event.isAllDay,
+                declined: Self.declined(event)
+            )
+        }
+        push(events)
+    }
+
+    private static func unix(_ date: Date?) -> UInt64 {
+        guard let date else { return 0 }
+        return UInt64(max(0, date.timeIntervalSince1970))
     }
 
     private static func declined(_ event: EKEvent) -> Bool {
-        event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
+        event.status == .canceled
+            || event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
     }
 }
