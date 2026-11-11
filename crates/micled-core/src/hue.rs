@@ -303,7 +303,7 @@ impl Session {
         // erst das aktuelle Ziel, damit eine nicht erreichbare alte Adresse es nicht aufhält
         self.apply_target(cfg, scene, send)?;
         match self.retry_orphans(send) {
-            Some(e) => Err(tr!("Frühere Hue-Lampe nicht zurückgestellt: {e}", "Previous Hue light not restored: {e}")),
+            Some(e) => Err(tr!("Frühere Hue-Lampe nicht zurückgestellt: {e}", "Previous Hue light not restored: {e}", e = e)),
             None => Ok(()),
         }
     }
@@ -436,7 +436,7 @@ fn parse_pair(v: &Value) -> Result<String, String> {
     match first["error"]["type"].as_i64() {
         Some(101) => Err(tr!("Knopf an der Bridge drücken, dann innerhalb von 30 Sekunden erneut koppeln", "Press the button on the bridge, then pair again within 30 seconds")),
         _ => Err(match first["error"]["description"].as_str() {
-            Some(d) => tr!("Hue-Bridge meldet: {d}", "Hue Bridge reports: {d}"),
+            Some(d) => tr!("Hue-Bridge meldet: {d}", "Hue Bridge reports: {d}", d = d),
             None => tr!("Hue-Bridge: unerwartete Antwort beim Koppeln", "Hue Bridge: unexpected reply while pairing"),
         }),
     }

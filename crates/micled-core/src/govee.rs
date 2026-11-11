@@ -170,13 +170,13 @@ fn resolve(host: &str) -> Result<IpAddr, String> {
         .ok()
         .and_then(|mut a| a.find(SocketAddr::is_ipv4))
         .map(|a| a.ip())
-        .ok_or_else(|| tr!("Govee {host}: Adresse unbekannt", "Govee {host}: address unknown"))
+        .ok_or_else(|| tr!("Govee {host}: Adresse unbekannt", "Govee {host}: address unknown", host = host))
 }
 
 fn bind() -> Result<UdpSocket, String> {
     UdpSocket::bind(("0.0.0.0", REPLY_PORT)).map_err(|e| match e.kind() {
         ErrorKind::AddrInUse => port_busy(),
-        _ => tr!("Govee: Port {REPLY_PORT} nicht nutzbar: {e}", "Govee: port {REPLY_PORT} unusable: {e}"),
+        _ => tr!("Govee: Port {port} nicht nutzbar: {e}", "Govee: port {port} unusable: {e}", port = REPLY_PORT, e = e),
     })
 }
 
@@ -201,7 +201,7 @@ fn exchange(host: &str, commands: &[Value]) -> Result<Value, String> {
     let _port = REPLY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let sock = bind()?;
     let to = SocketAddr::new(ip, CONTROL_PORT);
-    let send = |v: &Value| sock.send_to(v.to_string().as_bytes(), to).map_err(|e| tr!("Govee {host} nicht erreichbar: {e}", "Govee {host} unreachable: {e}"));
+    let send = |v: &Value| sock.send_to(v.to_string().as_bytes(), to).map_err(|e| tr!("Govee {host} nicht erreichbar: {e}", "Govee {host} unreachable: {e}", host = host, e = e));
     for c in commands {
         send(c)?;
         std::thread::sleep(SPACING);
@@ -215,7 +215,7 @@ fn exchange(host: &str, commands: &[Value]) -> Result<Value, String> {
         status = status_data(&v).cloned();
         status.is_some()
     });
-    status.ok_or_else(|| tr!("Govee {host} antwortet nicht", "Govee {host} does not reply"))
+    status.ok_or_else(|| tr!("Govee {host} antwortet nicht", "Govee {host} does not reply", host = host))
 }
 
 /// Geräte im eigenen Netz suchen (blockiert etwa zwei Sekunden). Liefert
@@ -224,7 +224,7 @@ pub fn discover() -> Result<Vec<(String, String)>, String> {
     let _port = REPLY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let sock = bind()?;
     let scan = msg("scan", json!({ "account_topic": "reserve" }));
-    sock.send_to(scan.to_string().as_bytes(), SCAN_ADDR).map_err(|e| tr!("Govee-Suche nicht möglich: {e}", "Govee search not possible: {e}"))?;
+    sock.send_to(scan.to_string().as_bytes(), SCAN_ADDR).map_err(|e| tr!("Govee-Suche nicht möglich: {e}", "Govee search not possible: {e}", e = e))?;
     let mut found: Vec<(String, String)> = Vec::new();
     receive(&sock, Instant::now() + SCAN_WAIT, |_, v| {
         if let Some(d) = parse_scan(&v) {
@@ -332,7 +332,7 @@ mod tests {
         fn send(&mut self) -> impl FnMut(&str, &[Value]) -> Result<Value, String> + '_ {
             move |host, cmds| {
                 if self.fail {
-                    return Err(tr!("Govee {host} antwortet nicht", "Govee {host} does not reply"));
+                    return Err(tr!("Govee {host} antwortet nicht", "Govee {host} does not reply", host = host));
                 }
                 self.log.push((host.into(), cmds.to_vec()));
                 Ok(self.status.clone())

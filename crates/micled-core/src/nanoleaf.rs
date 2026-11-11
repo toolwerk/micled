@@ -157,7 +157,7 @@ fn agent() -> ureq::Agent {
 }
 
 fn read_body(mut r: ureq::http::Response<ureq::Body>) -> Result<Value, String> {
-    let text = r.body_mut().read_to_string().map_err(|e| tr!("Antwort nicht lesbar: {e}", "Reply unreadable: {e}"))?;
+    let text = r.body_mut().read_to_string().map_err(|e| tr!("Antwort nicht lesbar: {e}", "Reply unreadable: {e}", e = e))?;
     if text.trim().is_empty() {
         return Ok(Value::Null);
     }
@@ -173,9 +173,9 @@ fn send_real(n: &Nanoleaf, method: &str, path: &str, body: Option<Value>) -> Res
     };
     match r {
         Ok(r) => read_body(r).map_err(|e| format!("Nanoleaf {}: {e}", n.host)),
-        Err(ureq::Error::StatusCode(401)) => Err(tr!("Nanoleaf {}: Schlüssel ungültig, neu koppeln", "Nanoleaf {}: key invalid, pair again", n.host)),
-        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {} meldet Fehler {c}", "Nanoleaf {} reports error {c}", n.host)),
-        Err(e) => Err(tr!("Nanoleaf {} nicht erreichbar: {e}", "Nanoleaf {} unreachable: {e}", n.host)),
+        Err(ureq::Error::StatusCode(401)) => Err(tr!("Nanoleaf {host}: Schlüssel ungültig, neu koppeln", "Nanoleaf {host}: key invalid, pair again", host = n.host)),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {host} meldet Fehler {c}", "Nanoleaf {host} reports error {c}", host = n.host, c = c)),
+        Err(e) => Err(tr!("Nanoleaf {host} nicht erreichbar: {e}", "Nanoleaf {host} unreachable: {e}", host = n.host, e = e)),
     }
 }
 
@@ -190,8 +190,8 @@ pub fn pair(host: &str) -> Result<String, String> {
     match agent().post(&format!("http://{host}/api/v1/new")).send_empty() {
         Ok(r) => parse_pair(&read_body(r)?),
         Err(ureq::Error::StatusCode(401 | 403)) => Err(pair_hint()),
-        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {host} meldet Fehler {c}", "Nanoleaf {host} reports error {c}")),
-        Err(e) => Err(tr!("Nanoleaf {host} nicht erreichbar: {e}", "Nanoleaf {host} unreachable: {e}")),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {host} meldet Fehler {c}", "Nanoleaf {host} reports error {c}", host = host, c = c)),
+        Err(e) => Err(tr!("Nanoleaf {host} nicht erreichbar: {e}", "Nanoleaf {host} unreachable: {e}", host = host, e = e)),
     }
 }
 

@@ -300,7 +300,7 @@ pub fn connack(header: u8, body: &[u8]) -> Result<(), String> {
         4 => Err(tr!("MQTT: Benutzer oder Passwort falsch", "MQTT: wrong user or password")),
         // Mosquitto (auch das Add-on in Home Assistant) meldet ein falsches Passwort mit 5
         5 => Err(tr!("MQTT: Benutzer oder Passwort falsch oder nicht berechtigt", "MQTT: wrong user or password, or not authorized")),
-        c => Err(tr!("MQTT: Broker lehnt ab ({c})", "MQTT: broker refuses ({c})")),
+        c => Err(tr!("MQTT: Broker lehnt ab ({c})", "MQTT: broker refuses ({c})", c = c)),
     }
 }
 
@@ -322,13 +322,13 @@ struct Net {
 }
 
 fn unreachable(e: &dyn std::fmt::Display) -> String {
-    tr!("MQTT: Broker nicht erreichbar ({e})", "MQTT: broker unreachable ({e})")
+    tr!("MQTT: Broker nicht erreichbar ({e})", "MQTT: broker unreachable ({e})", e = e)
 }
 
 impl Net {
     fn io_error(&self, e: std::io::Error) -> String {
         if self.tls && e.kind() == ErrorKind::InvalidData {
-            tr!("MQTT: TLS-Verbindung abgelehnt ({e})", "MQTT: TLS connection refused ({e})")
+            tr!("MQTT: TLS-Verbindung abgelehnt ({e})", "MQTT: TLS connection refused ({e})", e = e)
         } else {
             unreachable(&e)
         }
@@ -362,7 +362,7 @@ impl Net {
                 .map_err(|e| unreachable(&e))?
                 .with_root_certificates(roots)
                 .with_no_client_auth();
-            let name = ServerName::try_from(cfg.host.clone()).map_err(|_| tr!("MQTT: ungültige Adresse {}", "MQTT: invalid address {}", cfg.host))?;
+            let name = ServerName::try_from(cfg.host.clone()).map_err(|_| tr!("MQTT: ungültige Adresse {host}", "MQTT: invalid address {host}", host = cfg.host))?;
             let conn = ClientConnection::new(Arc::new(config), name).map_err(|e| unreachable(&e))?;
             Box::new(StreamOwned::new(conn, tcp))
         } else {

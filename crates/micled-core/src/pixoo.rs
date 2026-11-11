@@ -38,7 +38,7 @@ fn url(host: &str) -> String {
 fn check_reply(v: &Value) -> Result<(), String> {
     match v["error_code"].as_i64() {
         Some(0) => Ok(()),
-        Some(code) => Err(tr!("Pixoo meldet Fehler {code}", "Pixoo reports error {code}")),
+        Some(code) => Err(tr!("Pixoo meldet Fehler {code}", "Pixoo reports error {code}", code = code)),
         None => Err(tr!("Pixoo nicht erreichbar: unerwartete Antwort", "Pixoo unreachable: unexpected reply")),
     }
 }
@@ -49,7 +49,7 @@ fn post(host: &str, body: Value) -> Result<Value, String> {
     let v: Value = agent
         .post(&url(host))
         .send_json(&body)
-        .map_err(|e| tr!("Pixoo nicht erreichbar: {e}", "Pixoo unreachable: {e}"))?
+        .map_err(|e| tr!("Pixoo nicht erreichbar: {e}", "Pixoo unreachable: {e}", e = e))?
         .body_mut()
         .read_json()
         .map_err(|_| tr!("Pixoo nicht erreichbar: Antwort ist kein JSON", "Pixoo unreachable: reply is not JSON"))?;
