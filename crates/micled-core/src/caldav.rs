@@ -1,5 +1,5 @@
-//! Termine direkt aus einem Nextcloud-Kalender lesen (CalDAV), für die
-//! Vorwarnung ohne Umweg über die Kalender von macOS.
+//! Termine direkt aus einem Nextcloud-Kalender lesen (CalDAV), für
+//! Vorwarnung und Endzeit ohne Umweg über die Kalender von macOS.
 //!
 //! Ablauf je Abruf:
 //! 1. `PROPFIND /remote.php/dav/` → `current-user-principal`
@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use base64::Engine as _;
 
+use crate::reminder::Event;
 use crate::tr;
 
 /// Zugang zu einer Nextcloud. `server` ist die Adresse der Instanz,
@@ -118,13 +119,13 @@ pub fn calendars(xml: &str) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
-/// Startzeiten (Unix-Sekunden) aus einer `REPORT`-Antwort
-pub fn starts(xml: &str) -> Result<Vec<u64>, String> {
+/// Termine aus einer `REPORT`-Antwort
+pub fn events(xml: &str) -> Result<Vec<Event>, String> {
     let doc = parse(xml)?;
     let mut out = vec![];
     for data in doc.descendants().filter(|n| n.has_tag_name((CALDAV, "calendar-data"))) {
         if let Some(ics) = data.text() {
-            out.extend(ics_starts(ics));
+            out.extend(ics_events(ics));
         }
     }
     out.sort_unstable();
@@ -132,15 +133,19 @@ pub fn starts(xml: &str) -> Result<Vec<u64>, String> {
     Ok(out)
 }
 
-/// Startzeiten aller Termine eines iCalendar-Textes. Ganztägige und abgesagte
-/// Termine zählen nicht; Zeiten ohne `Z` (Ortszeit) werden übersprungen, weil
-/// der Server mit `expand` ohnehin UTC liefert.
-pub fn ics_starts(ics: &str) -> Vec<u64> {
+/// Termine eines iCalendar-Textes. Ganztägige und abgesagte Termine fallen weg;
+/// Zeiten ohne `Z` (Ortszeit) werden übersprungen, weil der Server mit `expand`
+/// ohnehin UTC liefert. Das Ende kommt aus `DTEND`, sonst aus `DURATION`.
+pub fn ics_events(ics: &str) -> Vec<Event> {
     // gefaltete Zeilen (Fortsetzung beginnt mit Leerzeichen oder Tab) zusammenfügen
     let unfolded = ics.replace("\r\n", "\n").replace("\n ", "").replace("\n\t", "");
     let mut out = vec![];
     let mut in_event = false;
+    // Tiefe in Unterkomponenten wie VALARM, deren DURATION nicht zum Termin gehört
+    let mut nested = 0u32;
     let mut start: Option<u64> = None;
+    let mut end: Option<u64> = None;
+    let mut duration: Option<u64> = None;
     let mut cancelled = false;
     for line in unfolded.lines() {
         let (name, value) = match line.split_once(':') {
@@ -148,27 +153,70 @@ pub fn ics_starts(ics: &str) -> Vec<u64> {
             None => continue,
         };
         let (key, params) = name.split_once(';').unwrap_or((name, ""));
-        match (key.to_ascii_uppercase().as_str(), value.trim()) {
-            ("BEGIN", "VEVENT") => {
+        let key = key.to_ascii_uppercase();
+        let vevent = value.trim().eq_ignore_ascii_case("VEVENT");
+        match (key.as_str(), value.trim()) {
+            ("BEGIN", _) if vevent => {
                 in_event = true;
+                nested = 0;
                 start = None;
+                end = None;
+                duration = None;
                 cancelled = false;
             }
-            ("END", "VEVENT") => {
+            ("END", _) if vevent => {
                 if let (Some(s), false) = (start, cancelled) {
-                    out.push(s);
+                    let end = end.or_else(|| duration.and_then(|d| s.checked_add(d))).filter(|&e| e > s);
+                    out.push(Event { start: s, end, all_day: false, declined: false });
                 }
                 in_event = false;
+                nested = 0;
             }
+            ("BEGIN", _) if in_event => nested += 1,
+            ("END", _) if in_event && nested > 0 => nested -= 1,
+            _ if nested > 0 => {}
             ("DTSTART", v) if in_event => {
                 let all_day = params.to_ascii_uppercase().contains("VALUE=DATE") && !params.to_ascii_uppercase().contains("VALUE=DATE-TIME");
                 start = if all_day { None } else { parse_utc(v) };
             }
+            ("DTEND", v) if in_event => end = parse_utc(v),
+            ("DURATION", v) if in_event => duration = parse_duration(v),
             ("STATUS", v) if in_event => cancelled = v.eq_ignore_ascii_case("CANCELLED"),
             _ => {}
         }
     }
     out
+}
+
+/// Dauer nach RFC 5545 (`PT1H30M`, `P1DT2H`, `P2W`) → Sekunden. Negative Dauern
+/// zählen nicht.
+pub fn parse_duration(v: &str) -> Option<u64> {
+    let v = v.strip_prefix('+').unwrap_or(v);
+    let rest = v.strip_prefix('P')?;
+    if let Some(weeks) = rest.strip_suffix('W') {
+        return weeks.parse::<u64>().ok()?.checked_mul(7 * 86400);
+    }
+    let (date, time) = match rest.split_once('T') {
+        Some((d, t)) if !t.is_empty() => (d, Some(t)),
+        Some(_) => return None,
+        None => (rest, None),
+    };
+    let mut secs: u64 = 0;
+    if !date.is_empty() {
+        secs = date.strip_suffix('D')?.parse::<u64>().ok()?.checked_mul(86400)?;
+    }
+    if let Some(mut t) = time {
+        for (unit, factor) in [('H', 3600u64), ('M', 60), ('S', 1)] {
+            if let Some(i) = t.find(unit) {
+                secs = secs.checked_add(t[..i].parse::<u64>().ok()?.checked_mul(factor)?)?;
+                t = &t[i + 1..];
+            }
+        }
+        if !t.is_empty() {
+            return None;
+        }
+    }
+    (!rest.is_empty()).then_some(secs)
 }
 
 /// `20261105T140000Z` → Unix-Sekunden
@@ -295,13 +343,13 @@ pub fn check(nc: &Nextcloud) -> Result<usize, String> {
     Client::new(nc).calendars(&normalize(&nc.server)).map(|c| c.len())
 }
 
-/// Startzeiten der Termine zwischen `now` und `now + HORIZON`
-pub fn fetch(nc: &Nextcloud, now: u64) -> Result<Vec<u64>, String> {
+/// Termine, die zwischen `now` und `now + HORIZON` stattfinden, auch schon begonnene
+pub fn fetch(nc: &Nextcloud, now: u64) -> Result<Vec<Event>, String> {
     let client = Client::new(nc);
     let body = report_body(now, now + HORIZON);
     let mut out = vec![];
     for cal in client.calendars(&normalize(&nc.server))? {
-        out.extend(starts(&client.call("REPORT", &cal, "1", &body)?)?);
+        out.extend(events(&client.call("REPORT", &cal, "1", &body)?)?);
     }
     out.sort_unstable();
     out.dedup();
@@ -394,13 +442,60 @@ END:VCALENDAR
 </cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
 </d:multistatus>"#;
         let t = parse_utc("20261105T140000Z").unwrap();
-        assert_eq!(starts(xml).unwrap(), vec![t, t + 1800]);
+        let ev = |start, end| Event { start, end, all_day: false, declined: false };
+        assert_eq!(events(xml).unwrap(), vec![ev(t, Some(t + 3600)), ev(t + 1800, None)]);
     }
 
     #[test]
     fn folded_lines_and_local_times() {
         let ics = "BEGIN:VEVENT\nDTSTART;TZID=Europe/Berlin:20261105T150000\nEND:VEVENT\nBEGIN:VEVENT\nDTST\n ART:20261105T140000Z\nEND:VEVENT\n";
-        assert_eq!(ics_starts(ics), vec![parse_utc("20261105T140000Z").unwrap()]);
+        let starts: Vec<u64> = ics_events(ics).iter().map(|e| e.start).collect();
+        assert_eq!(starts, vec![parse_utc("20261105T140000Z").unwrap()]);
+    }
+
+    #[test]
+    fn end_from_dtend_before_or_after_dtstart() {
+        let ics = "BEGIN:VEVENT\nDTEND:20261105T150000Z\nDTSTART:20261105T140000Z\nEND:VEVENT\n";
+        let t = parse_utc("20261105T140000Z").unwrap();
+        assert_eq!(ics_events(ics)[0].end, Some(t + 3600));
+    }
+
+    #[test]
+    fn end_from_duration() {
+        let t = parse_utc("20261105T140000Z").unwrap();
+        let end = |d: &str| {
+            let ics = format!("BEGIN:VEVENT\nDTSTART:20261105T140000Z\nDURATION:{d}\nEND:VEVENT\n");
+            ics_events(&ics)[0].end
+        };
+        assert_eq!(end("PT1H30M"), Some(t + 5400));
+        assert_eq!(end("PT45M"), Some(t + 2700));
+        assert_eq!(end("P1DT2H"), Some(t + 86400 + 7200));
+        assert_eq!(end("P1W"), Some(t + 7 * 86400));
+        assert_eq!(end("-PT1H"), None, "negativ zählt nicht");
+        assert_eq!(end("PT0S"), None, "Ende muss nach dem Beginn liegen");
+    }
+
+    #[test]
+    fn duration_of_an_alarm_does_not_count() {
+        let ics = "BEGIN:VEVENT\nDTSTART:20261105T140000Z\nDURATION:PT1H\nBEGIN:VALARM\nTRIGGER:-PT10M\nREPEAT:2\nDURATION:PT5M\nEND:VALARM\nEND:VEVENT\n";
+        let t = parse_utc("20261105T140000Z").unwrap();
+        assert_eq!(ics_events(ics)[0].end, Some(t + 3600));
+        let broken = "BEGIN:VEVENT\nDTSTART:20261105T140000Z\nBEGIN:VALARM\nend:vevent\nBEGIN:VEVENT\nDTSTART:20261105T150000Z\nEND:VEVENT\n";
+        assert_eq!(ics_events(broken).len(), 2, "VALARM ohne Ende schluckt keine weiteren Termine");
+    }
+
+    #[test]
+    fn duration_format() {
+        assert_eq!(parse_duration("PT15M"), Some(900));
+        assert_eq!(parse_duration("PT1H0M10S"), Some(3610));
+        assert_eq!(parse_duration("P2D"), Some(172800));
+        assert_eq!(parse_duration("+PT1H"), Some(3600));
+        assert_eq!(parse_duration("P"), None);
+        assert_eq!(parse_duration("PT"), None);
+        assert_eq!(parse_duration("PT1X"), None);
+        assert_eq!(parse_duration("1H"), None);
+        assert_eq!(parse_duration("P99999999999999999W"), None, "Überlauf");
+        assert_eq!(parse_duration("PT99999999999999999H"), None);
     }
 
     #[test]

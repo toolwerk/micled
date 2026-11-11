@@ -12,8 +12,9 @@ pub const SIZE: usize = 64;
 pub enum Scene {
     /// Nichts von MicLED: Das Display zeigt wieder, was vorher lief (z. B. die Uhr)
     Idle,
-    /// Auf Sendung, mit Mikro- oder Kamerasymbol und „ON AIR“
-    Live { camera: bool, color: Rgb },
+    /// Auf Sendung, mit Mikro- oder Kamerasymbol und „ON AIR“. `until` ist das
+    /// Ende des laufenden Termins in Minuten nach Mitternacht (Ortszeit).
+    Live { camera: bool, color: Rgb, until: Option<u16> },
     /// Konzentrations-Timer mit den restlichen Minuten
     Timer { minutes: u32, color: Rgb },
     /// Fokus von macOS
@@ -25,11 +26,24 @@ impl Scene {
     pub fn map_color(self, f: impl Fn(Rgb) -> Rgb) -> Scene {
         match self {
             Scene::Idle => Scene::Idle,
-            Scene::Live { camera, color } => Scene::Live { camera, color: f(color) },
+            Scene::Live { camera, color, until } => Scene::Live { camera, color: f(color), until },
             Scene::Timer { minutes, color } => Scene::Timer { minutes, color: f(color) },
             Scene::Focus { color } => Scene::Focus { color: f(color) },
         }
     }
+
+    /// Dieselbe Szene mit Ende des Termins; ändert nur `Live`
+    pub fn with_until(self, until: Option<u16>) -> Scene {
+        match self {
+            Scene::Live { camera, color, .. } => Scene::Live { camera, color, until },
+            other => other,
+        }
+    }
+}
+
+/// `BIS 14:30` zu Minuten nach Mitternacht
+pub fn until_text(min: u16) -> String {
+    tr!("BIS {:02}:{:02}", "TIL {:02}:{:02}", min / 60 % 24, min % 60)
 }
 
 /// Bild zur Szene: 64 · 64 · 3 Bytes, Zeilen von oben nach unten, je Pixel R G B,
@@ -38,13 +52,16 @@ pub fn render(scene: &Scene) -> Vec<u8> {
     let mut c = Canvas::new();
     match scene {
         Scene::Idle => return Vec::new(),
-        Scene::Live { camera, color } => {
+        Scene::Live { camera, color, until } => {
             if *camera {
                 c.camera(20, 8, *color);
             } else {
                 c.mic(20, 6, *color);
             }
             c.text_centered("ON AIR", 44, 1, *color);
+            if let Some(min) = until {
+                c.text_centered(&until_text(*min), 54, 1, *color);
+            }
         }
         Scene::Timer { minutes, color } => {
             let digits = if *minutes > 99 { "99+".to_string() } else { format!("{minutes:02}") };
@@ -152,15 +169,18 @@ impl Canvas {
 fn glyph(ch: char) -> [u8; 7] {
     match ch {
         'A' => [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+        'B' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
         'C' => [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
         'F' => [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
         'I' => [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
         'K' => [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+        'L' => [0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111],
         'M' => [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
         'N' => [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
         'O' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
         'R' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
         'S' => [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+        'T' => [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
         'U' => [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
         '0' => [0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110],
         '1' => [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
@@ -173,6 +193,7 @@ fn glyph(ch: char) -> [u8; 7] {
         '8' => [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
         '9' => [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
         '+' => [0b00000, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00000],
+        ':' => [0b00000, 0b01100, 0b01100, 0b00000, 0b01100, 0b01100, 0b00000],
         _ => [0; 7],
     }
 }
@@ -193,8 +214,9 @@ mod tests {
 
     fn all() -> Vec<Scene> {
         vec![
-            Scene::Live { camera: false, color: ORANGE },
-            Scene::Live { camera: true, color: ORANGE },
+            Scene::Live { camera: false, color: ORANGE, until: None },
+            Scene::Live { camera: true, color: ORANGE, until: None },
+            Scene::Live { camera: false, color: ORANGE, until: Some(14 * 60 + 30) },
             Scene::Timer { minutes: 25, color: ORANGE },
             Scene::Timer { minutes: 120, color: ORANGE },
             Scene::Focus { color: ORANGE },
@@ -224,9 +246,37 @@ mod tests {
 
     #[test]
     fn mic_and_camera_differ() {
-        let mic = render(&Scene::Live { camera: false, color: ORANGE });
-        let cam = render(&Scene::Live { camera: true, color: ORANGE });
+        let mic = render(&Scene::Live { camera: false, color: ORANGE, until: None });
+        let cam = render(&Scene::Live { camera: true, color: ORANGE, until: None });
         assert_ne!(mic, cam);
+    }
+
+    #[test]
+    fn meeting_end_is_shown_below_on_air() {
+        let plain = render(&Scene::Live { camera: false, color: ORANGE, until: None });
+        let until = render(&Scene::Live { camera: false, color: ORANGE, until: Some(14 * 60 + 30) });
+        let later = render(&Scene::Live { camera: false, color: ORANGE, until: Some(15 * 60) });
+        assert_ne!(plain, until);
+        assert_ne!(until, later);
+        assert_eq!(plain[..54 * SIZE * 3], until[..54 * SIZE * 3], "Symbol und „ON AIR“ bleiben");
+        assert!(lit(&until[54 * SIZE * 3..]) > 20, "Zeile mit der Zeit");
+    }
+
+    #[test]
+    fn until_text_has_two_digits() {
+        assert_eq!(until_text(14 * 60 + 30), "BIS 14:30");
+        assert_eq!(until_text(9 * 60 + 5), "BIS 09:05");
+        assert_eq!(until_text(0), "BIS 00:00");
+        assert_eq!(until_text(23 * 60 + 59), "BIS 23:59");
+    }
+
+    #[test]
+    fn with_until_only_changes_live() {
+        let live = Scene::Live { camera: true, color: ORANGE, until: None };
+        assert_eq!(live.with_until(Some(60)), Scene::Live { camera: true, color: ORANGE, until: Some(60) });
+        let timer = Scene::Timer { minutes: 5, color: ORANGE };
+        assert_eq!(timer.clone().with_until(Some(60)), timer);
+        assert_eq!(Scene::Idle.with_until(Some(60)), Scene::Idle);
     }
 
     #[test]
@@ -255,7 +305,7 @@ mod tests {
     #[test]
     fn everything_inside_the_image() {
         // Text am Rand würde abgeschnitten: alle Zeichen passen in die Breite
-        for s in ["ON AIR", "FOKUS", "FOCUS", "99+", "MIN"] {
+        for s in ["ON AIR", "FOKUS", "FOCUS", "99+", "MIN", "BIS 23:59", "TIL 23:59"] {
             let scale = if s.starts_with("FO") || s == "99+" { 2 } else { 1 };
             assert!((s.len() as i32 * 6 - 1) * scale <= SIZE as i32, "{s}");
             for ch in s.chars().filter(|c| *c != ' ') {

@@ -595,8 +595,8 @@ mod tests {
         }
     }
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
-    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
+    const CAM: Scene = Scene::Live { camera: true, color: Rgb::MAGENTA, until: None };
 
     #[test]
     fn single_light_colored_and_restored() {

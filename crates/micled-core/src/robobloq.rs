@@ -429,7 +429,7 @@ mod tests {
     ];
 
     const MEEWATA: Info = Info { inches: 32, leds: 78, firmware: [1, 9, 4] };
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
 
     #[test]
     fn info_request() {

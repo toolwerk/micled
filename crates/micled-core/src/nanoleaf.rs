@@ -347,7 +347,7 @@ mod tests {
         }
     }
 
-    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED };
+    const LIVE: Scene = Scene::Live { camera: false, color: Rgb::RED, until: None };
 
     #[test]
     fn debug_hides_the_key_and_port_is_added() {
