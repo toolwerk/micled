@@ -11,6 +11,10 @@ use crate::display::Scene;
 use crate::slack::Slack;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
+use crate::reminder::Event;
+
+/// Längere Termine (mehrtägige Einträge) liefern keine Endzeit
+const MEETING_END_MAX: u64 = 12 * 3600;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AfterMic {
@@ -69,12 +73,16 @@ pub struct Config {
     pub camera_color: Rgb,
     /// Ziel für „Auf Sendung“-Meldungen (leer = aus), siehe [`crate::onair`]
     pub on_air_url: String,
+    /// Vor Terminen blinken
+    pub reminders: bool,
     /// Farbe der Vorwarnung vor Terminen
     pub reminder_color: Rgb,
     /// So lange vor Terminbeginn wird gewarnt
     pub reminder_lead: Duration,
     /// Termine zusätzlich direkt aus Nextcloud lesen (`None` = aus)
     pub nextcloud: Option<Nextcloud>,
+    /// Während eines Calls das Ende des laufenden Termins auf Pixoo und AWTRIX zeigen
+    pub meeting_end: bool,
     /// Eigene Farbe je Programm (Bundle-ID oder Prozessname). Bei mehreren
     /// aktiven Programmen gewinnt der erste passende Eintrag.
     pub app_colors: Vec<(String, Rgb)>,
@@ -115,9 +123,11 @@ impl Default for Config {
             camera: true,
             camera_color: Rgb::MAGENTA,
             on_air_url: String::new(),
+            reminders: true,
             reminder_color: Rgb::YELLOW,
             reminder_lead: Duration::from_secs(120),
             nextcloud: None,
+            meeting_end: true,
             app_colors: Vec::new(),
             timer_color: Rgb { r: 0x80, g: 0x00, b: 0xff },
             focus_enabled: false,
@@ -163,6 +173,8 @@ pub struct Engine {
     focus: bool,
     /// Während des Fokus wurde eine Farbe gewählt; sie gilt bis zum nächsten Wechsel
     focus_suspended: bool,
+    /// Termine rund um jetzt, auch schon begonnene
+    events: Vec<Event>,
 }
 
 impl Engine {
@@ -181,6 +193,7 @@ impl Engine {
             timer: None,
             focus: false,
             focus_suspended: false,
+            events: Vec::new(),
         }
     }
 
@@ -243,7 +256,7 @@ impl Engine {
     pub fn scene(&self, now: u64) -> Scene {
         if self.live() {
             let (camera, color) = self.live_look;
-            Scene::Live { camera, color }
+            Scene::Live { camera, color, until: None }
         } else if self.dark() {
             Scene::Idle
         } else if let Some(until) = self.timer {
@@ -253,6 +266,28 @@ impl Engine {
         } else {
             Scene::Idle
         }
+    }
+
+    /// Termine aus den Kalendern ersetzen
+    pub fn set_events(&mut self, events: Vec<Event>) {
+        self.events = events;
+    }
+
+    /// Ende des Termins, zu dem der laufende Call gehört (Unix-Sekunden), oder
+    /// `None` ohne Call, ohne passenden Termin oder bei ausgeschalteter Endzeit.
+    /// Laufen mehrere, gilt der zuletzt begonnene, bei gleichem Beginn der
+    /// früher endende. Ganztägige, abgelehnte und Termine über 12 Stunden zählen nicht.
+    pub fn meeting_end(&self, now: u64) -> Option<u64> {
+        if !self.live() || !self.cfg.meeting_end {
+            return None;
+        }
+        self.events
+            .iter()
+            .filter(|e| e.counts())
+            .filter_map(|e| e.end.map(|end| (e.start, end)))
+            .filter(|&(start, end)| start <= now && now < end && end - start <= MEETING_END_MAX)
+            .max_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)))
+            .map(|(_, end)| end)
     }
 
     fn focus_shown(&self) -> bool {
@@ -908,9 +943,9 @@ mod tests {
     fn scene_live_with_mic_and_camera() {
         let (mut e, t) = engine(AfterMic::Restore);
         e.on_mic(vec![user("zoom")], t);
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED, until: None });
         e.on_input(vec![user("zoom")], true, t);
-        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA });
+        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA, until: None });
     }
 
     #[test]
@@ -919,10 +954,10 @@ mod tests {
         e.on_input(vec![user("zoom")], true, t);
         e.on_input(vec![], false, t + Duration::from_secs(1));
         assert!(e.live());
-        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA }, "Kamera bleibt bis zum Ende");
+        assert_eq!(e.scene(NOW), Scene::Live { camera: true, color: Rgb::MAGENTA, until: None }, "Kamera bleibt bis zum Ende");
         e.on_mic(vec![user("plaud")], t + Duration::from_secs(2));
         e.on_mic(vec![], t + Duration::from_secs(3));
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange() }, "Programmfarbe bleibt");
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange(), until: None }, "Programmfarbe bleibt");
         e.on_mic(vec![], t + Duration::from_secs(10));
         assert_eq!(e.scene(NOW), Scene::Idle);
     }
@@ -931,7 +966,7 @@ mod tests {
     fn scene_live_uses_app_color() {
         let (mut e, t) = with_app_colors();
         e.on_mic(vec![user("plaud")], t);
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange() });
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: orange(), until: None });
     }
 
     #[test]
@@ -939,7 +974,7 @@ mod tests {
         let cfg = Config { enabled: false, ..Config::default() };
         let mut e = Engine::new(cfg, None);
         e.on_mic(vec![user("zoom")], Instant::now());
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED, until: None });
     }
 
     #[test]
@@ -972,7 +1007,7 @@ mod tests {
         let (mut e, t) = engine(AfterMic::Restore);
         e.start_timer(NOW + 600);
         e.on_mic(vec![user("zoom")], t);
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED });
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED, until: None });
     }
 
     #[test]
@@ -983,7 +1018,86 @@ mod tests {
         e.set_away(Away::Locked, true);
         assert_eq!(e.scene(NOW), Scene::Idle);
         e.on_mic(vec![user("zoom")], t);
-        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED }, "Call auch gesperrt");
+        assert_eq!(e.scene(NOW), Scene::Live { camera: false, color: Rgb::RED, until: None }, "Call auch gesperrt");
+    }
+
+    // --- Ende des Termins --------------------------------------------------
+
+    fn meeting(start: u64, end: u64) -> Event {
+        Event { start, end: Some(end), all_day: false, declined: false }
+    }
+
+    /// Engine mit laufendem Call und den Terminen `events`
+    fn in_call(events: Vec<Event>) -> Engine {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        e.set_events(events);
+        e
+    }
+
+    #[test]
+    fn meeting_end_of_running_event() {
+        let e = in_call(vec![meeting(NOW - 600, NOW + 1200)]);
+        assert_eq!(e.meeting_end(NOW), Some(NOW + 1200));
+        assert_eq!(e.meeting_end(NOW - 600), Some(NOW + 1200), "ab Beginn");
+    }
+
+    #[test]
+    fn meeting_end_not_before_start() {
+        let e = in_call(vec![meeting(NOW + 60, NOW + 1800)]);
+        assert_eq!(e.meeting_end(NOW), None);
+    }
+
+    #[test]
+    fn meeting_end_gone_once_the_event_is_over() {
+        let e = in_call(vec![meeting(NOW - 1800, NOW)]);
+        assert_eq!(e.meeting_end(NOW - 1), Some(NOW));
+        assert_eq!(e.meeting_end(NOW), None, "kein „BIS“ in der Vergangenheit");
+        assert_eq!(e.meeting_end(NOW + 300), None);
+    }
+
+    #[test]
+    fn meeting_end_skips_all_day_declined_and_open_events() {
+        let all_day = Event { all_day: true, ..meeting(NOW - 3600, NOW + 3600) };
+        let declined = Event { declined: true, ..meeting(NOW - 600, NOW + 600) };
+        let open = Event { end: None, ..meeting(NOW - 600, 0) };
+        let e = in_call(vec![all_day, declined, open]);
+        assert_eq!(e.meeting_end(NOW), None);
+    }
+
+    #[test]
+    fn meeting_end_skips_events_over_twelve_hours() {
+        let e = in_call(vec![meeting(NOW - 3600, NOW - 3600 + 12 * 3600 + 1)]);
+        assert_eq!(e.meeting_end(NOW), None);
+        let e = in_call(vec![meeting(NOW - 3600, NOW - 3600 + 12 * 3600)]);
+        assert_eq!(e.meeting_end(NOW), Some(NOW - 3600 + 12 * 3600), "genau 12 Stunden zählen");
+    }
+
+    #[test]
+    fn meeting_end_of_the_latest_started_event() {
+        let e = in_call(vec![meeting(NOW - 1800, NOW + 3600), meeting(NOW - 300, NOW + 900)]);
+        assert_eq!(e.meeting_end(NOW), Some(NOW + 900));
+        let e = in_call(vec![meeting(NOW - 300, NOW + 1800), meeting(NOW - 300, NOW + 900)]);
+        assert_eq!(e.meeting_end(NOW), Some(NOW + 900), "gleicher Beginn: das frühere Ende");
+    }
+
+    #[test]
+    fn meeting_end_only_during_a_call() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.set_events(vec![meeting(NOW - 600, NOW + 600)]);
+        assert_eq!(e.meeting_end(NOW), None);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.meeting_end(NOW), Some(NOW + 600));
+        e.on_mic(vec![], t + Duration::from_secs(10));
+        assert_eq!(e.meeting_end(NOW), None);
+    }
+
+    #[test]
+    fn meeting_end_switched_off() {
+        let mut e = in_call(vec![meeting(NOW - 600, NOW + 600)]);
+        let cfg = Config { meeting_end: false, ..e.config().clone() };
+        e.set_config(cfg);
+        assert_eq!(e.meeting_end(NOW), None);
     }
 
     #[test]
