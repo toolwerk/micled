@@ -337,15 +337,17 @@ fn found(result: Result<Vec<(String, String)>, String>) -> FoundDevices {
     }
 }
 
-/// Zugang zum Broker; `None` ohne Adresse
+/// Zugang zum Broker; `None` ohne Adresse. Ein Port im Feld der Adresse
+/// gilt vor dem Feld „Port“.
 fn mqtt_access(host: &str, port: u16, tls: bool, user: &str, password: String) -> Option<core::mqtt::Mqtt> {
-    let port = match (port, tls) {
+    let (host, in_host) = core::mqtt::address(host)?;
+    let port = match (in_host.unwrap_or(port), tls) {
         (0, false) => core::mqtt::PORT,
         (0, true) => core::mqtt::TLS_PORT,
         (p, _) => p,
     };
     Some(core::mqtt::Mqtt {
-        host: core::mqtt::normalize(host)?,
+        host,
         port,
         tls,
         user: user.trim().to_string(),
@@ -786,6 +788,9 @@ mod tests {
         assert_eq!(tls.port, 8883, "Standard-Port mit TLS");
         let own = core::Config::from(MicLedConfig { mqtt_port: 1884, mqtt_tls: true, ..config() }).mqtt.unwrap();
         assert_eq!(own.port, 1884);
+        let in_host = core::Config::from(MicLedConfig { mqtt_host: "homeassistant.local:1885".into(), ..config() });
+        let m = in_host.mqtt.unwrap();
+        assert_eq!((m.host.as_str(), m.port), ("homeassistant.local", 1885), "Port in der Adresse gewinnt");
     }
 
     #[test]

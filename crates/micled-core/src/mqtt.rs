@@ -73,9 +73,15 @@ pub struct Report {
     pub apps: Vec<String>,
 }
 
-/// Adresse ohne `mqtt://`, `mqtts://`, eckige Klammern und `/` am Ende;
+/// Adresse ohne `mqtt://`, `mqtts://`, eckige Klammern, Port und `/` am Ende;
 /// `None`, wenn nichts übrig bleibt
 pub fn normalize(host: &str) -> Option<String> {
+    address(host).map(|(h, _)| h)
+}
+
+/// Adresse wie bei [`normalize`] und ein mit eingetragener Port
+/// (`homeassistant.local:1883`, `[fd00::1]:1883`)
+pub fn address(host: &str) -> Option<(String, Option<u16>)> {
     let mut h = host.trim();
     for prefix in ["mqtt://", "mqtts://", "tcp://", "ssl://"] {
         if let Some(rest) = h.strip_prefix(prefix) {
@@ -83,8 +89,20 @@ pub fn normalize(host: &str) -> Option<String> {
         }
     }
     let h = h.trim_end_matches('/').trim();
-    let h = h.strip_prefix('[').and_then(|r| r.strip_suffix(']')).unwrap_or(h);
-    (!h.is_empty()).then(|| h.to_string())
+    let (h, port) = if let Some((inner, tail)) = h.strip_prefix('[').and_then(|r| r.split_once(']')) {
+        (inner, tail.strip_prefix(':').and_then(|p| p.parse().ok()))
+    } else {
+        match h.split_once(':') {
+            // genau ein Doppelpunkt: Name oder IPv4 mit Port (IPv6 ohne Klammern hat mehrere)
+            Some((name, p)) if !p.contains(':') => match p.parse() {
+                Ok(port) => (name, Some(port)),
+                Err(_) => (h, None),
+            },
+            _ => (h, None),
+        }
+    };
+    let h = h.trim();
+    (!h.is_empty()).then(|| (h.to_string(), port))
 }
 
 /// Geräte-ID für Topics: nur Buchstaben, Ziffern, `-` und `_`; `None`, wenn nichts übrig bleibt
@@ -874,6 +892,11 @@ mod tests {
     fn host_and_id_are_cleaned() {
         assert_eq!(normalize(" mqtt://homeassistant.local/ ").as_deref(), Some("homeassistant.local"));
         assert_eq!(normalize("[fd00::1]").as_deref(), Some("fd00::1"));
+        assert_eq!(address("homeassistant.local:1884"), Some(("homeassistant.local".into(), Some(1884))));
+        assert_eq!(address("mqtt://10.0.0.2:8883/"), Some(("10.0.0.2".into(), Some(8883))));
+        assert_eq!(address("[fd00::1]:1883"), Some(("fd00::1".into(), Some(1883))));
+        assert_eq!(address("fd00::1"), Some(("fd00::1".into(), None)), "IPv6 ohne Klammern");
+        assert_eq!(address("host:abc"), Some(("host:abc".into(), None)));
         assert_eq!(normalize("  "), None);
         assert_eq!(clean_id("a1/b2+#c3").as_deref(), Some("a1b2c3"));
         assert_eq!(clean_id("/#"), None);

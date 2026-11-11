@@ -242,9 +242,10 @@ fn strip_cmd(cmd: &StripCmd) -> Result<(), String> {
 fn mqtt_cmd(cmd: &MqttCmd) -> Result<(), String> {
     match cmd {
         MqttCmd::Check { host, port, tls, user, password } => {
+            let (host, in_host) = mqtt::address(host).ok_or("Adresse des Brokers fehlt")?;
             let cfg = mqtt::Mqtt {
-                host: mqtt::normalize(host).ok_or("Adresse des Brokers fehlt")?,
-                port: port.unwrap_or(if *tls { mqtt::TLS_PORT } else { mqtt::PORT }),
+                host,
+                port: port.or(in_host).unwrap_or(if *tls { mqtt::TLS_PORT } else { mqtt::PORT }),
                 tls: *tls,
                 user: user.clone(),
                 password: password.clone().or_else(|| std::env::var("MICLED_MQTT_PASSWORD").ok()).unwrap_or_default(),
