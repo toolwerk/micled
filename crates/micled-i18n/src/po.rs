@@ -65,6 +65,9 @@ impl File {
             }
         }
         if !found {
+            if !out.is_empty() && !out.ends_with('\n') {
+                out.push('\n');
+            }
             out.push_str(&line);
         }
         h.text = out;
@@ -120,6 +123,9 @@ pub fn parse(text: &str) -> Result<File, String> {
             continue;
         }
         if line.starts_with("#~") {
+            if !started {
+                cur = Entry::default(); // Kommentare davor gehören zum obsoleten Eintrag
+            }
             obsolete = true;
             continue;
         }
@@ -338,6 +344,16 @@ mod tests {
         assert!(e.fuzzy());
         assert_eq!(e.prev_id.as_deref(), Some("Old text"));
         assert_eq!((e.ctxt.as_deref(), e.id.as_str(), e.text.as_str()), (Some("A"), "New text", "Nouveau texte"));
+    }
+
+    #[test]
+    fn comments_of_obsolete_entries_stay_there() {
+        let text = "msgid \"\"\nmsgstr \"Language: fr\"\n\n#, fuzzy\n#~ msgid \"old\"\n#~ msgstr \"vieux\"\n\nmsgctxt \"A\"\nmsgid \"a\"\nmsgstr \"b\"\n";
+        let mut f = parse(text).unwrap();
+        assert_eq!(f.entries.len(), 1);
+        assert!(!f.entries[0].fuzzy());
+        f.set_header_field("X-Test", "1");
+        assert_eq!(f.header.unwrap().text, "Language: fr\nX-Test: 1\n");
     }
 
     #[test]
