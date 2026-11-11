@@ -797,8 +797,6 @@ struct NetLight: Identifiable, Equatable {
 /// Gespeichert als `["call": Bool, "timer": Bool, "focus": Bool]`. Ein fehlender
 /// Eintrag oder Schlüssel zählt als an, damit alte Einstellungen gleich bleiben.
 extension OutputStates {
-    static let all = OutputStates(call: true, timer: true, focus: true)
-
     init(stored: Any?) {
         let d = stored as? [String: Bool] ?? [:]
         self.init(call: d["call"] ?? true, timer: d["timer"] ?? true, focus: d["focus"] ?? true)
