@@ -413,7 +413,7 @@ final class AppModel {
         let result = await Task.detached { wledDiscover() }.value
         wledFound = result.items
         if let error = result.error { return error }
-        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+        return result.items.isEmpty ? String(localized: "Nichts gefunden") : String(localized: "\(result.items.count) gefunden")
     }
 
     /// Mit der Nanoleaf-Lampe koppeln (Einschaltknopf vorher 5–7 Sekunden

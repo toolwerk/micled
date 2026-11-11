@@ -10,7 +10,7 @@
 
 **Your Luxafor light shows when you are on air.** MicLED sits in the macOS menu bar and switches the light to red as soon as an app uses the microphone or the camera. Afterwards the previous color comes back.
 
-You don't need a Luxafor for this: MicLED shows the status just as well with Philips Hue, Govee, Nanoleaf, a USB light strip or on a Pixoo or AWTRIX display, individually or together.
+You don't need a Luxafor for this: MicLED shows the status just as well with Philips Hue, Govee, Nanoleaf, WLED, a USB light strip or on a Pixoo or AWTRIX display, individually or together.
 
 <p align="center">
   <img src="docs/images/lamp.gif" alt="Luxafor Flag on the monitor: green, red during the call, then green again" width="340">
@@ -32,7 +32,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - 🖼️ **Pixoo 64**: “ON AIR” (during an event with its end, e.g. “TIL 14:30”), the remaining timer time or Focus on a Divoom display in your own network, even without any light.
 - 🕒 **AWTRIX clock**: the same display on an Ulanzi pixel clock with AWTRIX 3, for example at the office door.
 - 💡 **Philips Hue**: a Hue light or a whole room lights up in the status color and returns to its previous light afterwards.
-- 🌈 **Govee and Nanoleaf**: lights in your own Wi-Fi show the status color and get their light or effect back afterwards, without an account and without the cloud.
+- 🌈 **Govee, Nanoleaf and WLED**: lights and LED strips in your own Wi-Fi show the status color and get their light or effect back afterwards, without an account and without the cloud.
 - 📺 **Light strip on the monitor**: a USB strip with a Robobloq controller (e.g. Meewata) lights up in the color during a call, timer and Focus.
 - 🏠 **Home Assistant**: “on air” via webhook, e.g. for a door sign.
 - 📊 **Statistics**: time on air per day, export as CSV.
@@ -252,14 +252,37 @@ While on air, during the timer and Focus they show their color, dimmed according
 
 A new address or “Remove” deletes the pairing. If the menu shows “key invalid, pair again”, repeat step 2.
 
-If a Govee or Nanoleaf light can't be reached, an error with its address appears in the menu and MicLED retries every 30 seconds. The light and the other devices still switch immediately. The only exception: Govee lights share port 4002, so a Govee light waits up to one second for each Govee light that can't be reached.
-
 ### Not supported
 
 - **Nanoleaf Essentials** (bulbs and light strips with Matter or HomeKit over Thread) have no interface in your own network.
 - **Govee without control in your own network**, such as the AI Sync Box H6603/H6604, and Govee devices that only have Bluetooth.
 
 For these devices: integrate them in Home Assistant and switch them there by an automation with the webhook from [“On air” to Home Assistant](#on-air-to-home-assistant).
+
+## WLED
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/settings-wled-dark.png">
+    <img src="docs/images/en/settings-wled-light.png" alt="MicLED settings: WLED section with an added and a found device" width="400">
+  </picture>
+</p>
+
+LED strips and lights with the free firmware [WLED](https://kno.wled.ge/) show the status through its interface in your own network, without an account, without pairing and without the cloud. Several devices are possible.
+
+While on air, during the timer and during Focus, all segments light up in a single color, dimmed accordingly in the evening. Afterwards they get back their on/off, brightness and, per segment, color and effect from before.
+
+- If a **preset** was running, MicLED restores its look but doesn't reload the preset. That way, for example, a brightness dimmed afterwards is kept. In the WLED app the preset is no longer marked afterwards, but the light looks the same.
+- If a **playlist** was running, it starts over afterwards.
+- If the device is currently receiving **live data** from another controller, such as screen sync via Hyperion, MicLED takes precedence for the duration of the call and releases it afterwards.
+- A running **nightlight** (including sunrise) is ended by the call and doesn't restart afterwards.
+- Devices linked via **WLED sync** don't get the status color; if they should light up too, add them as well. If an added device itself receives sync from another one, that device's next change may overwrite the status color.
+
+1. Give the device a **fixed IP address** in the router.
+2. In MicLED, under Settings › WLED, turn on “Show status on WLED devices” and press “Search”. Take over found devices with “Add”, or enter the IP by hand with “Add address”, with the port if it isn't 80 (`192.168.1.45:8080`).
+3. As with the Pixoo, MicLED needs access to the **local network**.
+
+If a Govee or Nanoleaf light or a WLED device can't be reached, an error with the address appears in the menu and MicLED retries every 30 seconds. The light and the other devices still switch immediately. The only exception: Govee lights share port 4002, so a Govee light waits up to one second for each Govee light that can't be reached.
 
 ## Light strip (USB)
 
@@ -317,7 +340,7 @@ MicLED doesn't notice color changes from the Luxafor app.
 
 - macOS 14 or later
 - Xcode (only needed for building, not opened), `xcodegen`, Rust via `rustup`
-- Luxafor Flag, Orb or Bluetooth (USB ID 04d8:f372) or one of the other devices: Philips Hue, Govee, Nanoleaf, light strip with Robobloq controller, Pixoo 64 or AWTRIX clock. Without a Luxafor, choose “No light” under Settings › Connection to the light (see [Setup](#setup)); this is also enough if MicLED should only set the Slack status or trigger the webhook.
+- Luxafor Flag, Orb or Bluetooth (USB ID 04d8:f372) or one of the other devices: Philips Hue, Govee, Nanoleaf, WLED, light strip with Robobloq controller, Pixoo 64 or AWTRIX clock. Without a Luxafor, choose “No light” under Settings › Connection to the light (see [Setup](#setup)); this is also enough if MicLED should only set the Slack status or trigger the webhook.
 
 ## Setup
 
@@ -353,6 +376,8 @@ cargo run -p micled-cli -- govee test 192.168.1.31   # 5 s red, then back
 cargo run -p micled-cli -- nanoleaf scan       # search for Nanoleaf via Bonjour
 cargo run -p micled-cli -- nanoleaf pair 192.168.1.40   # after 5–7 s on the power button: key
 MICLED_NANOLEAF_KEY=<key> cargo run -p micled-cli -- nanoleaf test 192.168.1.40   # 5 s red, then back
+cargo run -p micled-cli -- wled scan           # search for WLED via Bonjour
+cargo run -p micled-cli -- wled test 192.168.1.45    # 5 s red, then back
 cargo run -p micled-cli -- strip info          # light strip via USB: LEDs, monitor size, firmware
 cargo run -p micled-cli -- strip test          # 5 s red, then off
 ```
@@ -360,7 +385,7 @@ cargo run -p micled-cli -- strip test          # 5 s red, then off
 ## Structure
 
 ```
-crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, light strip (USB)
+crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB)
 crates/micled-cli    command line `micled`
 crates/micled-ffi    UniFFI layer for Swift
 apps/MicLED          SwiftUI menu bar app, project.yml for xcodegen
@@ -376,7 +401,7 @@ The Xcode target `RustCore` (a dependency of the app) calls `scripts/build-rust.
 scripts/screenshots.sh
 ```
 
-The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top and at Govee/Nanoleaf) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
+The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Govee/Nanoleaf, at WLED and at the light strip) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
 
 ## Updates
 

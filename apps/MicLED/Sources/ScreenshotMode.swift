@@ -59,7 +59,7 @@ enum ScreenshotMode {
         d.set(true, forKey: "nanoleafEnabled")
         d.set([["id": UUID().uuidString, "host": "192.168.1.40:16021", "name": "Canvas 5B3C"]], forKey: "nanoleafDevices")
         d.set(true, forKey: "wledEnabled")
-        d.set([["id": UUID().uuidString, "host": "192.168.1.45", "name": "Schreibtisch"]], forKey: "wledDevices")
+        d.set([["id": UUID().uuidString, "host": "192.168.1.45", "name": String(localized: "Schreibtisch")]], forKey: "wledDevices")
         d.set(true, forKey: "robobloqEnabled")
         return d
     }

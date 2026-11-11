@@ -574,6 +574,22 @@
         }
       }
     },
+    "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afterwards the device gets back its on/off, brightness and color or effect from before. A fixed IP is recommended."
+          }
+        }
+      }
+    },
     "Den Timer startest du im Menü, per Rechtsklick auf das Symbol, mit micled://timer/25 oder in Kurzbefehlen. Am Ende blinkt die Lampe kurz. Ein Call hat Vorrang, eine gewählte Farbe beendet den Timer.": {
       "localizations": {
         "de": {
@@ -2150,6 +2166,22 @@
         }
       }
     },
+    "Schreibtisch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreibtisch"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desk"
+          }
+        }
+      }
+    },
     "Server": {
       "shouldTranslate": false
     },
@@ -2312,6 +2344,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show status on Nanoleaf lights"
+          }
+        }
+      }
+    },
+    "Status auf WLED-Geräten zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status auf WLED-Geräten zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show status on WLED devices"
           }
         }
       }
@@ -2743,6 +2791,9 @@
           }
         }
       }
+    },
+    "WLED": {
+      "shouldTranslate": false
     },
     "Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.": {
       "localizations": {

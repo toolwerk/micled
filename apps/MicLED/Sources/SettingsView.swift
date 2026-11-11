@@ -266,7 +266,7 @@ struct SettingsView: View {
                     }
                     HStack {
                         Button("Suchen") {
-                            wledResult = "Suche …"
+                            wledResult = String(localized: "Suche …")
                             Task { wledResult = await model.searchWled() }
                         }
                         Button("Adresse hinzufügen") {
