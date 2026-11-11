@@ -222,7 +222,8 @@ impl Monitor {
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
                     (nanoleaf, HUE_SHUTDOWN),
-                    (strip, Duration::from_secs(3)),
+                    // ein laufender „Testen“ (bis gut 5 s) kommt vor dem Zurückstellen dran
+                    (strip, Duration::from_secs(3) + robobloq::TEST_RED + Duration::from_secs(4)),
                 ] {
                     if let Some(done) = done {
                         let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
