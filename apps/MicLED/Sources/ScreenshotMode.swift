@@ -81,7 +81,7 @@ enum ScreenshotMode {
     /// Beispiel-Ergebnis der WLED-Suche (eines schon eingetragen)
     static let wledFound = [
         FoundDevice(host: "192.168.1.45", name: "Schreibtisch"),
-        FoundDevice(host: "192.168.1.47", name: "Regal"),
+        FoundDevice(host: "192.168.1.47", name: String(localized: "Regal")),
     ]
 
     /// Feste Zeit auf Sendung: Wochenende frei, werktags 40–220 min

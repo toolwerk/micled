@@ -2150,6 +2150,22 @@
         }
       }
     },
+    "Regal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shelf"
+          }
+        }
+      }
+    },
     "Schnellfarben im Menü": {
       "localizations": {
         "de": {
