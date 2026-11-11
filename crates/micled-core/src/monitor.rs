@@ -1,5 +1,5 @@
 //! Hintergrund-Thread: fragt Mikrofon, Kamera und Statusdatei ab, schaltet die
-//! Lampe, meldet „Auf Sendung“ nach außen und Änderungen an die Oberfläche.
+//! Lampe, meldet „Auf Sendung“ nach außen (Webhook, Slack, MQTT) und Änderungen an die Oberfläche.
 
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, RecvTimeoutError, Sender};
@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
+use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -119,6 +119,7 @@ impl Monitor {
         let govee_error = Arc::new(Mutex::new(None));
         let nanoleaf_error = Arc::new(Mutex::new(None));
         let robobloq_error = Arc::new(Mutex::new(None));
+        let mqtt_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
             .spawn(move || {
@@ -170,6 +171,9 @@ impl Monitor {
                     last_robobloq: None,
                     watch: robobloq::Watch::default(),
                     next_watch: Instant::now(),
+                    mqtt: mqtt::Updater::start(mqtt_error.clone()),
+                    mqtt_error,
+                    last_mqtt: None,
                 };
                 // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
                 w.report_slack();
@@ -208,7 +212,8 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                // Pixoo, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen gleichzeitig zurückstellen, nicht nacheinander
+                // Pixoo, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen gleichzeitig zurückstellen und
+                // bei MQTT abmelden, nicht nacheinander
                 let started = Instant::now();
                 let pixoo = w.pixoo.begin_shutdown();
                 let awtrix = w.awtrix.begin_shutdown();
@@ -216,8 +221,10 @@ impl Monitor {
                 let govee = w.govee.begin_shutdown();
                 let nanoleaf = w.nanoleaf.begin_shutdown();
                 let strip = w.robobloq.begin_shutdown();
+                let mqtt = w.mqtt.begin_shutdown();
                 for (done, limit) in [
                     (pixoo, Duration::from_secs(3)),
+                    (mqtt, Duration::from_secs(3)),
                     (awtrix, Duration::from_secs(3)),
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
@@ -369,6 +376,10 @@ struct Worker {
     /// Ist der Streifen angesteckt? Zählt das Wiederanstecken.
     watch: robobloq::Watch,
     next_watch: Instant,
+    mqtt: mqtt::Updater,
+    mqtt_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an den MQTT-Thread gegebene Einstellung, Meldung und Ruhezustand
+    last_mqtt: Option<(Option<mqtt::Mqtt>, mqtt::Report, bool)>,
 }
 
 impl Worker {
@@ -403,6 +414,9 @@ impl Worker {
         }
         if cfg.nanoleaf != self.engine.config().nanoleaf {
             *self.nanoleaf_error.lock().unwrap() = None;
+        }
+        if cfg.mqtt != self.engine.config().mqtt {
+            *self.mqtt_error.lock().unwrap() = None;
         }
         if cfg.robobloq != self.engine.config().robobloq {
             *self.robobloq_error.lock().unwrap() = None;
@@ -601,6 +615,16 @@ impl Worker {
         if live != self.live || (live && self.engine.camera_on() != self.camera_reported) {
             self.set_live(live);
         }
+        let report = mqtt::Report {
+            on_air: self.live,
+            camera: self.camera_reported,
+            apps: self.engine.users().iter().map(|u| u.name.clone()).collect(),
+        };
+        let wanted = (self.engine.config().mqtt.clone(), report, self.engine.asleep());
+        if self.last_mqtt.as_ref() != Some(&wanted) {
+            self.mqtt.send(wanted.0.clone(), wanted.1.clone(), wanted.2);
+            self.last_mqtt = Some(wanted);
+        }
 
         // 7. Lichtstreifen: alle fünf Sekunden nachsehen, ob er (wieder) angesteckt ist
         if self.engine.config().robobloq && Instant::now() >= self.next_watch {
@@ -716,6 +740,7 @@ impl Worker {
                 .clone()
                 .or_else(|| self.mic_error.clone())
                 .or_else(|| self.on_air_error.lock().unwrap().clone())
+                .or_else(|| self.mqtt_error.lock().unwrap().clone())
                 .or_else(|| self.calendar_error.clone())
                 .or_else(|| self.slack_error.lock().unwrap().clone())
                 .or_else(|| self.pixoo_error.lock().unwrap().clone())
