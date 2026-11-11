@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var current: [MicUser] = []
     @State private var nextcloudResult = ""
     @State private var slackResult = ""
+    @State private var mqttResult = ""
     @State private var pixooResult = ""
     @State private var awtrixResult = ""
     @State private var hueResult = ""
@@ -80,6 +81,31 @@ struct SettingsView: View {
                 Text("„Auf Sendung“ melden")
             } footer: {
                 Text("Bei jedem Wechsel geht ein POST mit {\"on_air\": true, \"camera\": false, \"apps\": […]} an diese Adresse, z. B. an einen Home-Assistant-Webhook für ein Türschild. Leer = aus.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("An Home Assistant melden (MQTT)", isOn: $model.mqttEnabled)
+                if model.mqttEnabled {
+                    TextField("Broker", text: $model.mqttHost, prompt: Text("homeassistant.local"))
+                        .autocorrectionDisabled()
+                    TextField("Port", value: $model.mqttPort, format: .number.grouping(.never))
+                    Toggle("TLS", isOn: $model.mqttTls)
+                    TextField("Benutzer", text: $model.mqttUser, prompt: Text("micled"))
+                        .autocorrectionDisabled()
+                    SecureField("Passwort", text: $model.mqttPassword)
+                    HStack {
+                        Button("Verbindung prüfen") {
+                            mqttResult = "Prüfe …"
+                            Task { mqttResult = await model.checkMqtt() }
+                        }
+                        Text(mqttResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Home Assistant (MQTT)").id("mqtt")
+            } footer: {
+                Text("Erscheint in Home Assistant als Gerät „MicLED (\(model.mqttDeviceName))“ mit Auf Sendung, Kamera und Programm. Endet MicLED oder schläft der Mac, ist es dort nicht verfügbar. TLS prüft das Zertifikat gegen die öffentlichen Zertifizierungsstellen, z. B. Let's Encrypt. Das Passwort liegt im Schlüsselbund; Anleitung in der README.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
