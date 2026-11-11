@@ -13,6 +13,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Automatische Updates mit Sparkle: MicLED sucht täglich nach einer neuen Version und fragt vor der Installation nach. „Nach Updates suchen …“ im Menü und Kontextmenü, abschaltbar in den Einstellungen. `scripts/release.sh` signiert das ZIP und schreibt den Appcast.
 - Lichtstreifen per USB mit Robobloq-Controller (`1A86:FE07`, z. B. Meewata): Der ganze Streifen zeigt die Farbe für Call, Timer und Fokus, sonst ist er aus. Erkennt das Wiederanstecken, Fehler im Menü bei fehlendem oder anderem Controller, „Testen“ in den Einstellungen lässt den Streifen etwa zwei Sekunden rot leuchten, zeigt danach wieder den aktuellen Zustand und nennt LEDs und Firmware. Kommandozeile `micled strip info|test`.
 - „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack und am Webhook.
+- Englische Oberfläche: Steht macOS nicht auf Deutsch, erscheinen Menü, Einstellungen, Statistik, Kurzbefehle und die Fehlermeldungen von Lampen und Geräten auf Englisch, Pixoo und AWTRIX-Uhr zeigen dann „FOCUS“. Dazu eine englische README mit englischen Screenshots.
 
 ## [0.1.0] - 2026-11-05
 
