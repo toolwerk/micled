@@ -53,6 +53,21 @@ pub const DEFAULT_IGNORED: &[&str] = &[
     "com.rogueamoeba.arkaudiod",
 ];
 
+/// Zustände, die ein Zusatzgerät zeigt. Ein abgewählter Zustand gilt für das
+/// Gerät als frei; es zeigt dann den nächsten gewählten darunter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OutputStates {
+    pub call: bool,
+    pub timer: bool,
+    pub focus: bool,
+}
+
+impl Default for OutputStates {
+    fn default() -> Self {
+        OutputStates { call: true, timer: true, focus: true }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     /// Automatik an/aus
@@ -97,16 +112,25 @@ pub struct Config {
     pub slack: Option<Slack>,
     /// Adresse eines Pixoo 64 im eigenen Netz (`None` = aus)
     pub pixoo: Option<String>,
+    pub pixoo_states: OutputStates,
     /// Adresse einer Pixeluhr mit AWTRIX 3 im eigenen Netz (`None` = aus)
     pub awtrix: Option<String>,
+    pub awtrix_states: OutputStates,
     /// Hue-Lampe oder -Raum über die Hue Bridge (`None` = aus)
     pub hue: Option<crate::hue::Hue>,
+    pub hue_states: OutputStates,
     /// Govee-Lampen im eigenen Netz (leer = aus)
     pub govee: Vec<crate::govee::Govee>,
+    pub govee_states: OutputStates,
     /// Gekoppelte Nanoleaf-Lampen (leer = aus)
     pub nanoleaf: Vec<crate::nanoleaf::Nanoleaf>,
+    pub nanoleaf_states: OutputStates,
+    /// WLED-Geräte im eigenen Netz (leer = aus)
+    pub wled: Vec<crate::wled::Wled>,
+    pub wled_states: OutputStates,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
+    pub robobloq_states: OutputStates,
     /// „Auf Sendung“ per MQTT an Home Assistant (`None` = aus)
     pub mqtt: Option<crate::mqtt::Mqtt>,
 }
@@ -137,11 +161,19 @@ impl Default for Config {
             dim: None,
             slack: None,
             pixoo: None,
+            pixoo_states: OutputStates::default(),
             awtrix: None,
+            awtrix_states: OutputStates::default(),
             hue: None,
+            hue_states: OutputStates::default(),
             govee: Vec::new(),
+            govee_states: OutputStates::default(),
             nanoleaf: Vec::new(),
+            nanoleaf_states: OutputStates::default(),
+            wled: Vec::new(),
+            wled_states: OutputStates::default(),
             robobloq: false,
+            robobloq_states: OutputStates::default(),
             mqtt: None,
         }
     }
@@ -255,14 +287,20 @@ impl Engine {
     /// Bild für Displays zur Zeit `now` (Unix-Sekunden). Ein Call gilt auch bei
     /// ausgeschalteter Automatik (wie in Slack), sonst wie bei [`Engine::resting`].
     pub fn scene(&self, now: u64) -> Scene {
-        if self.live() {
+        self.scene_for(now, OutputStates::default())
+    }
+
+    /// Bild für ein Gerät, das nur die Zustände in `states` zeigt. Ein
+    /// abgewählter Zustand wird übersprungen, es gilt der nächste darunter.
+    pub fn scene_for(&self, now: u64, states: OutputStates) -> Scene {
+        if self.live() && states.call {
             let (camera, color) = self.live_look;
             Scene::Live { camera, color, until: None }
         } else if self.dark() {
             Scene::Idle
-        } else if let Some(until) = self.timer {
+        } else if let (Some(until), true) = (self.timer, states.timer) {
             Scene::Timer { minutes: until.saturating_sub(now).div_ceil(60).max(1) as u32, color: self.cfg.timer_color }
-        } else if self.focus_shown() {
+        } else if self.focus_shown() && states.focus {
             Scene::Focus { color: self.cfg.focus_color }
         } else {
             Scene::Idle
@@ -1098,5 +1136,93 @@ mod tests {
         let (mut e, _) = engine(AfterMic::Restore);
         e.set_focus(true);
         assert_eq!(e.scene(NOW), Scene::Idle);
+    }
+
+    // --- Zustände je Gerät ------------------------------------------------
+
+    const NO_CALL: OutputStates = OutputStates { call: false, timer: true, focus: true };
+    const NO_TIMER: OutputStates = OutputStates { call: true, timer: false, focus: true };
+    const NO_FOCUS: OutputStates = OutputStates { call: true, timer: true, focus: false };
+    const NOTHING: OutputStates = OutputStates { call: false, timer: false, focus: false };
+
+    #[test]
+    fn scene_for_default_matches_scene() {
+        let (mut e, t) = focus_engine();
+        assert_eq!(e.scene_for(NOW, OutputStates::default()), e.scene(NOW));
+        e.set_focus(true);
+        assert_eq!(e.scene_for(NOW, OutputStates::default()), e.scene(NOW));
+        e.start_timer(NOW + 600);
+        assert_eq!(e.scene_for(NOW, OutputStates::default()), e.scene(NOW));
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, OutputStates::default()), e.scene(NOW));
+    }
+
+    #[test]
+    fn scene_for_without_call_is_idle_during_call() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, NO_CALL), Scene::Idle);
+    }
+
+    #[test]
+    fn scene_for_without_call_shows_timer_during_call() {
+        let (mut e, t) = engine(AfterMic::Restore);
+        e.start_timer(NOW + 600);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, NO_CALL), Scene::Timer { minutes: 10, color: VIOLET });
+    }
+
+    #[test]
+    fn scene_for_without_call_shows_focus_during_call() {
+        let (mut e, t) = focus_engine();
+        e.set_focus(true);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, NO_CALL), Scene::Focus { color: ORANGE });
+    }
+
+    #[test]
+    fn scene_for_without_timer_shows_focus() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        e.start_timer(NOW + 600);
+        assert_eq!(e.scene_for(NOW, NO_TIMER), Scene::Focus { color: ORANGE });
+    }
+
+    #[test]
+    fn scene_for_without_focus_is_idle() {
+        let (mut e, _) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.scene_for(NOW, NO_FOCUS), Scene::Idle);
+    }
+
+    #[test]
+    fn scene_for_without_call_is_idle_while_locked() {
+        let (mut e, t) = focus_engine();
+        e.set_focus(true);
+        e.start_timer(NOW + 600);
+        e.set_away(Away::Locked, true);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, NO_CALL), Scene::Idle);
+    }
+
+    #[test]
+    fn scene_for_nothing_is_always_idle() {
+        let (mut e, t) = focus_engine();
+        e.set_focus(true);
+        assert_eq!(e.scene_for(NOW, NOTHING), Scene::Idle);
+        e.start_timer(NOW + 600);
+        assert_eq!(e.scene_for(NOW, NOTHING), Scene::Idle);
+        e.on_mic(vec![user("zoom")], t);
+        assert_eq!(e.scene_for(NOW, NOTHING), Scene::Idle);
+    }
+
+    #[test]
+    fn output_states_default_to_all() {
+        let c = Config::default();
+        let all = OutputStates { call: true, timer: true, focus: true };
+        assert_eq!(OutputStates::default(), all);
+        for s in [c.pixoo_states, c.awtrix_states, c.hue_states, c.govee_states, c.nanoleaf_states, c.wled_states, c.robobloq_states] {
+            assert_eq!(s, all);
+        }
     }
 }

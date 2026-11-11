@@ -25,10 +25,11 @@ pub mod robobloq;
 pub mod shared;
 pub mod slack;
 pub mod stats;
+pub mod wled;
 
 pub use caldav::Nextcloud;
 pub use color::Rgb;
-pub use engine::{AfterMic, Away, Config, DEFAULT_IGNORED};
+pub use engine::{AfterMic, Away, Config, OutputStates, DEFAULT_IGNORED};
 pub use lamp::Transport;
 pub use mic::MicUser;
 pub use monitor::{Monitor, Status, StatusListener};
