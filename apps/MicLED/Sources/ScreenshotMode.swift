@@ -40,6 +40,7 @@ enum ScreenshotMode {
         d.set(["ff0000", "00ff00", "ffff00", "0000ff", "ffffff"], forKey: "favorites")
         d.set([["key": "com.plaud.mac", "hex": "ff8800"]], forKey: "appColors")
         d.set(true, forKey: "slackEnabled")
+        d.set(true, forKey: "nextcloudStatusEnabled")
         d.set(true, forKey: "dimEnabled")
         d.set(true, forKey: "remindersEnabled")
         d.set(true, forKey: "pixooEnabled")
