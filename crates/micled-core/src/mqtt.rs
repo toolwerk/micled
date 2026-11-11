@@ -518,10 +518,10 @@ impl Session {
             self.next_try = None;
             return;
         }
-        self.removal_tries += 1;
         if matches!(&self.next_try, Some((c, t)) if *c == old && now < *t) {
             return;
         }
+        self.removal_tries += 1;
         match (self.connect)(&old) {
             Ok(link) => {
                 self.link = Some((old, link));
@@ -1067,6 +1067,20 @@ mod tests {
             s.step(None, &live(&[]), false, t);
         }
         assert_eq!(s.next_wake(None, false, t), None, "aufgegeben");
+    }
+
+    #[test]
+    fn waiting_does_not_use_up_removal_tries() {
+        let (mut s, wire) = session();
+        let t = Instant::now();
+        s.step(Some(&cfg()), &live(&[]), false, t);
+        wire.lock().unwrap().broken = true;
+        s.step(None, &live(&[]), false, t);
+        for i in 1..10 {
+            s.step(None, &live(&[]), false, t + Duration::from_millis(i * 100));
+        }
+        assert_eq!(s.removal_tries, 0, "Meldungen in der Pause zählen nicht");
+        assert_eq!(s.next_wake(None, false, t), Some(t + Duration::from_secs(10)));
     }
 
     #[test]
