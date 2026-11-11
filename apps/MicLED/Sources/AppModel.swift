@@ -771,7 +771,7 @@ struct NetLight: Identifiable, Equatable {
     }
 
     /// Adresse wie im Kern bereinigt (ohne `http://` und `/`, Nanoleaf mit
-    /// Port 16021, Govee ohne Port, WLED mit dem angegebenen), zum Vergleichen
+    /// Port 16021, Govee ohne Port, WLED mit dem angegebenen außer 80), zum Vergleichen
     static func normalized(_ host: String, _ kind: NetKind) -> String {
         var h = host.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in ["http://", "https://"] where h.hasPrefix(prefix) { h.removeFirst(prefix.count) }
@@ -780,6 +780,8 @@ struct NetLight: Identifiable, Equatable {
         if let colon = h.lastIndex(of: ":") {
             let port = h[h.index(after: colon)...]
             if kind == .govee, !port.isEmpty, port.allSatisfy(\.isASCII), port.allSatisfy(\.isNumber) {
+                h = String(h[..<colon])
+            } else if kind == .wled, port == "80" {
                 h = String(h[..<colon])
             }
         } else if kind == .nanoleaf, !h.isEmpty {

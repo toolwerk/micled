@@ -662,7 +662,7 @@ mod tests {
 
     #[test]
     fn wled_hosts_are_cleaned_and_deduplicated() {
-        let hosts = ["10.0.0.7", " ", "http://10.0.0.7/", "10.0.0.7:8080", "10.0.0.8"].map(String::from);
+        let hosts = ["10.0.0.7", " ", "http://10.0.0.7/", "10.0.0.7:80", "10.0.0.7:8080", "10.0.0.8"].map(String::from);
         let list: Vec<String> = wled(&hosts).into_iter().map(|w| w.host).collect();
         assert_eq!(list, ["10.0.0.7", "10.0.0.7:8080", "10.0.0.8"]);
     }

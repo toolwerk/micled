@@ -41,9 +41,15 @@ impl Keyed for Wled {
 }
 
 /// Adresse aus den Einstellungen bereinigen wie [`crate::pixoo::normalize`],
-/// ein angegebener Port bleibt. Leer = aus.
+/// ein angegebener Port bleibt, außer dem Standard-Port 80 (sonst zählte
+/// dasselbe Gerät doppelt). Leer = aus.
 pub fn normalize(host: &str) -> Option<String> {
-    crate::pixoo::normalize(host)
+    let h = crate::pixoo::normalize(host)?;
+    match h.strip_suffix(":80") {
+        Some("") => None,
+        Some(bare) => Some(bare.to_string()),
+        None => Some(h),
+    }
 }
 
 /// Befehl für die Farbe `c` auf den Segmenten `ids` (`OFF` schaltet aus),
@@ -304,6 +310,8 @@ mod tests {
     fn addresses_keep_a_given_port() {
         assert_eq!(normalize(" http://10.0.0.5/ ").as_deref(), Some("10.0.0.5"));
         assert_eq!(normalize("10.0.0.5:8080").as_deref(), Some("10.0.0.5:8080"));
+        assert_eq!(normalize("http://10.0.0.5:80/").as_deref(), Some("10.0.0.5"), "Port 80 ist derselbe Eintrag");
+        assert_eq!(normalize("10.0.0.5:8000").as_deref(), Some("10.0.0.5:8000"));
         assert_eq!(normalize("  "), None);
         assert_eq!(found_host([10, 0, 0, 5].into(), 80), "10.0.0.5");
         assert_eq!(found_host([10, 0, 0, 5].into(), 8080), "10.0.0.5:8080");
