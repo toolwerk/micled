@@ -36,7 +36,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - 🌈 **Govee, Nanoleaf und WLED**: Lampen und LED-Streifen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
 - 📺 **Lichtstreifen am Monitor**: ein USB-Streifen mit Robobloq-Controller (z. B. Meewata) leuchtet bei Call, Timer und Fokus in der Farbe.
 - 🏠 **Home Assistant**: MicLED erscheint per MQTT als Gerät mit Auf Sendung, Kamera und Programm, wahlweise meldet ein Webhook „Auf Sendung“.
-- 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
+- 📊 **Statistik**: Zeit auf Sendung je Tag, Wochen mit Fokuszeit im Vergleich zur Vorwoche, Export als CSV.
 - ⌨️ **Steuerung von außen** über `micled://`-Adressen, Kurzbefehle und das Stream Deck.
 - 🔌 **USB direkt** ohne Luxafor-App, wahlweise über den Luxafor-Webhook.
 
@@ -85,6 +85,12 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - Fokus von macOS: Solange ein Fokus an ist, leuchtet die Lampe in der Fokusfarbe. Gibt macOS den Fokus nicht frei, meldet ihn eine Kurzbefehle-Automation („Fokus an MicLED melden“).
 - Abends dimmen: In einer einstellbaren Zeitspanne (Standard 18–7 Uhr) leuchtet die Lampe gedimmt, die Farben rechnet MicLED herunter.
 - Statistik: Im Menü steht, wie lange du heute auf Sendung warst. Das Fenster „Statistik“ zeigt die letzten 7 oder 30 Tage als Balken und exportiert alle Calls als CSV. Gespeichert wird ein Jahr.
+- Wochen in der Statistik: Die Ansicht „Wochen“ zeigt für die letzten zwölf Kalenderwochen (Beginn Montag, Zeitzone des Macs) die Zeit auf Sendung und die Fokuszeit als Balken und die Zahl der Calls, darunter Zeit auf Sendung, Calls und Fokuszeit der laufenden Woche mit der Veränderung zur Vorwoche bis zum selben Wochentag und zur selben Uhrzeit. Als Fokuszeit zählt, solange der Konzentrations-Timer läuft oder ein Fokus von macOS an ist, Überschneidungen einmal und nur bei wachem, entsperrtem Mac mit eingeschaltetem Bildschirm. Den Fokus von macOS liest MicLED, sobald die Freigabe dafür besteht; um sie gebeten wird beim Einschalten von „Fokus von macOS anzeigen“ in den Einstellungen, danach zählt er auch bei ausgeschalteter Anzeige. Erfasst wird sie erst seit dem Update mit dieser Ansicht. Beim Export wählt „Inhalt“ zwischen allen Calls und den Summen je Woche (`week,start,live_seconds,calls,focus_seconds`).
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/stats-week-dark.png">
+    <img src="docs/images/stats-week-light.png" alt="Statistik: Stunden auf Sendung und Fokus je Kalenderwoche" width="600">
+  </picture>
 - Steuerung von außen über `micled://`-Adressen und Aktionen in der Kurzbefehle-App, siehe unten.
 
 </details>
@@ -465,7 +471,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Nextcloud, bei Govee/Nanoleaf, bei WLED, beim Lichtstreifen und bei MQTT) und Statistik in Hell und Dunkel auf, auf Deutsch nach `docs/images/` und auf Englisch für die [englische README](README.en.md) nach `docs/images/en/`. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Nextcloud, bei Govee/Nanoleaf, bei WLED, beim Lichtstreifen und bei MQTT) und Statistik (Tage und Wochen) in Hell und Dunkel auf, auf Deutsch nach `docs/images/` und auf Englisch für die [englische README](README.en.md) nach `docs/images/en/`. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Updates
 

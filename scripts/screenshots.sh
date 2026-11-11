@@ -17,11 +17,12 @@ mkdir -p "$OUT" "$OUT/en"
 xcodebuild -project "$ROOT/apps/MicLED/MicLED.xcodeproj" -scheme MicLED -configuration Debug \
   -derivedDataPath "$DERIVED" build >/dev/null 2>&1 || { echo "Debug-Build fehlgeschlagen" >&2; exit 1; }
 
-# Fenstertitel → Dateiname (settings-nextcloud: Einstellungen bei Nextcloud,
+# Fenstertitel → Dateiname (stats-week: Statistik in der Ansicht „Wochen“,
+# settings-nextcloud: Einstellungen bei Nextcloud,
 # settings-network: bei Govee und Nanoleaf, settings-wled: bei WLED, settings-strip: beim Lichtstreifen,
 # settings-mqtt: bei Home Assistant per MQTT). Deutsch nach docs/images/, Englisch nach docs/images/en/; die Einstellungen heißen in beiden Sprachen „MicLED“.
-WINDOWS_DE=("MicLED-Menü:menu" "Statistik:stats")
-WINDOWS_EN=("MicLED Menu:menu" "Statistics:stats")
+WINDOWS_DE=("MicLED-Menü:menu" "Statistik:stats" "Statistik:stats-week")
+WINDOWS_EN=("MicLED Menu:menu" "Statistics:stats" "Statistics:stats-week")
 SETTINGS=("MicLED:settings" "MicLED:settings-nextcloud" "MicLED:settings-network" "MicLED:settings-wled" "MicLED:settings-strip" "MicLED:settings-mqtt")
 
 # je Fenster ein eigener Start, damit es das aktive Fenster ist
@@ -32,6 +33,7 @@ for lang in de en; do
     for entry in "${windows[@]}"; do
       title="${entry%%:*}" name="${entry##*:}"
       args=(--window "$name")
+      [[ "$name" == stats-week ]] && args=(--window stats --stats week)
       [[ "$name" == settings-nextcloud ]] && args=(--window settings --scroll nextcloud)
       [[ "$name" == settings-network ]] && args=(--window settings --scroll network)
       [[ "$name" == settings-wled ]] && args=(--window settings --scroll wled)

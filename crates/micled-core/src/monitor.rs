@@ -12,7 +12,7 @@ use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
 use crate::reminder::{self, Event};
-use crate::stats::CallLog;
+use crate::stats::{self, CallLog, WeekSum};
 use crate::display::Scene;
 use crate::presence;
 use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, nc_status, onair, output, pixoo, robobloq, shared, slack, wled};
@@ -143,6 +143,7 @@ impl Monitor {
                     flash_color: Rgb::OFF,
                     live: false,
                     camera_reported: false,
+                    focused: false,
                     calls: log,
                     calls_path,
                     on_air_error: Arc::new(Mutex::new(None)),
@@ -221,6 +222,7 @@ impl Monitor {
                         listener.status_changed(next);
                     }
                 }
+                w.set_focused(false);
                 w.set_live(false);
                 // Pixoo, AWTRIX, Hue, Govee, Nanoleaf, WLED und Lichtstreifen gleichzeitig zurückstellen und
                 // bei MQTT abmelden, nicht nacheinander
@@ -312,6 +314,19 @@ impl Monitor {
         self.calls.lock().unwrap().to_csv()
     }
 
+    /// Summen der letzten `count` Kalenderwochen (laufende zuletzt) und die
+    /// Vorwoche bis zur selben Zeit, in der Zeitzone des Macs
+    pub fn weekly(&self, count: usize) -> (Vec<WeekSum>, WeekSum) {
+        let now = unix_now();
+        let calls = self.calls.lock().unwrap();
+        (calls.weeks(count, now, stats::local_offset), calls.last_week_to_date(now, stats::local_offset))
+    }
+
+    /// Summen je Kalenderwoche als CSV
+    pub fn weeks_csv(&self) -> String {
+        self.calls.lock().unwrap().weeks_csv(unix_now(), stats::local_offset)
+    }
+
     pub fn status(&self) -> Status {
         self.status.lock().unwrap().clone()
     }
@@ -347,6 +362,8 @@ struct Worker {
     /// Zuletzt nach außen gemeldeter Zustand „Auf Sendung“
     live: bool,
     camera_reported: bool,
+    /// Zuletzt in der Statistik als Fokuszeit erfasst
+    focused: bool,
     calls: Arc<Mutex<CallLog>>,
     calls_path: Option<PathBuf>,
     on_air_error: Arc<Mutex<Option<String>>>,
@@ -739,6 +756,28 @@ impl Worker {
         if self.last_scene.as_ref() != Some(&wanted) {
             self.pixoo.send(wanted.0.clone(), wanted.1.clone());
             self.last_scene = Some(wanted);
+        }
+
+        // 9. Fokuszeit für die Statistik
+        self.set_focused(self.engine.focus_time());
+    }
+
+    /// Beginn und Ende der Fokuszeit in der Statistik festhalten
+    fn set_focused(&mut self, on: bool) {
+        if on == self.focused {
+            return;
+        }
+        self.focused = on;
+        let mut calls = self.calls.lock().unwrap();
+        if on {
+            calls.focus_start(unix_now());
+        } else {
+            calls.focus_stop(unix_now());
+            if let Some(p) = &self.calls_path {
+                if let Err(e) = calls.save(p) {
+                    log::warn!("Statistik nicht schreibbar: {e}");
+                }
+            }
         }
     }
 

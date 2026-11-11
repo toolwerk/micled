@@ -36,7 +36,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - 🌈 **Govee, Nanoleaf and WLED**: lights and LED strips in your own Wi-Fi show the status color and get their light or effect back afterwards, without an account and without the cloud.
 - 📺 **Light strip on the monitor**: a USB strip with a Robobloq controller (e.g. Meewata) lights up in the color during a call, timer and Focus.
 - 🏠 **Home Assistant**: MicLED appears via MQTT as a device with on air, camera and app; alternatively a webhook reports “on air”.
-- 📊 **Statistics**: time on air per day, export as CSV.
+- 📊 **Statistics**: time on air per day, weeks with focus time compared to last week, export as CSV.
 - ⌨️ **Remote control** via `micled://` URLs, Shortcuts and the Stream Deck.
 - 🔌 **USB directly** without the Luxafor app, or optionally via the Luxafor webhook.
 
@@ -85,6 +85,12 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - macOS Focus: while a Focus is on, the light shows the Focus color. If macOS doesn't share the Focus, a Shortcuts automation reports it (“Report Focus to MicLED”).
 - Dim in the evening: during an adjustable time span (default 18:00–7:00) the light is dimmed; MicLED scales the colors down.
 - Statistics: the menu shows how long you have been on air today. The “Statistics” window shows the last 7 or 30 days as bars and exports all calls as CSV. One year is stored.
+- Weeks in the statistics: the “Weeks” view shows time on air and focus time for the last twelve calendar weeks (starting Monday, in the Mac's time zone) as bars, plus the number of calls. Below, it shows time on air, calls and focus time of the current week with the change compared to last week up to the same weekday and time. Focus time is while the focus timer runs or a macOS Focus is on, overlaps counted once, and only while the Mac is awake and unlocked with the display on. MicLED reads the macOS Focus as soon as it has access; it asks for access when you turn on “Show macOS Focus” in the settings, after that the Focus also counts with the display off. Focus time is only recorded since the update with this view. When exporting, “Content” chooses between all calls and totals per week (`week,start,live_seconds,calls,focus_seconds`).
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/stats-week-dark.png">
+    <img src="docs/images/en/stats-week-light.png" alt="Statistics: hours on air and focus per calendar week" width="600">
+  </picture>
 - Remote control via `micled://` URLs and actions in the Shortcuts app, see below.
 
 </details>
@@ -467,7 +473,7 @@ The Xcode target `RustCore` (a dependency of the app) calls `scripts/build-rust.
 scripts/screenshots.sh
 ```
 
-The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Nextcloud, at Govee/Nanoleaf, at WLED, at the light strip and at MQTT) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
+The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Nextcloud, at Govee/Nanoleaf, at WLED, at the light strip and at MQTT) and statistics (days and weeks) in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
 
 ## Updates
 

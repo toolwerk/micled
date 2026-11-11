@@ -268,6 +268,13 @@ impl Engine {
         self.away & Away::Sleep.bit() != 0
     }
 
+    /// Fokuszeit für die Statistik: Konzentrations-Timer läuft oder Fokus von
+    /// macOS ist an, nur bei wachem, entsperrtem Mac mit Bildschirm an.
+    /// Unabhängig davon, ob Fokus oder Abwesenheit an der Lampe angezeigt werden.
+    pub fn focus_time(&self) -> bool {
+        (self.timer.is_some() || self.focus) && self.away == 0
+    }
+
     fn is_ignored(&self, u: &MicUser) -> bool {
         self.cfg.ignored.iter().any(|i| matches(i, u))
     }
@@ -517,6 +524,27 @@ mod tests {
     fn engine(after: AfterMic) -> (Engine, Instant) {
         let cfg = Config { after_mic: after, ..Config::default() };
         (Engine::new(cfg, Some(Rgb::parse("0000ff").unwrap())), Instant::now())
+    }
+
+    #[test]
+    fn focus_time_counts_timer_or_focus_only_when_present() {
+        let cfg = Config { focus_enabled: false, off_when_away: false, ..Config::default() };
+        let mut e = Engine::new(cfg, None);
+        assert!(!e.focus_time());
+        e.start_timer(100);
+        assert!(e.focus_time(), "Timer");
+        e.set_focus(true);
+        assert!(e.focus_time(), "Timer und Fokus");
+        e.stop_timer();
+        assert!(e.focus_time(), "Fokus, auch wenn er nicht angezeigt wird");
+        for reason in [Away::Sleep, Away::DisplaySleep, Away::Locked] {
+            e.set_away(reason, true);
+            assert!(!e.focus_time(), "{reason:?}");
+            e.set_away(reason, false);
+            assert!(e.focus_time());
+        }
+        e.set_focus(false);
+        assert!(!e.focus_time());
     }
 
     #[test]

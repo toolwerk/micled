@@ -13,6 +13,46 @@
     "%lld %%": {
       "shouldTranslate": false
     },
+    "%lld Calls": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Call"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Calls"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld call"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld calls"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld gefunden": {
       "localizations": {
         "de": {
@@ -232,6 +272,22 @@
         }
       }
     },
+    "Alle Calls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Calls"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All calls"
+          }
+        }
+      }
+    },
     "Allgemein": {
       "localizations": {
         "de": {
@@ -328,6 +384,22 @@
         }
       }
     },
+    "Art": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        }
+      }
+    },
     "Auch „Nicht stören“ setzen": {
       "localizations": {
         "de": {
@@ -340,6 +412,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Also set “Do not disturb”"
+          }
+        }
+      }
+    },
+    "Auf Sendung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Sendung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On air"
           }
         }
       }
@@ -625,6 +713,22 @@
         }
       }
     },
+    "Calls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calls"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calls"
+          }
+        }
+      }
+    },
     "Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.": {
       "localizations": {
         "de": {
@@ -733,6 +837,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "These apps don’t switch the light, e.g. a dictation or recording tool that keeps the microphone open all the time."
+          }
+        }
+      }
+    },
+    "Diese Woche (KW %lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Woche (KW %lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This week (wk %lld)"
           }
         }
       }
@@ -1252,6 +1372,22 @@
         }
       }
     },
+    "ggü. Vorwoche bis jetzt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ggü. Vorwoche bis jetzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vs. last week to date"
+          }
+        }
+      }
+    },
     "Gilt auch, wenn der Bildschirm ausgeht. Während eines Calls bleibt die Mikrofarbe. Danach kommt die vorherige Farbe zurück.": {
       "localizations": {
         "de": {
@@ -1375,6 +1511,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "In a call"
+          }
+        }
+      }
+    },
+    "Inhalt:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inhalt:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content:"
           }
         }
       }
@@ -1699,6 +1851,22 @@
         }
       }
     },
+    "KW %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KW %lld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wk %lld"
+          }
+        }
+      }
+    },
     "Lampe": {
       "localizations": {
         "de": {
@@ -1989,6 +2157,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "MicLED Menu"
+          }
+        }
+      }
+    },
+    "MicLED-Wochen.csv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED-Wochen.csv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MicLED-Weeks.csv"
           }
         }
       }
@@ -2558,6 +2742,22 @@
         }
       }
     },
+    "Stunden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hours"
+          }
+        }
+      }
+    },
     "Suche …": {
       "localizations": {
         "de": {
@@ -2602,6 +2802,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Total"
+          }
+        }
+      }
+    },
+    "Summen je Woche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summen je Woche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totals per week"
           }
         }
       }
@@ -2991,6 +3207,38 @@
     },
     "WLED": {
       "shouldTranslate": false
+    },
+    "Woche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
+          }
+        }
+      }
+    },
+    "Wochen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weeks"
+          }
+        }
+      }
     },
     "Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.": {
       "localizations": {

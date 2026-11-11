@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Intents
 import Observation
 import ServiceManagement
 import SystemConfiguration
@@ -563,6 +564,16 @@ final class AppModel {
         controller?.callsCsv() ?? "start,end,seconds\n"
     }
 
+    /// Summen der letzten `weeks` Kalenderwochen und die Vorwoche bis jetzt
+    func weeklyStats(weeks: UInt32) -> WeeklyStats? {
+        if ScreenshotMode.isActive { return ScreenshotMode.weeklyStats(weeks: Int(weeks)) }
+        return controller?.weeklyStats(weeks: weeks)
+    }
+
+    func weeksCsv() -> String {
+        controller?.weeksCsv() ?? "week,start,live_seconds,calls,focus_seconds\n"
+    }
+
     /// Sekunden auf Sendung seit Mitternacht
     func liveSecondsToday() -> UInt64 {
         if ScreenshotMode.isActive { return 2 * 3600 + 10 * 60 }
@@ -805,11 +816,15 @@ final class AppModel {
         watcher.start()
     }
 
-    /// Fokus nur abfragen, wenn er angezeigt werden soll
+    /// Fokus abfragen, wenn er angezeigt werden soll oder die Freigabe schon
+    /// besteht (für die Fokuszeit in der Statistik). Ohne Anzeige wird nicht
+    /// nach der Freigabe gefragt.
     private func updateFocus() {
-        guard focusEnabled else {
+        guard focusEnabled || INFocusStatusCenter.default.authorizationStatus == .authorized else {
             focusWatcher?.stop()
             focusWatcher = nil
+            // sonst zählte ein beim Abschalten laufender Fokus in der Statistik weiter
+            controller?.setFocus(on: false)
             return
         }
         guard focusWatcher == nil else { return }
