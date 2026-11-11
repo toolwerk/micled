@@ -194,7 +194,7 @@ pub fn format_utc(t: u64) -> String {
 }
 
 // Kalenderrechnung nach Howard Hinnant, „chrono-Compatible Low-Level Date Algorithms“
-fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+pub(crate) fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let y = if m <= 2 { y - 1 } else { y };
     let era = y.div_euclid(400);
     let yoe = y - era * 400;
@@ -203,7 +203,7 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     era * 146097 + doe - 719468
 }
 
-fn civil_from_days(z: i64) -> (i64, i64, i64) {
+pub(crate) fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let z = z + 719468;
     let era = z.div_euclid(146097);
     let doe = z - era * 146097;
