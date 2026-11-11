@@ -38,7 +38,7 @@ struct SettingsView: View {
                     Text("Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.")
                         .font(.caption).foregroundStyle(.secondary)
                 case .noLamp:
-                    Text("MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook.")
+                    Text("MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -107,6 +107,31 @@ struct SettingsView: View {
             }
 
             Section {
+                TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
+                TextField("Benutzer", text: $model.nextcloudUser)
+                SecureField("App-Passwort", text: $model.nextcloudPassword)
+                HStack {
+                    Button("Verbindung prüfen") {
+                        nextcloudResult = String(localized: "Prüfe …")
+                        Task { nextcloudResult = await model.checkNextcloud() }
+                    }
+                    Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
+                }
+                Toggle("Termine lesen", isOn: $model.nextcloudEnabled)
+                Toggle("Status setzen", isOn: $model.nextcloudStatusEnabled)
+                if model.nextcloudStatusEnabled {
+                    TextField("Statustext", text: $model.nextcloudStatusText)
+                    TextField("Emoji", text: $model.nextcloudStatusEmoji, prompt: Text("🔴"))
+                    Toggle("Auch „Nicht stören“ setzen", isOn: $model.nextcloudStatusDnd)
+                }
+            } header: {
+                Text("Nextcloud").id("nextcloud")
+            } footer: {
+                Text("Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle("Status auf dem Pixoo 64 zeigen", isOn: $model.pixooEnabled)
                 if model.pixooEnabled {
                     TextField("Adresse", text: $model.pixooHost, prompt: Text("192.168.1.50"))
@@ -118,6 +143,7 @@ struct SettingsView: View {
                         }
                         Text(pixooResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.pixooStates)
                 }
             } header: {
                 Text("Pixoo 64")
@@ -138,6 +164,7 @@ struct SettingsView: View {
                         }
                         Text(awtrixResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.awtrixStates)
                 }
             } header: {
                 Text("AWTRIX")
@@ -177,6 +204,7 @@ struct SettingsView: View {
                             Text(error).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    states($model.hueStates)
                 }
             } header: {
                 Text("Philips Hue")
@@ -209,6 +237,7 @@ struct SettingsView: View {
                         Text(goveeResult).font(.caption).foregroundStyle(.secondary)
                     }
                     found(model.goveeFound, .govee)
+                    states($model.goveeStates)
                 }
             } header: {
                 Text("Govee").id("network")
@@ -247,6 +276,7 @@ struct SettingsView: View {
                         Text(nanoleafResult).font(.caption).foregroundStyle(.secondary)
                     }
                     found(model.nanoleafFound, .nanoleaf)
+                    states($model.nanoleafStates)
                 }
             } header: {
                 Text("Nanoleaf")
@@ -275,6 +305,7 @@ struct SettingsView: View {
                         Text(wledResult).font(.caption).foregroundStyle(.secondary)
                     }
                     found(model.wledFound, .wled)
+                    states($model.wledStates)
                 }
             } header: {
                 Text("WLED").id("wled")
@@ -298,13 +329,14 @@ struct SettingsView: View {
                         .disabled(robobloqTesting)
                         Text(robobloqResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.robobloqStates)
                 }
                 Text("Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: {
                 Text("Lichtstreifen (USB)").id("strip")
             } footer: {
-                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
+                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -320,23 +352,10 @@ struct SettingsView: View {
                 .disabled(!model.remindersEnabled)
                 Toggle("Ende des Termins auf Pixoo und AWTRIX zeigen", isOn: $model.meetingEndEnabled)
                 Toggle("Kalender von macOS", isOn: $model.useSystemCalendar)
-                Toggle("Nextcloud direkt", isOn: $model.nextcloudEnabled)
-                if model.nextcloudEnabled {
-                    TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
-                    TextField("Benutzer", text: $model.nextcloudUser)
-                    SecureField("App-Passwort", text: $model.nextcloudPassword)
-                    HStack {
-                        Button("Verbindung prüfen") {
-                            nextcloudResult = String(localized: "Prüfe …")
-                            Task { nextcloudResult = await model.checkNextcloud() }
-                        }
-                        Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
             } header: {
                 Text("Termine")
             } footer: {
-                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
+                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -494,6 +513,19 @@ struct SettingsView: View {
 
     private func pairState(_ paired: Bool) -> String {
         paired ? String(localized: "Gekoppelt ✓") : String(localized: "Nicht gekoppelt")
+    }
+
+    /// Häkchen für die Zustände, die ein Zusatzgerät zeigt
+    private func states(_ binding: Binding<OutputStates>) -> some View {
+        LabeledContent("Zeigen bei") {
+            HStack {
+                Toggle("Call", isOn: binding.call)
+                Toggle("Timer", isOn: binding.timer)
+                Toggle("Fokus", isOn: binding.focus)
+                    .disabled(!model.focusEnabled)
+            }
+            .toggleStyle(.checkbox)
+        }
     }
 
     /// Gefundenes Gerät mit Namen und Adresse, von Hand eingetragenes als Eingabefeld

@@ -28,7 +28,7 @@ enum ScreenshotMode {
     /// (und nicht ausgegraut) aufgenommen wird
     static var window: String { argument("--window") ?? "menu" }
 
-    /// `--scroll network|wled|strip`: Einstellungen bis zu Govee und Nanoleaf, zu WLED bzw. zum Lichtstreifen scrollen
+    /// `--scroll nextcloud|network|wled|strip`: Einstellungen bis zu Nextcloud, zu Govee und Nanoleaf, zu WLED bzw. zum Lichtstreifen scrollen
     static var scroll: String? { isActive ? argument("--scroll") : nil }
 
     static let suiteName = "net.staude.micled.screenshots"
@@ -40,6 +40,9 @@ enum ScreenshotMode {
         d.set(["ff0000", "00ff00", "ffff00", "0000ff", "ffffff"], forKey: "favorites")
         d.set([["key": "com.plaud.mac", "hex": "ff8800"]], forKey: "appColors")
         d.set(true, forKey: "slackEnabled")
+        d.set(true, forKey: "nextcloudStatusEnabled")
+        d.set("https://cloud.example.org", forKey: "nextcloudServer")
+        d.set("anna", forKey: "nextcloudUser")
         d.set(true, forKey: "dimEnabled")
         d.set(true, forKey: "remindersEnabled")
         d.set(true, forKey: "pixooEnabled")
@@ -51,6 +54,7 @@ enum ScreenshotMode {
         d.set("screenshot", forKey: "hueFingerprint")
         d.set("room", forKey: "hueTargetKind")
         d.set("flur", forKey: "hueTargetId")
+        d.set(["call": true, "timer": false, "focus": false], forKey: "hueStates")
         d.set(true, forKey: "goveeEnabled")
         d.set([
             ["id": UUID().uuidString, "host": "192.168.1.31", "name": "H6609"],

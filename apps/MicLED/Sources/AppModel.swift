@@ -34,12 +34,19 @@ final class AppModel {
     var meetingEndEnabled: Bool { didSet { persist(); updateCalendar() } }
     /// Termine aus den Kalendern von macOS (EventKit)
     var useSystemCalendar: Bool { didSet { persist(); updateCalendar() } }
-    /// Termine zusätzlich direkt aus Nextcloud
+    /// „Termine lesen“: Termine zusätzlich direkt aus Nextcloud (mit „Vor Terminen blinken“)
     var nextcloudEnabled: Bool { didSet { persist() } }
+    /// Zugang zu Nextcloud für Termine und Status
     var nextcloudServer: String { didSet { persist() } }
     var nextcloudUser: String { didSet { persist() } }
     /// Liegt im Schlüsselbund
     var nextcloudPassword: String { didSet { Keychain.write(.nextcloud, nextcloudPassword); persist() } }
+    /// Nextcloud-Status bei „Auf Sendung“
+    var nextcloudStatusEnabled: Bool { didSet { persist() } }
+    var nextcloudStatusText: String { didSet { persist() } }
+    var nextcloudStatusEmoji: String { didSet { persist() } }
+    /// Dazu „Nicht stören“ setzen
+    var nextcloudStatusDnd: Bool { didSet { persist() } }
     /// Slack-Status bei „Auf Sendung“
     var slackEnabled: Bool { didSet { persist() } }
     /// Liegt im Schlüsselbund
@@ -95,6 +102,14 @@ final class AppModel {
     var wledDevices: [NetLight] { didSet { persist() } }
     /// Status auf einem USB-Lichtstreifen mit Robobloq-Controller zeigen
     var robobloqEnabled: Bool { didSet { persist() } }
+    /// Zustände, die das Gerät zeigt (Call, Timer, Fokus)
+    var pixooStates: OutputStates { didSet { persist() } }
+    var awtrixStates: OutputStates { didSet { persist() } }
+    var hueStates: OutputStates { didSet { persist() } }
+    var goveeStates: OutputStates { didSet { persist() } }
+    var nanoleafStates: OutputStates { didSet { persist() } }
+    var wledStates: OutputStates { didSet { persist() } }
+    var robobloqStates: OutputStates { didSet { persist() } }
     /// Schlüssel vom Koppeln je Eintrag, liegen im Schlüsselbund
     private(set) var nanoleafKeys: [UUID: String] = [:]
     var favorites: [String] { didSet { persist(pushConfig: false) } }
@@ -167,6 +182,10 @@ final class AppModel {
             Key.nextcloudEnabled: false,
             Key.nextcloudServer: "",
             Key.nextcloudUser: "",
+            Key.nextcloudStatusEnabled: false,
+            Key.nextcloudStatusText: String(localized: "Im Call"),
+            Key.nextcloudStatusEmoji: "🔴",
+            Key.nextcloudStatusDnd: false,
             Key.favorites: AppModel.defaultFavorites,
             Key.appColors: [[String: String]](),
             Key.timerColor: "8000ff",
@@ -219,6 +238,10 @@ final class AppModel {
         nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
         nextcloudPassword = ScreenshotMode.isActive ? "" : Keychain.read(.nextcloud)
+        nextcloudStatusEnabled = d.bool(forKey: Key.nextcloudStatusEnabled)
+        nextcloudStatusText = d.string(forKey: Key.nextcloudStatusText) ?? String(localized: "Im Call")
+        nextcloudStatusEmoji = d.string(forKey: Key.nextcloudStatusEmoji) ?? "🔴"
+        nextcloudStatusDnd = d.bool(forKey: Key.nextcloudStatusDnd)
         slackEnabled = d.bool(forKey: Key.slackEnabled)
         slackToken = ScreenshotMode.isActive ? "" : Keychain.read(.slack)
         slackText = d.string(forKey: Key.slackText) ?? String(localized: "Im Call")
@@ -240,6 +263,13 @@ final class AppModel {
         wledEnabled = d.bool(forKey: Key.wledEnabled)
         wledDevices = NetLight.list(d.array(forKey: Key.wledDevices))
         robobloqEnabled = d.bool(forKey: Key.robobloqEnabled)
+        pixooStates = OutputStates(stored: d.object(forKey: Key.pixooStates))
+        awtrixStates = OutputStates(stored: d.object(forKey: Key.awtrixStates))
+        hueStates = OutputStates(stored: d.object(forKey: Key.hueStates))
+        goveeStates = OutputStates(stored: d.object(forKey: Key.goveeStates))
+        nanoleafStates = OutputStates(stored: d.object(forKey: Key.nanoleafStates))
+        wledStates = OutputStates(stored: d.object(forKey: Key.wledStates))
+        robobloqStates = OutputStates(stored: d.object(forKey: Key.robobloqStates))
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
         focusEnabled = d.bool(forKey: Key.focusEnabled)
@@ -296,7 +326,7 @@ final class AppModel {
         controller?.startTimer(minutes: UInt32(max(0, minutes)))
     }
 
-    /// Beim Beenden der App: Kern anhalten (wartet kurz auf Slack)
+    /// Beim Beenden der App: Kern anhalten (wartet kurz auf Slack und Nextcloud)
     func shutdown() {
         controller?.stop()
     }
@@ -534,9 +564,14 @@ final class AppModel {
             remindersEnabled: remindersEnabled,
             reminderColor: reminderHex,
             reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60),
-            nextcloudServer: nextcloudActive ? nextcloudServer : "",
-            nextcloudUser: nextcloudActive ? nextcloudUser : "",
-            nextcloudPassword: nextcloudActive ? nextcloudPassword : "",
+            nextcloudServer: nextcloudAccess ? nextcloudServer : "",
+            nextcloudUser: nextcloudAccess ? nextcloudUser : "",
+            nextcloudPassword: nextcloudAccess ? nextcloudPassword : "",
+            nextcloudCalendar: nextcloudActive,
+            nextcloudStatus: nextcloudStatusEnabled,
+            nextcloudStatusText: nextcloudStatusText,
+            nextcloudStatusEmoji: nextcloudStatusEmoji,
+            nextcloudStatusDnd: nextcloudStatusDnd,
             meetingEndEnabled: meetingEndEnabled,
             appColors: appColors,
             timerColor: timerHex,
@@ -550,21 +585,29 @@ final class AppModel {
             slackText: slackText,
             slackEmoji: slackEmoji,
             pixooHost: pixooEnabled ? pixooHost : "",
+            pixooStates: pixooStates,
             awtrixHost: awtrixEnabled ? awtrixHost : "",
+            awtrixStates: awtrixStates,
             hueHost: hueEnabled ? hueHost : "",
             hueKey: hueKey,
             hueFingerprint: hueFingerprint,
             hueTargetKind: hueTargetKind,
             hueTargetId: hueTargetId,
+            hueStates: hueStates,
             goveeHosts: goveeEnabled ? goveeDevices.map(\.host) : [],
+            goveeStates: goveeStates,
             nanoleaf: nanoleafEnabled
                 ? nanoleafDevices.map { NanoleafDevice(host: $0.host, key: nanoleafKeys[$0.id] ?? "") }
                 : [],
+            nanoleafStates: nanoleafStates,
             wledHosts: wledEnabled ? wledDevices.map(\.host) : [],
-            robobloq: robobloqEnabled
+            wledStates: wledStates,
+            robobloq: robobloqEnabled,
+            robobloqStates: robobloqStates
         )
     }
 
+    /// Termine aus Nextcloud lesen
     private var nextcloudActive: Bool {
         calendarNeeded && nextcloudEnabled
     }
@@ -572,6 +615,11 @@ final class AppModel {
     /// Termine werden gebraucht für die Vorwarnung oder für die Endzeit auf Pixoo und AWTRIX
     private var calendarNeeded: Bool {
         remindersEnabled || (meetingEndEnabled && (pixooEnabled || awtrixEnabled))
+    }
+
+    /// Zugang an den Kern geben (für Termine oder Status)
+    private var nextcloudAccess: Bool {
+        nextcloudActive || nextcloudStatusEnabled
     }
 
     /// Unterdrückt `persist()` während `batch`, damit der Kern keine halb
@@ -608,6 +656,10 @@ final class AppModel {
         defaults.set(nextcloudEnabled, forKey: Key.nextcloudEnabled)
         defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
         defaults.set(nextcloudUser, forKey: Key.nextcloudUser)
+        defaults.set(nextcloudStatusEnabled, forKey: Key.nextcloudStatusEnabled)
+        defaults.set(nextcloudStatusText, forKey: Key.nextcloudStatusText)
+        defaults.set(nextcloudStatusEmoji, forKey: Key.nextcloudStatusEmoji)
+        defaults.set(nextcloudStatusDnd, forKey: Key.nextcloudStatusDnd)
         defaults.set(favorites, forKey: Key.favorites)
         defaults.set(timerHex, forKey: Key.timerColor)
         defaults.set(focusEnabled, forKey: Key.focusEnabled)
@@ -631,6 +683,13 @@ final class AppModel {
         defaults.set(wledEnabled, forKey: Key.wledEnabled)
         defaults.set(wledDevices.map(\.stored), forKey: Key.wledDevices)
         defaults.set(robobloqEnabled, forKey: Key.robobloqEnabled)
+        defaults.set(pixooStates.stored, forKey: Key.pixooStates)
+        defaults.set(awtrixStates.stored, forKey: Key.awtrixStates)
+        defaults.set(hueStates.stored, forKey: Key.hueStates)
+        defaults.set(goveeStates.stored, forKey: Key.goveeStates)
+        defaults.set(nanoleafStates.stored, forKey: Key.nanoleafStates)
+        defaults.set(wledStates.stored, forKey: Key.wledStates)
+        defaults.set(robobloqStates.stored, forKey: Key.robobloqStates)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
         defaults.set(dimToMinutes, forKey: Key.dimTo)
@@ -730,6 +789,10 @@ final class AppModel {
         static let nextcloudEnabled = "nextcloudEnabled"
         static let nextcloudServer = "nextcloudServer"
         static let nextcloudUser = "nextcloudUser"
+        static let nextcloudStatusEnabled = "nextcloudStatusEnabled"
+        static let nextcloudStatusText = "nextcloudStatusText"
+        static let nextcloudStatusEmoji = "nextcloudStatusEmoji"
+        static let nextcloudStatusDnd = "nextcloudStatusDnd"
         static let favorites = "favorites"
         static let appColors = "appColors"
         static let timerColor = "timerColor"
@@ -754,6 +817,13 @@ final class AppModel {
         static let wledEnabled = "wledEnabled"
         static let wledDevices = "wledDevices"
         static let robobloqEnabled = "robobloqEnabled"
+        static let pixooStates = "pixooStates"
+        static let awtrixStates = "awtrixStates"
+        static let hueStates = "hueStates"
+        static let goveeStates = "goveeStates"
+        static let nanoleafStates = "nanoleafStates"
+        static let wledStates = "wledStates"
+        static let robobloqStates = "robobloqStates"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
         static let dimTo = "dimToMinutes"
@@ -814,6 +884,19 @@ struct NetLight: Identifiable, Equatable {
     /// Adresse ohne den Standard-Port von Nanoleaf
     var shownHost: String {
         host.hasSuffix(":16021") ? String(host.dropLast(6)) : host
+    }
+}
+
+/// Gespeichert als `["call": Bool, "timer": Bool, "focus": Bool]`. Ein fehlender
+/// Eintrag oder Schlüssel zählt als an, damit alte Einstellungen gleich bleiben.
+extension OutputStates {
+    init(stored: Any?) {
+        let d = stored as? [String: Bool] ?? [:]
+        self.init(call: d["call"] ?? true, timer: d["timer"] ?? true, focus: d["focus"] ?? true)
+    }
+
+    var stored: [String: Bool] {
+        ["call": call, "timer": timer, "focus": focus]
     }
 }
 

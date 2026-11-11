@@ -76,11 +76,19 @@ pub struct MicLedConfig {
     pub reminders_enabled: bool,
     pub reminder_color: String,
     pub reminder_lead_s: u32,
-    /// Termine direkt aus Nextcloud; ist eines der drei Felder leer, ist es aus
+    /// Zugang zu Nextcloud; ist eines der drei Felder leer, ist er aus
     pub nextcloud_server: String,
     pub nextcloud_user: String,
     /// App-Passwort (liegt in der App im Schlüsselbund)
     pub nextcloud_password: String,
+    /// Termine direkt aus Nextcloud lesen
+    pub nextcloud_calendar: bool,
+    /// Nextcloud-Status bei „Auf Sendung“; leerer Text = aus
+    pub nextcloud_status: bool,
+    pub nextcloud_status_text: String,
+    pub nextcloud_status_emoji: String,
+    /// Dazu „Nicht stören“ setzen
+    pub nextcloud_status_dnd: bool,
     /// Während eines Calls das Ende des laufenden Termins auf Pixoo und AWTRIX zeigen
     pub meeting_end_enabled: bool,
     /// Eigene Farbe je Programm, erster passender Eintrag gewinnt
@@ -100,8 +108,10 @@ pub struct MicLedConfig {
     pub slack_emoji: String,
     /// Adresse eines Pixoo 64 im eigenen Netz; leer = aus
     pub pixoo_host: String,
+    pub pixoo_states: OutputStates,
     /// Adresse einer Pixeluhr mit AWTRIX 3 im eigenen Netz; leer = aus
     pub awtrix_host: String,
+    pub awtrix_states: OutputStates,
     /// Hue Bridge; ist Adresse, Schlüssel, Fingerabdruck oder Ziel leer, ist es aus
     pub hue_host: String,
     /// App-Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
@@ -109,14 +119,33 @@ pub struct MicLedConfig {
     pub hue_fingerprint: String,
     pub hue_target_kind: HueTargetKind,
     pub hue_target_id: String,
+    pub hue_states: OutputStates,
     /// Adressen von Govee-Lampen; leere fallen weg, doppelte zählen einmal
     pub govee_hosts: Vec<String>,
+    pub govee_states: OutputStates,
     /// Gekoppelte Nanoleaf-Lampen; ohne Adresse oder Schlüssel fallen sie weg
     pub nanoleaf: Vec<NanoleafDevice>,
+    pub nanoleaf_states: OutputStates,
     /// Adressen von WLED-Geräten; leere fallen weg, doppelte zählen einmal
     pub wled_hosts: Vec<String>,
+    pub wled_states: OutputStates,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
+    pub robobloq_states: OutputStates,
+}
+
+/// Zustände, die ein Zusatzgerät zeigt; ein abgewählter gilt dort als frei
+#[derive(uniffi::Record, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OutputStates {
+    pub call: bool,
+    pub timer: bool,
+    pub focus: bool,
+}
+
+impl From<OutputStates> for core::OutputStates {
+    fn from(s: OutputStates) -> Self {
+        core::OutputStates { call: s.call, timer: s.timer, focus: s.focus }
+    }
 }
 
 /// Termin aus den Kalendern von macOS, ohne Titel
@@ -336,10 +365,25 @@ fn nextcloud(server: String, user: String, password: String) -> Option<core::Nex
     filled.then_some(core::Nextcloud { server, user, password })
 }
 
+/// Status nur mit vollem Zugang, eingeschaltetem Schalter und Text
+fn nextcloud_status(nc: Option<core::Nextcloud>, on: bool, text: &str, emoji: &str, dnd: bool) -> Option<core::nc_status::NcStatus> {
+    let text = text.trim();
+    let nc = nc.filter(|_| on && !text.is_empty())?;
+    Some(core::nc_status::NcStatus { nc, text: text.to_string(), emoji: emoji.trim().to_string(), dnd })
+}
+
 impl From<MicLedConfig> for core::Config {
     fn from(c: MicLedConfig) -> Self {
+        let nc = nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password);
         core::Config {
-            nextcloud: nextcloud(c.nextcloud_server, c.nextcloud_user, c.nextcloud_password),
+            nextcloud_status: nextcloud_status(
+                nc.clone(),
+                c.nextcloud_status,
+                &c.nextcloud_status_text,
+                &c.nextcloud_status_emoji,
+                c.nextcloud_status_dnd,
+            ),
+            nextcloud: nc.filter(|_| c.nextcloud_calendar),
             meeting_end: c.meeting_end_enabled,
             reminders: c.reminders_enabled,
             timer_color: color(&c.timer_color, Rgb { r: 0x80, g: 0, b: 0xff }),
@@ -363,12 +407,19 @@ impl From<MicLedConfig> for core::Config {
                 TransportKind::NoLamp => core::Transport::None,
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
+            pixoo_states: c.pixoo_states.into(),
             awtrix: core::pixoo::normalize(&c.awtrix_host),
+            awtrix_states: c.awtrix_states.into(),
             hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
+            hue_states: c.hue_states.into(),
             govee: govee(&c.govee_hosts),
+            govee_states: c.govee_states.into(),
             nanoleaf: nanoleaf(&c.nanoleaf),
+            nanoleaf_states: c.nanoleaf_states.into(),
             wled: wled(&c.wled_hosts),
+            wled_states: c.wled_states.into(),
             robobloq: c.robobloq,
+            robobloq_states: c.robobloq_states.into(),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -684,6 +735,17 @@ pub fn current_mic_users() -> Vec<MicUser> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nextcloud_status_needs_access_switch_and_text() {
+        let nc = || nextcloud("https://cloud.example.org".into(), "frank".into(), "pw".into());
+        let s = nextcloud_status(nc(), true, " Im Call ", " 🔴 ", true).unwrap();
+        assert_eq!((s.text.as_str(), s.emoji.as_str(), s.dnd), ("Im Call", "🔴", true));
+        assert!(nextcloud_status(nc(), false, "Im Call", "", false).is_none(), "Schalter aus");
+        assert!(nextcloud_status(nc(), true, "  ", "🔴", false).is_none(), "ohne Text");
+        let partial = nextcloud("https://cloud.example.org".into(), "frank".into(), " ".into());
+        assert!(nextcloud_status(partial, true, "Im Call", "", false).is_none(), "ohne Passwort");
+    }
 
     #[test]
     fn govee_hosts_are_cleaned_and_deduplicated() {
