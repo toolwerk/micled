@@ -6,6 +6,8 @@
 [![CI](https://github.com/toolwerk/micled/actions/workflows/ci.yml/badge.svg)](https://github.com/toolwerk/micled/actions/workflows/ci.yml)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-blue)](LICENSE)
 
+**Deutsch** · [English](README.en.md)
+
 **Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
 
 Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Philips Hue, Govee, Nanoleaf, einem USB-Lichtstreifen oder auf einem Pixoo- bzw. AWTRIX-Display, einzeln oder zusammen.
@@ -352,7 +354,7 @@ crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh
-docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README
+docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README, en/ für README.en.md
 ```
 
 Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und legt Bibliothek und Header unter `build/universal` und `build/include` ab. Generierte Dateien werden nicht eingecheckt.
@@ -363,7 +365,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben und bei Govee/Nanoleaf) und Statistik in Hell und Dunkel auf, auf Deutsch nach `docs/images/` und auf Englisch für die [englische README](README.en.md) nach `docs/images/en/`. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Updates
 
