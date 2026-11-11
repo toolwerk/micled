@@ -140,6 +140,8 @@ pub fn ics_events(ics: &str) -> Vec<Event> {
     let unfolded = ics.replace("\r\n", "\n").replace("\n ", "").replace("\n\t", "");
     let mut out = vec![];
     let mut in_event = false;
+    // Tiefe in Unterkomponenten wie VALARM, deren DURATION nicht zum Termin gehört
+    let mut nested = 0u32;
     let mut start: Option<u64> = None;
     let mut end: Option<u64> = None;
     let mut duration: Option<u64> = None;
@@ -151,8 +153,12 @@ pub fn ics_events(ics: &str) -> Vec<Event> {
         };
         let (key, params) = name.split_once(';').unwrap_or((name, ""));
         match (key.to_ascii_uppercase().as_str(), value.trim()) {
+            ("BEGIN", _) if in_event => nested += 1,
+            ("END", v) if in_event && nested > 0 && !v.eq_ignore_ascii_case("VEVENT") => nested -= 1,
+            (k, v) if nested > 0 && !(k == "END" && v.eq_ignore_ascii_case("VEVENT")) => {}
             ("BEGIN", "VEVENT") => {
                 in_event = true;
+                nested = 0;
                 start = None;
                 end = None;
                 duration = None;
@@ -463,6 +469,13 @@ END:VCALENDAR
         assert_eq!(end("P1W"), Some(t + 7 * 86400));
         assert_eq!(end("-PT1H"), None, "negativ zählt nicht");
         assert_eq!(end("PT0S"), None, "Ende muss nach dem Beginn liegen");
+    }
+
+    #[test]
+    fn duration_of_an_alarm_does_not_count() {
+        let ics = "BEGIN:VEVENT\nDTSTART:20261105T140000Z\nDURATION:PT1H\nBEGIN:VALARM\nTRIGGER:-PT10M\nREPEAT:2\nDURATION:PT5M\nEND:VALARM\nEND:VEVENT\n";
+        let t = parse_utc("20261105T140000Z").unwrap();
+        assert_eq!(ics_events(ics)[0].end, Some(t + 3600));
     }
 
     #[test]
