@@ -176,7 +176,7 @@ MicLED setzt die Nachricht nur, wenn gerade keine gesetzt ist. Eine eigene Nachr
 
 Mit **„Auch ‚Nicht stören‘ setzen“** (ab Werk aus) steht während des Calls zusätzlich „Nicht stören“. Das schaltet auch die Benachrichtigungen von Talk und der Nextcloud-App auf dem Handy stumm. Danach kommt ein selbst gewählter Status „Abwesend“, „Unsichtbar“ oder „Nicht stören“ zurück, sonst „Online“. Hast du den Status während des Calls selbst geändert, bleibt er. Das gilt auch, wenn die Nachricht im Call abgelaufen oder ersetzt ist.
 
-Die Nachricht läuft nach vier Stunden von selbst ab, „Nicht stören“ nicht. Stürzt MicLED im Call ab, räumt der nächste Start beides auf; ist die Nachricht bis dahin schon abgelaufen, bleibt „Nicht stören“ stehen.
+Die Nachricht läuft nach vier Stunden von selbst ab, „Nicht stören“ nicht. Stürzt MicLED im Call ab, räumt der nächste Start beides auf; der Status ist danach „Online“, weil MicLED den von vorher nicht mehr kennt. Ist die Nachricht bis dahin schon abgelaufen, bleibt „Nicht stören“ stehen.
 
 ## Pixoo 64
 
