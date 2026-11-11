@@ -556,13 +556,13 @@ impl MicLedController {
     }
 }
 
-/// Programme, die ab Werk ignoriert werden (Vorgabe für die Einstellungen)
 /// Ob die Adresse für „Auf Sendung“ die richtige Form hat (nicht, ob der Server antwortet).
 #[uniffi::export]
 pub fn on_air_url_valid(url: String) -> bool {
     core::onair::valid_url(&url)
 }
 
+/// Programme, die ab Werk ignoriert werden (Vorgabe für die Einstellungen)
 #[uniffi::export]
 pub fn default_ignored() -> Vec<String> {
     core::DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect()
