@@ -8,7 +8,7 @@
 
 **Deine Luxafor-Lampe zeigt, wann du auf Sendung bist.** MicLED sitzt in der macOS-Menüleiste und schaltet die Lampe auf Rot, sobald ein Programm das Mikrofon oder die Kamera nutzt. Danach kommt die Farbe von vorher zurück.
 
-Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Philips Hue, Govee, Nanoleaf, einem USB-Lichtstreifen oder auf einem Pixoo- bzw. AWTRIX-Display, einzeln oder zusammen.
+Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Philips Hue, Govee, Nanoleaf, WLED, einem USB-Lichtstreifen oder auf einem Pixoo- bzw. AWTRIX-Display, einzeln oder zusammen.
 
 <p align="center">
   <img src="docs/images/lamp.gif" alt="Luxafor Flag am Monitor: grün, beim Call rot, danach wieder grün" width="340">
@@ -31,7 +31,7 @@ Eine Luxafor brauchst du dafür nicht: MicLED zeigt den Status genauso mit Phili
 - 🖼️ **Pixoo 64**: „ON AIR“ (im Termin mit dessen Ende, z. B. „BIS 14:30“), Restzeit des Timers oder Fokus auf einem Divoom-Display im eigenen Netz, auch ganz ohne Lampe.
 - 🕒 **AWTRIX-Uhr**: dieselbe Anzeige auf einer Ulanzi-Pixeluhr mit AWTRIX 3, etwa an der Bürotür.
 - 💡 **Philips Hue**: eine Hue-Lampe oder ein ganzer Raum leuchtet in der Statusfarbe und kehrt danach zum Licht von vorher zurück.
-- 🌈 **Govee und Nanoleaf**: Lampen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
+- 🌈 **Govee, Nanoleaf und WLED**: Lampen und LED-Streifen im eigenen WLAN zeigen die Statusfarbe und bekommen danach ihr Licht bzw. ihren Effekt zurück, ohne Konto und ohne Cloud.
 - 📺 **Lichtstreifen am Monitor**: ein USB-Streifen mit Robobloq-Controller (z. B. Meewata) leuchtet bei Call, Timer und Fokus in der Farbe.
 - 🏠 **Home Assistant**: „Auf Sendung“ per Webhook, z. B. für ein Türschild.
 - 📊 **Statistik**: Zeit auf Sendung je Tag, Export als CSV.
@@ -178,6 +178,12 @@ Mit **„Auch ‚Nicht stören‘ setzen“** (ab Werk aus) steht während des C
 
 Die Nachricht läuft nach vier Stunden von selbst ab, „Nicht stören“ nicht. Stürzt MicLED im Call ab, räumt der nächste Start beides auf; der Status ist danach „Online“, weil MicLED den von vorher nicht mehr kennt. Ist die Nachricht bis dahin schon abgelaufen, bleibt „Nicht stören“ stehen.
 
+## Welche Zustände ein Gerät zeigt
+
+Pixoo 64, AWTRIX, Hue, Govee, Nanoleaf, WLED und der Lichtstreifen haben in ihrem Abschnitt der Einstellungen die Zeile „Zeigen bei“ mit den Häkchen „Call“, „Timer“ und „Fokus“. Ab Werk sind alle drei gesetzt, auch nach einem Update. So bleibt z. B. eine Hue-Lampe im Wohnzimmer bei Timer und Fokus, wie sie ist, und färbt sich nur bei einem Call.
+
+Ein abgewählter Zustand gilt für dieses Gerät als frei. Läuft darunter ein Zustand, den es zeigen darf, zeigt es diesen: Ein Lichtstreifen ohne „Call“ bleibt während eines Calls in der Fokusfarbe, wenn „Fokus“ gesetzt ist. Sonst hat das Gerät seinen Zustand von vorher. „Fokus“ wirkt nur, wenn „Fokus von macOS anzeigen“ an ist, sonst ist das Häkchen ausgegraut. Die Luxafor-Lampe, Slack, Nextcloud und der Webhook folgen den Häkchen nicht.
+
 ## Pixoo 64
 
 Ein Divoom Pixoo 64 im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr.
@@ -273,14 +279,37 @@ Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten sie in deren Farbe
 
 Eine neue Adresse oder „Entfernen“ löscht die Kopplung. Steht im Menü „Schlüssel ungültig, neu koppeln“, Schritt 2 wiederholen.
 
-Ist eine Govee- oder Nanoleaf-Lampe nicht erreichbar, steht ein Fehler mit ihrer Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
-
 ### Nicht unterstützt
 
 - **Nanoleaf Essentials** (Glühbirnen und Lichtstreifen mit Matter oder HomeKit über Thread) haben keine Schnittstelle im eigenen Netz.
 - **Govee ohne Steuerung im eigenen Netz**, etwa die AI Sync Box H6603/H6604, und Govee-Geräte, die nur Bluetooth haben.
 
 Für diese Geräte: in Home Assistant einbinden und dort per Automation mit dem Webhook aus [„Auf Sendung“ an Home Assistant](#auf-sendung-an-home-assistant) schalten.
+
+## WLED
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-wled-dark.png">
+    <img src="docs/images/settings-wled-light.png" alt="Einstellungen von MicLED: Abschnitt WLED mit eingetragenem und gefundenem Gerät" width="400">
+  </picture>
+</p>
+
+LED-Streifen und -Lampen mit der freien Firmware [WLED](https://kno.wled.ge/) zeigen den Status über deren Schnittstelle im eigenen Netz, ohne Konto, ohne Koppeln und ohne Cloud. Mehrere Geräte sind möglich.
+
+Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten alle Segmente einfarbig in deren Farbe, abends entsprechend gedimmt. Danach haben sie wieder An/Aus, Helligkeit und je Segment Farbe und Effekt von vorher.
+
+- Lief ein **Preset**, stellt MicLED dessen Aussehen zurück, lädt das Preset aber nicht neu. So bleibt etwa eine danach gedimmte Helligkeit erhalten. In der WLED-App ist das Preset danach nicht mehr markiert, das Licht sieht aber gleich aus.
+- Lief eine **Playlist**, startet sie danach von vorn.
+- Empfängt das Gerät gerade **Live-Daten** einer anderen Steuerung, etwa Bildschirm-Sync über Hyperion, hat MicLED für die Dauer des Calls Vorrang und gibt danach wieder frei.
+- Ein laufendes **Nachtlicht** (auch Sonnenaufgang) beendet der Call, danach startet es nicht neu.
+- Per **WLED-Sync** gekoppelte Geräte bekommen die Statusfarbe nicht mit; sollen sie mitleuchten, trag sie ebenfalls ein. Empfängt ein eingetragenes Gerät selbst Sync von einem anderen, kann dessen nächste Änderung die Statusfarbe überschreiben.
+
+1. Dem Gerät im Router eine **feste IP-Adresse** geben.
+2. In MicLED unter Einstellungen › WLED „Status auf WLED-Geräten zeigen“ einschalten und „Suchen“ drücken. Gefundene Geräte mit „Hinzufügen“ übernehmen oder mit „Adresse hinzufügen“ die IP von Hand eintragen, bei einem anderen Port als 80 mit Port (`192.168.1.45:8080`).
+3. Wie beim Pixoo braucht MicLED den Zugriff auf das **lokale Netzwerk**.
+
+Ist eine Govee- oder Nanoleaf-Lampe oder ein WLED-Gerät nicht erreichbar, steht ein Fehler mit der Adresse im Menü und MicLED versucht es alle 30 Sekunden erneut. Lampe und die anderen Geräte schalten trotzdem sofort. Einzige Ausnahme: Govee-Lampen teilen sich Port 4002, deshalb wartet eine Govee-Lampe bis zu einer Sekunde je nicht erreichbarer Govee-Lampe.
 
 ## Lichtstreifen (USB)
 
@@ -299,7 +328,7 @@ Bekannte Geräte: Meewata, Robobloq/SyncLight, DS leddess, Eastfine, DX LIGHT (V
 2. In MicLED unter Einstellungen › Lichtstreifen (USB) „Status auf dem Lichtstreifen zeigen“ einschalten.
 3. „Testen“ drücken. Der Streifen leuchtet etwa zwei Sekunden rot und zeigt danach wieder, was MicLED gerade zeigt (aus oder die Farbe von Call, Timer oder Fokus). Darunter erscheint z. B. „Gefunden: 78 LEDs, Firmware 1.9.4 ✓“. Findet MicLED den Streifen nicht oder antwortet er nicht, steht dort ein Fehler, und er bleibt unverändert.
 
-Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt. Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
+Bei Call, Timer und Fokus leuchtet der ganze Streifen in deren Farbe, abends gedimmt; welche davon er zeigt, legen die Häkchen fest ([Welche Zustände ein Gerät zeigt](#welche-zustände-ein-gerät-zeigt)). Bist du frei, ist er aus; seinen eingebauten Effekt holt MicLED nicht zurück. Nach einem Stromverlust läuft wieder der eingebaute Effekt, bis MicLED den Streifen ausschaltet. MicLED sieht alle fünf Sekunden nach dem Streifen; nach dem Wiederanstecken bekommt er die aktuelle Farbe neu. Fehlt er oder hat er eine andere USB-ID, steht ein Fehler im Menü. Wie DX-Light begrenzt MicLED die Summe von Rot, Grün und Blau, damit der USB-Anschluss nicht überlastet; Weiß und Mischfarben wirken deshalb etwas dunkler.
 
 **Nur ein Programm zur Zeit kann mit dem Controller sprechen.** Wer DX-Light, SyncLight, backlit oder ein anderes Programm für den Streifen laufen lässt, beendet es, damit MicLED ihn steuern kann.
 
@@ -338,7 +367,7 @@ Farbwechsel aus der Luxafor-App bekommt MicLED nicht mit.
 
 - macOS 14 oder neuer
 - Xcode (wird nur zum Bauen gebraucht, nicht geöffnet), `xcodegen`, Rust über `rustup`
-- Luxafor Flag, Orb oder Bluetooth (USB-Kennung 04d8:f372) oder eines der anderen Geräte: Philips Hue, Govee, Nanoleaf, Lichtstreifen mit Robobloq-Controller, Pixoo 64 oder AWTRIX-Uhr. Ohne Luxafor unter Einstellungen › Verbindung zur Lampe „Keine Lampe“ wählen (siehe [Einrichten](#einrichten)); das reicht auch, wenn MicLED nur den Slack-Status setzen oder den Webhook auslösen soll.
+- Luxafor Flag, Orb oder Bluetooth (USB-Kennung 04d8:f372) oder eines der anderen Geräte: Philips Hue, Govee, Nanoleaf, WLED, Lichtstreifen mit Robobloq-Controller, Pixoo 64 oder AWTRIX-Uhr. Ohne Luxafor unter Einstellungen › Verbindung zur Lampe „Keine Lampe“ wählen (siehe [Einrichten](#einrichten)); das reicht auch, wenn MicLED nur den Slack-Status setzen oder den Webhook auslösen soll.
 
 ## Einrichten
 
@@ -374,6 +403,8 @@ cargo run -p micled-cli -- govee test 192.168.1.31   # 5 s Rot, dann zurück
 cargo run -p micled-cli -- nanoleaf scan       # Nanoleaf per Bonjour suchen
 cargo run -p micled-cli -- nanoleaf pair 192.168.1.40   # nach 5–7 s Einschaltknopf: Schlüssel
 MICLED_NANOLEAF_KEY=<schlüssel> cargo run -p micled-cli -- nanoleaf test 192.168.1.40   # 5 s Rot, dann zurück
+cargo run -p micled-cli -- wled scan           # WLED per Bonjour suchen
+cargo run -p micled-cli -- wled test 192.168.1.45    # 5 s Rot, dann zurück
 cargo run -p micled-cli -- strip info          # Lichtstreifen per USB: LEDs, Monitorgröße, Firmware
 cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ```
@@ -381,7 +412,7 @@ cargo run -p micled-cli -- strip test          # 5 s Rot, dann aus
 ## Aufbau
 
 ```
-crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender und -Status, Slack-Status, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, Lichtstreifen (USB)
+crates/micled-core   Lampe (USB/Webhook), Mikrofon und Kamera, Logik, Statusdatei, Nextcloud-Kalender und -Status, Slack-Status, Bilder für den Pixoo 64, AWTRIX-Uhr, Hue Bridge, Govee, Nanoleaf, WLED, Lichtstreifen (USB)
 crates/micled-cli    Kommandozeile `micled`
 crates/micled-ffi    UniFFI-Schicht für Swift
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
@@ -397,7 +428,7 @@ Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh`
 scripts/screenshots.sh
 ```
 
-Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Nextcloud, bei Govee/Nanoleaf und beim Lichtstreifen) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
+Das Skript baut die Debug-App, startet sie mit Beispieldaten (Schalter `--screenshots`, nur in Debug-Builds) und nimmt Menü, Einstellungen (oben, bei Nextcloud, bei Govee/Nanoleaf, bei WLED und beim Lichtstreifen) und Statistik in Hell und Dunkel nach `docs/images/` auf. Lampe, Slack und Nextcloud bleiben dabei unberührt. Das Terminal braucht einmalig das Recht „Bildschirmaufnahme“ (Systemeinstellungen › Datenschutz & Sicherheit).
 
 ## Updates
 
