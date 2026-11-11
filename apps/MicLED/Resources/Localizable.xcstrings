@@ -264,6 +264,22 @@
         }
       }
     },
+    "An Home Assistant melden (MQTT)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Home Assistant melden (MQTT)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report to Home Assistant (MQTT)"
+          }
+        }
+      }
+    },
     "Anmeldeobjekt: %@": {
       "localizations": {
         "de": {
@@ -574,6 +590,9 @@
     "Bridge": {
       "shouldTranslate": false
     },
+    "Broker": {
+      "shouldTranslate": false
+    },
     "Büro": {
       "localizations": {
         "de": {
@@ -634,6 +653,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start the timer from the menu, by right-clicking the icon, with micled://timer/25 or in Shortcuts. At the end the light flashes briefly. A call takes precedence, choosing a color ends the timer."
+          }
+        }
+      }
+    },
+    "Die Adresse muss mit http:// oder https:// beginnen und einen Server nennen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Adresse muss mit http:// oder https:// beginnen und einen Server nennen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address must start with http:// or https:// and name a server."
           }
         }
       }
@@ -829,6 +864,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Developer builds don’t check for updates."
+          }
+        }
+      }
+    },
+    "Erscheint in Home Assistant als Gerät „MicLED (%@)“ mit Auf Sendung, Kamera und Programm. Endet MicLED oder schläft der Mac, ist es dort nicht verfügbar. TLS prüft das Zertifikat gegen die öffentlichen Zertifizierungsstellen, z. B. Let's Encrypt. Das Passwort liegt im Schlüsselbund; Anleitung in der README.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheint in Home Assistant als Gerät „MicLED (%@)“ mit Auf Sendung, Kamera und Programm. Endet MicLED oder schläft der Mac, ist es dort nicht verfügbar. TLS prüft das Zertifikat gegen die öffentlichen Zertifizierungsstellen, z. B. Let's Encrypt. Das Passwort liegt im Schlüsselbund; Anleitung in der README."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appears in Home Assistant as the device “MicLED (%@)” with on air, camera and app. If MicLED quits or the Mac sleeps, it is unavailable there. TLS checks the certificate against the public certificate authorities, e.g. Let's Encrypt. The password is stored in the keychain; instructions in the README."
           }
         }
       }
@@ -1267,6 +1318,12 @@
           }
         }
       }
+    },
+    "Home Assistant (MQTT)": {
+      "shouldTranslate": false
+    },
+    "homeassistant.local": {
+      "shouldTranslate": false
     },
     "http://homeassistant.local:8123/api/webhook/…": {
       "shouldTranslate": false
@@ -1850,6 +1907,9 @@
         }
       }
     },
+    "micled": {
+      "shouldTranslate": false
+    },
     "MicLED %@": {
       "shouldTranslate": false
     },
@@ -2131,6 +2191,22 @@
         }
       }
     },
+    "Passwort": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        }
+      }
+    },
     "Philips Hue": {
       "shouldTranslate": false
     },
@@ -2152,6 +2228,9 @@
           }
         }
       }
+    },
+    "Port": {
+      "shouldTranslate": false
     },
     "Prüfe …": {
       "localizations": {
@@ -2623,6 +2702,9 @@
         }
       }
     },
+    "TLS": {
+      "shouldTranslate": false
+    },
     "Umschalten": {
       "localizations": {
         "de": {
@@ -2747,6 +2829,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connected as %@"
+          }
+        }
+      }
+    },
+    "Verbunden ✓": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbunden ✓"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected ✓"
           }
         }
       }

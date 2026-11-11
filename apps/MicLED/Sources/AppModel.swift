@@ -412,7 +412,7 @@ final class AppModel {
         let result = await Task.detached {
             mqttCheck(host: host, port: port, tls: tls, user: user, password: password)
         }.value
-        return result.error ?? "Verbunden ✓"
+        return result.error ?? String(localized: "Verbunden ✓")
     }
 
     /// Slack-Token prüfen, liefert eine Meldung für die Einstellungen

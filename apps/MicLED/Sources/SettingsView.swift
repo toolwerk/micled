@@ -103,7 +103,7 @@ struct SettingsView: View {
                     SecureField("Passwort", text: $model.mqttPassword)
                     HStack {
                         Button("Verbindung prüfen") {
-                            mqttResult = "Prüfe …"
+                            mqttResult = String(localized: "Prüfe …")
                             Task { mqttResult = await model.checkMqtt() }
                         }
                         Text(mqttResult).font(.caption).foregroundStyle(.secondary)

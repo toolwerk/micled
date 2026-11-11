@@ -35,7 +35,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - 💡 **Philips Hue**: a Hue light or a whole room lights up in the status color and returns to its previous light afterwards.
 - 🌈 **Govee, Nanoleaf and WLED**: lights and LED strips in your own Wi-Fi show the status color and get their light or effect back afterwards, without an account and without the cloud.
 - 📺 **Light strip on the monitor**: a USB strip with a Robobloq controller (e.g. Meewata) lights up in the color during a call, timer and Focus.
-- 🏠 **Home Assistant**: “on air” via webhook, e.g. for a door sign.
+- 🏠 **Home Assistant**: MicLED appears via MQTT as a device with on air, camera and app; alternatively a webhook reports “on air”.
 - 📊 **Statistics**: time on air per day, export as CSV.
 - ⌨️ **Remote control** via `micled://` URLs, Shortcuts and the Stream Deck.
 - 🔌 **USB directly** without the Luxafor app, or optionally via the Luxafor webhook.
@@ -76,6 +76,7 @@ You don't need a Luxafor for this: MicLED shows the status just as well with Phi
 - Delay before switching back (default 3 seconds), so short pauses don't flicker.
 - Camera detection via CoreMediaIO: camera on counts like mic on and has its own color (default magenta).
 - Color per app, e.g. orange for a recording with Plaud and red for calls. With several apps, the top entry wins; the camera color takes precedence.
+- Home Assistant via MQTT: MicLED registers itself with MQTT discovery as a device with the sensors on air, camera and app, and is unavailable while MicLED isn't running or the Mac is asleep.
 - Report “on air” to the outside: on every change, a POST with JSON goes to an address, for example a Home Assistant webhook for a door sign.
 - Slack status: while you are on air, e.g. 🔴 “In a call” appears in your Slack profile, afterwards the previous status comes back.
 - Nextcloud status: the same in your Nextcloud user status, optionally with “Do not disturb”; afterwards the previous status comes back.
@@ -102,9 +103,44 @@ micled://focus/on          report Focus (also off), e.g. from a Focus automation
 
 The Shortcuts app offers the actions “Set light color”, “Turn light off”, “Switch microphone automatic”, “Start timer”, “Stop timer” and “Report Focus to MicLED”. If macOS doesn't share the Focus, an automation reports it: Shortcuts › Automation › Focus “Work” on › “Report Focus to MicLED” (and a second one for off).
 
+## Home Assistant via MQTT
+
+With MQTT, MicLED registers itself in Home Assistant as the device “MicLED (<Mac name>)”, without a webhook and without an automation. The device has three sensors:
+
+| Sensor | Type | Value |
+|---|---|---|
+| Auf Sendung (on air) | `binary_sensor` | on while microphone or camera are active, short pauses included |
+| Kamera (camera) | `binary_sensor` | on while the camera is running |
+| Programm (app) | `sensor` | process names of the apps at the microphone, e.g. `zoom.us`, otherwise `keins` |
+
+The sensor names and the value `keins` are German in Home Assistant, whatever the language of macOS.
+
+If MicLED quits, the Mac sleeps or the connection drops, Home Assistant shows the device as unavailable. If the Mac sleeps before MicLED can sign off, this takes up to about 45 seconds. If you turn MQTT off in MicLED, MicLED removes the device from Home Assistant again. If the broker can't be reached, an error appears in the menu; the light and other outputs still switch immediately, and MicLED retries every ten seconds.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/settings-mqtt-dark.png">
+    <img src="docs/images/en/settings-mqtt-light.png" alt="MicLED settings: Home Assistant (MQTT) section with broker, port, TLS, user, password and “Check connection”" width="400">
+  </picture>
+</p>
+
+### Setup with the Mosquitto add-on
+
+1. In Home Assistant, under Settings › Add-ons › Add-on Store, install and start the **Mosquitto broker** add-on.
+2. Under Settings › People › Users, create a separate user for MicLED, e.g. `micled` (users are only visible if advanced mode is turned on in your profile). The add-on accepts Home Assistant users as broker logins.
+3. Under Settings › Devices & services, set up the **MQTT** integration. Usually Home Assistant offers it by itself after the add-on starts, otherwise via “Add integration”. Discovery is on by default.
+4. In MicLED, under Settings › Home Assistant (MQTT), turn on “Report to Home Assistant”, enter `homeassistant.local` or the IP address as broker, port `1883`, user and password, then press “Check connection”.
+5. The device then appears under Settings › Devices & services › MQTT › Devices.
+
+In an automation the sensor serves as trigger, e.g. `trigger: state` with `entity_id: binary_sensor.micled_macbook_pro_auf_sendung`; the exact ID is on the device page. The [example with the red light](#example-turn-a-light-red-while-on-air) works the same way with it; instead of `trigger.json.on_air`, use `trigger.to_state.state == 'on'`.
+
+**TLS:** The “TLS” switch encrypts the connection (default port 8883) and checks the broker certificate against the public certificate authorities, e.g. a Let's Encrypt certificate for your own domain. MicLED doesn't accept self-signed certificates. In your own network, port 1883 without TLS is usually enough.
+
+**Topics** for your own evaluations (all retained): `micled/<id>/state` with `{"on_air": true, "camera": false, "program": "zoom.us", "apps": ["zoom.us"]}`, `micled/<id>/availability` with `online` or `offline`, and the discovery entries under `homeassistant/binary_sensor/micled_<id>/…/config` and `homeassistant/sensor/micled_<id>/program/config`. MicLED sets the `<id>` once per Mac.
+
 ## “On air” to Home Assistant
 
-Enter the webhook address in the settings, e.g. `http://homeassistant.local:8123/api/webhook/micled`. MicLED sends on every change:
+Instead of MQTT (or without Home Assistant, e.g. for your own server), MicLED also reports “on air” via webhook. Enter the webhook address in the settings, e.g. `http://homeassistant.local:8123/api/webhook/micled`. MicLED sends on every change:
 
 ```json
 {"on_air": true, "camera": false, "apps": ["us.zoom.xos"]}
@@ -369,7 +405,7 @@ MicLED doesn't notice color changes from the Luxafor app.
 
 - macOS 14 or later
 - Xcode (only needed for building, not opened), `xcodegen`, Rust via `rustup`
-- Luxafor Flag, Orb or Bluetooth (USB ID 04d8:f372) or one of the other devices: Philips Hue, Govee, Nanoleaf, WLED, light strip with Robobloq controller, Pixoo 64 or AWTRIX clock. Without a Luxafor, choose “No light” under Settings › Connection to the light (see [Setup](#setup)); this is also enough if MicLED should only set the Slack status or trigger the webhook.
+- Luxafor Flag, Orb or Bluetooth (USB ID 04d8:f372) or one of the other devices: Philips Hue, Govee, Nanoleaf, WLED, light strip with Robobloq controller, Pixoo 64 or AWTRIX clock. Without a Luxafor, choose “No light” under Settings › Connection to the light (see [Setup](#setup)); this is also enough if MicLED should only set the Slack status, report to Home Assistant or trigger the webhook.
 
 ## Setup
 
@@ -380,7 +416,7 @@ open apps/MicLED/MicLED.xcodeproj
 
 Before the first signed build, enter the team ID in `apps/MicLED/project.yml` under `DEVELOPMENT_TEAM`.
 
-Under Settings › Connection to the light you choose “USB directly”, “Webhook” (via the Luxafor app) or **“No light”**. Without a light, MicLED shows the status only on the [Pixoo 64](#pixoo-64), the [AWTRIX clock](#awtrix-clock), in Slack, in Nextcloud and at the webhook, and the menu shows no light error.
+Under Settings › Connection to the light you choose “USB directly”, “Webhook” (via the Luxafor app) or **“No light”**. Without a light, MicLED shows the status only on the [Pixoo 64](#pixoo-64), the [AWTRIX clock](#awtrix-clock), in Slack, in Nextcloud, in Home Assistant and at the webhook, and the menu shows no light error.
 
 ## Command line
 
@@ -397,6 +433,7 @@ cargo run -p micled-cli -- --webhook <ID> set gruen
 MICLED_NEXTCLOUD_PASSWORD=<app-password> cargo run -p micled-cli -- nextcloud https://cloud.example.org <user>
 cargo run -p micled-cli -- pixoo 192.168.1.50  # check Pixoo: 5 s “ON AIR”, then back to the previous channel
 cargo run -p micled-cli -- awtrix 192.168.1.60 # check AWTRIX clock: 5 s “ON AIR”, then the normal display again
+MICLED_MQTT_PASSWORD=<password> cargo run -p micled-cli -- mqtt check homeassistant.local --user micled   # check the login at the MQTT broker
 cargo run -p micled-cli -- hue pair 192.168.1.20  # after pressing the bridge button: key and fingerprint
 MICLED_HUE_KEY=<key> MICLED_HUE_FINGERPRINT=<fingerprint> \
   cargo run -p micled-cli -- hue test 192.168.1.20 <light-id> [--room]   # 5 s red, then back
@@ -414,7 +451,7 @@ cargo run -p micled-cli -- strip test          # 5 s red, then off
 ## Structure
 
 ```
-crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar and status, Slack status, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB)
+crates/micled-core   light (USB/webhook), microphone and camera, logic, status file, Nextcloud calendar and status, Slack status, images for the Pixoo 64, AWTRIX clock, Hue Bridge, Govee, Nanoleaf, WLED, light strip (USB), MQTT for Home Assistant
 crates/micled-cli    command line `micled`
 crates/micled-ffi    UniFFI layer for Swift
 apps/MicLED          SwiftUI menu bar app, project.yml for xcodegen
@@ -430,7 +467,7 @@ The Xcode target `RustCore` (a dependency of the app) calls `scripts/build-rust.
 scripts/screenshots.sh
 ```
 
-The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Nextcloud, at Govee/Nanoleaf, at WLED and at the light strip) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
+The script builds the debug app, launches it with sample data (switch `--screenshots`, debug builds only) and records the menu, settings (top, at Nextcloud, at Govee/Nanoleaf, at WLED, at the light strip and at MQTT) and statistics in light and dark mode: the German UI to `docs/images/` for the [German README](README.md) and the English UI to `docs/images/en/` for this README. The light, Slack and Nextcloud stay untouched. Terminal needs the “Screen Recording” permission once (System Settings › Privacy & Security).
 
 ## Updates
 
