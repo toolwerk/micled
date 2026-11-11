@@ -125,6 +125,9 @@ pub struct Config {
     /// Gekoppelte Nanoleaf-Lampen (leer = aus)
     pub nanoleaf: Vec<crate::nanoleaf::Nanoleaf>,
     pub nanoleaf_states: OutputStates,
+    /// WLED-Geräte im eigenen Netz (leer = aus)
+    pub wled: Vec<crate::wled::Wled>,
+    pub wled_states: OutputStates,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
     pub robobloq_states: OutputStates,
@@ -165,6 +168,8 @@ impl Default for Config {
             govee_states: OutputStates::default(),
             nanoleaf: Vec::new(),
             nanoleaf_states: OutputStates::default(),
+            wled: Vec::new(),
+            wled_states: OutputStates::default(),
             robobloq: false,
             robobloq_states: OutputStates::default(),
         }
@@ -1195,7 +1200,7 @@ mod tests {
         let c = Config::default();
         let all = OutputStates { call: true, timer: true, focus: true };
         assert_eq!(OutputStates::default(), all);
-        for s in [c.pixoo_states, c.awtrix_states, c.hue_states, c.govee_states, c.nanoleaf_states, c.robobloq_states] {
+        for s in [c.pixoo_states, c.awtrix_states, c.hue_states, c.govee_states, c.nanoleaf_states, c.wled_states, c.robobloq_states] {
             assert_eq!(s, all);
         }
     }

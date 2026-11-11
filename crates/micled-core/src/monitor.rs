@@ -14,7 +14,7 @@ use crate::mic::{self, MicUser};
 use crate::reminder::{self, Event, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
+use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack, wled};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -25,7 +25,7 @@ const NEXTCLOUD_EVERY: Duration = Duration::from_secs(120);
 /// Wartezeit nach einer Änderung der Zugangsdaten (Tippen nicht abrufen)
 const NEXTCLOUD_SETTLE: Duration = Duration::from_secs(3);
 /// Höchstens so lange beim Beenden auf die Hue-Lampen warten (ein Raum wird
-/// Lampe für Lampe zurückgestellt), ebenso auf Govee und Nanoleaf
+/// Lampe für Lampe zurückgestellt), ebenso auf Govee, Nanoleaf und WLED
 const HUE_SHUTDOWN: Duration = Duration::from_secs(5);
 /// Abstand der Suche nach dem Lichtstreifen (Anstecken erkennen)
 const STRIP_EVERY: Duration = Duration::from_secs(5);
@@ -34,6 +34,8 @@ const STRIP_EVERY: Duration = Duration::from_secs(5);
 type GoveeFleet = output::Fleet<govee::Session>;
 /// Nanoleaf-Lampen
 type NanoleafFleet = output::Fleet<nanoleaf::Session>;
+/// WLED-Geräte
+type WledFleet = output::Fleet<wled::Session>;
 
 /// Ergebnis eines Abrufs aus Nextcloud, gekennzeichnet mit der Runde
 type Fetched = Arc<Mutex<Option<(u64, Result<Vec<Event>, String>)>>>;
@@ -118,6 +120,7 @@ impl Monitor {
         let hue_error = Arc::new(Mutex::new(None));
         let govee_error = Arc::new(Mutex::new(None));
         let nanoleaf_error = Arc::new(Mutex::new(None));
+        let wled_error = Arc::new(Mutex::new(None));
         let robobloq_error = Arc::new(Mutex::new(None));
         let thread = std::thread::Builder::new()
             .name("micled-monitor".into())
@@ -165,6 +168,9 @@ impl Monitor {
                     nanoleaf: output::Updater::start("nanoleaf", nanoleaf_error.clone()),
                     nanoleaf_error,
                     last_nanoleaf: None,
+                    wled: output::Updater::start("wled", wled_error.clone()),
+                    wled_error,
+                    last_wled: None,
                     robobloq: output::Updater::start("robobloq", robobloq_error.clone()),
                     robobloq_error,
                     last_robobloq: None,
@@ -208,13 +214,14 @@ impl Monitor {
                     }
                 }
                 w.set_live(false);
-                // Pixoo, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen gleichzeitig zurückstellen, nicht nacheinander
+                // Pixoo, AWTRIX, Hue, Govee, Nanoleaf, WLED und Lichtstreifen gleichzeitig zurückstellen, nicht nacheinander
                 let started = Instant::now();
                 let pixoo = w.pixoo.begin_shutdown();
                 let awtrix = w.awtrix.begin_shutdown();
                 let hue = w.hue.begin_shutdown();
                 let govee = w.govee.begin_shutdown();
                 let nanoleaf = w.nanoleaf.begin_shutdown();
+                let wled = w.wled.begin_shutdown();
                 let strip = w.robobloq.begin_shutdown();
                 for (done, limit) in [
                     (pixoo, Duration::from_secs(3)),
@@ -222,6 +229,7 @@ impl Monitor {
                     (hue, HUE_SHUTDOWN),
                     (govee, HUE_SHUTDOWN),
                     (nanoleaf, HUE_SHUTDOWN),
+                    (wled, HUE_SHUTDOWN),
                     // ein laufender „Testen“ (bis gut 5 s) kommt vor dem Zurückstellen dran
                     (strip, Duration::from_secs(3) + robobloq::TEST_RED + Duration::from_secs(4)),
                 ] {
@@ -363,6 +371,10 @@ struct Worker {
     nanoleaf_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an die Nanoleaf-Lampen gegebene Liste und Szene
     last_nanoleaf: Option<(Option<Vec<nanoleaf::Nanoleaf>>, Scene)>,
+    wled: output::Updater<WledFleet>,
+    wled_error: Arc<Mutex<Option<String>>>,
+    /// Zuletzt an die WLED-Geräte gegebene Liste und Szene
+    last_wled: Option<(Option<Vec<wled::Wled>>, Scene)>,
     robobloq: output::Updater<robobloq::Session>,
     robobloq_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an den Lichtstreifen gegebenes Ziel und Szene
@@ -380,6 +392,7 @@ struct Scenes {
     hue: Scene,
     govee: Scene,
     nanoleaf: Scene,
+    wled: Scene,
     robobloq: Scene,
 }
 
@@ -393,6 +406,7 @@ impl Scenes {
             hue: scene(cfg.hue_states),
             govee: scene(cfg.govee_states),
             nanoleaf: scene(cfg.nanoleaf_states),
+            wled: scene(cfg.wled_states),
             robobloq: scene(cfg.robobloq_states),
         }
     }
@@ -430,6 +444,9 @@ impl Worker {
         }
         if cfg.nanoleaf != self.engine.config().nanoleaf {
             *self.nanoleaf_error.lock().unwrap() = None;
+        }
+        if cfg.wled != self.engine.config().wled {
+            *self.wled_error.lock().unwrap() = None;
         }
         if cfg.robobloq != self.engine.config().robobloq {
             *self.robobloq_error.lock().unwrap() = None;
@@ -643,7 +660,7 @@ impl Worker {
             }
         }
 
-        // 8. Display, AWTRIX, Hue, Govee, Nanoleaf und Lichtstreifen: nur bei einer Änderung (oder neuem Ziel) senden
+        // 8. Display, AWTRIX, Hue, Govee, Nanoleaf, WLED und Lichtstreifen: nur bei einer Änderung (oder neuem Ziel) senden
         let scenes = Scenes::new(&self.engine, now, self.brightness);
         let cfg = self.engine.config();
         let wanted = (cfg.hue.clone(), scenes.hue);
@@ -662,6 +679,12 @@ impl Worker {
         if self.last_nanoleaf.as_ref() != Some(&wanted) {
             self.nanoleaf.send(wanted.0.clone(), wanted.1.clone());
             self.last_nanoleaf = Some(wanted);
+        }
+        let wleds = &cfg.wled;
+        let wanted = ((!wleds.is_empty()).then(|| wleds.clone()), scenes.wled);
+        if self.last_wled.as_ref() != Some(&wanted) {
+            self.wled.send(wanted.0.clone(), wanted.1.clone());
+            self.last_wled = Some(wanted);
         }
         let strip = cfg.robobloq.then_some(robobloq::Strip { connection: self.watch.connection });
         let wanted = (strip, scenes.robobloq);
@@ -753,6 +776,7 @@ impl Worker {
                 .or_else(|| self.hue_error.lock().unwrap().clone())
                 .or_else(|| self.govee_error.lock().unwrap().clone())
                 .or_else(|| self.nanoleaf_error.lock().unwrap().clone())
+                .or_else(|| self.wled_error.lock().unwrap().clone())
                 .or_else(|| self.robobloq_error.lock().unwrap().clone())
                 .or_else(|| self.awtrix_error.lock().unwrap().clone()),
         }
@@ -781,12 +805,13 @@ mod tests {
     #[test]
     fn scenes_follow_each_outputs_own_selection() {
         let live = Scene::Live { camera: false, color: Rgb::RED, until: None };
-        let devices: [Device; 6] = [
+        let devices: [Device; 7] = [
             ("pixoo", |c| c.pixoo_states = NOTHING, |s| &s.pixoo),
             ("awtrix", |c| c.awtrix_states = NOTHING, |s| &s.awtrix),
             ("hue", |c| c.hue_states = NOTHING, |s| &s.hue),
             ("govee", |c| c.govee_states = NOTHING, |s| &s.govee),
             ("nanoleaf", |c| c.nanoleaf_states = NOTHING, |s| &s.nanoleaf),
+            ("wled", |c| c.wled_states = NOTHING, |s| &s.wled),
             ("robobloq", |c| c.robobloq_states = NOTHING, |s| &s.robobloq),
         ];
         for (name, off, _) in devices {

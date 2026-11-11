@@ -90,6 +90,9 @@ final class AppModel {
             persist()
         }
     }
+    /// Status auf WLED-Geräten im eigenen Netz zeigen
+    var wledEnabled: Bool { didSet { persist() } }
+    var wledDevices: [NetLight] { didSet { persist() } }
     /// Status auf einem USB-Lichtstreifen mit Robobloq-Controller zeigen
     var robobloqEnabled: Bool { didSet { persist() } }
     /// Zustände, die das Gerät zeigt (Call, Timer, Fokus)
@@ -98,6 +101,7 @@ final class AppModel {
     var hueStates: OutputStates { didSet { persist() } }
     var goveeStates: OutputStates { didSet { persist() } }
     var nanoleafStates: OutputStates { didSet { persist() } }
+    var wledStates: OutputStates { didSet { persist() } }
     var robobloqStates: OutputStates { didSet { persist() } }
     /// Schlüssel vom Koppeln je Eintrag, liegen im Schlüsselbund
     private(set) var nanoleafKeys: [UUID: String] = [:]
@@ -134,6 +138,7 @@ final class AppModel {
     /// Ergebnis der letzten Suche (nur im Speicher)
     private(set) var goveeFound: [FoundDevice] = []
     private(set) var nanoleafFound: [FoundDevice] = []
+    private(set) var wledFound: [FoundDevice] = []
 
     var micActive: Bool { !micUsers.isEmpty }
 
@@ -189,6 +194,8 @@ final class AppModel {
             Key.goveeDevices: [[String: String]](),
             Key.nanoleafEnabled: false,
             Key.nanoleafDevices: [[String: String]](),
+            Key.wledEnabled: false,
+            Key.wledDevices: [[String: String]](),
             Key.robobloqEnabled: false,
             Key.dimEnabled: false,
             Key.dimFrom: 18 * 60,
@@ -236,12 +243,15 @@ final class AppModel {
         goveeDevices = NetLight.list(d.array(forKey: Key.goveeDevices))
         nanoleafEnabled = d.bool(forKey: Key.nanoleafEnabled)
         nanoleafDevices = NetLight.list(d.array(forKey: Key.nanoleafDevices))
+        wledEnabled = d.bool(forKey: Key.wledEnabled)
+        wledDevices = NetLight.list(d.array(forKey: Key.wledDevices))
         robobloqEnabled = d.bool(forKey: Key.robobloqEnabled)
         pixooStates = OutputStates(stored: d.object(forKey: Key.pixooStates))
         awtrixStates = OutputStates(stored: d.object(forKey: Key.awtrixStates))
         hueStates = OutputStates(stored: d.object(forKey: Key.hueStates))
         goveeStates = OutputStates(stored: d.object(forKey: Key.goveeStates))
         nanoleafStates = OutputStates(stored: d.object(forKey: Key.nanoleafStates))
+        wledStates = OutputStates(stored: d.object(forKey: Key.wledStates))
         robobloqStates = OutputStates(stored: d.object(forKey: Key.robobloqStates))
         favorites = d.stringArray(forKey: Key.favorites) ?? AppModel.defaultFavorites
         timerHex = d.string(forKey: Key.timerColor) ?? "8000ff"
@@ -267,6 +277,7 @@ final class AppModel {
             baseHex = "0000ff"
             hueChoices = ScreenshotMode.hueChoices
             goveeFound = ScreenshotMode.goveeFound
+            wledFound = ScreenshotMode.wledFound
             return
         }
 
@@ -410,6 +421,14 @@ final class AppModel {
         return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
     }
 
+    /// WLED-Geräte per Bonjour suchen, liefert eine Meldung für die Einstellungen
+    func searchWled() async -> String {
+        let result = await Task.detached { wledDiscover() }.value
+        wledFound = result.items
+        if let error = result.error { return error }
+        return result.items.isEmpty ? "Nichts gefunden" : "\(result.items.count) gefunden"
+    }
+
     /// Mit der Nanoleaf-Lampe koppeln (Einschaltknopf vorher 5–7 Sekunden
     /// halten), liefert eine Meldung für die Einstellungen
     func pairNanoleaf(_ id: UUID) async -> String {
@@ -440,12 +459,22 @@ final class AppModel {
     }
 
     /// Gefundenes Gerät übernehmen
-    func add(_ found: FoundDevice, toNanoleaf: Bool) {
+    func add(_ found: FoundDevice, to kind: NetKind) {
         let light = NetLight(id: UUID(), host: found.host, name: found.name)
-        if toNanoleaf {
-            if !NetLight.contains(nanoleafDevices, found.host, nanoleaf: true) { nanoleafDevices.append(light) }
-        } else if !NetLight.contains(goveeDevices, found.host, nanoleaf: false) {
-            goveeDevices.append(light)
+        guard !NetLight.contains(devices(kind), found.host, kind) else { return }
+        switch kind {
+        case .govee: goveeDevices.append(light)
+        case .nanoleaf: nanoleafDevices.append(light)
+        case .wled: wledDevices.append(light)
+        }
+    }
+
+    /// Eingetragene Geräte einer Art
+    func devices(_ kind: NetKind) -> [NetLight] {
+        switch kind {
+        case .govee: goveeDevices
+        case .nanoleaf: nanoleafDevices
+        case .wled: wledDevices
         }
     }
 
@@ -549,6 +578,8 @@ final class AppModel {
                 ? nanoleafDevices.map { NanoleafDevice(host: $0.host, key: nanoleafKeys[$0.id] ?? "") }
                 : [],
             nanoleafStates: nanoleafStates,
+            wledHosts: wledEnabled ? wledDevices.map(\.host) : [],
+            wledStates: wledStates,
             robobloq: robobloqEnabled,
             robobloqStates: robobloqStates
         )
@@ -617,12 +648,15 @@ final class AppModel {
         defaults.set(goveeDevices.map(\.stored), forKey: Key.goveeDevices)
         defaults.set(nanoleafEnabled, forKey: Key.nanoleafEnabled)
         defaults.set(nanoleafDevices.map(\.stored), forKey: Key.nanoleafDevices)
+        defaults.set(wledEnabled, forKey: Key.wledEnabled)
+        defaults.set(wledDevices.map(\.stored), forKey: Key.wledDevices)
         defaults.set(robobloqEnabled, forKey: Key.robobloqEnabled)
         defaults.set(pixooStates.stored, forKey: Key.pixooStates)
         defaults.set(awtrixStates.stored, forKey: Key.awtrixStates)
         defaults.set(hueStates.stored, forKey: Key.hueStates)
         defaults.set(goveeStates.stored, forKey: Key.goveeStates)
         defaults.set(nanoleafStates.stored, forKey: Key.nanoleafStates)
+        defaults.set(wledStates.stored, forKey: Key.wledStates)
         defaults.set(robobloqStates.stored, forKey: Key.robobloqStates)
         defaults.set(dimEnabled, forKey: Key.dimEnabled)
         defaults.set(dimFromMinutes, forKey: Key.dimFrom)
@@ -744,12 +778,15 @@ final class AppModel {
         static let goveeDevices = "goveeDevices"
         static let nanoleafEnabled = "nanoleafEnabled"
         static let nanoleafDevices = "nanoleafDevices"
+        static let wledEnabled = "wledEnabled"
+        static let wledDevices = "wledDevices"
         static let robobloqEnabled = "robobloqEnabled"
         static let pixooStates = "pixooStates"
         static let awtrixStates = "awtrixStates"
         static let hueStates = "hueStates"
         static let goveeStates = "goveeStates"
         static let nanoleafStates = "nanoleafStates"
+        static let wledStates = "wledStates"
         static let robobloqStates = "robobloqStates"
         static let dimEnabled = "dimEnabled"
         static let dimFrom = "dimFromMinutes"
@@ -758,7 +795,12 @@ final class AppModel {
     }
 }
 
-/// Govee- oder Nanoleaf-Lampe im eigenen Netz
+/// Art eines Geräts im eigenen Netz, bestimmt den Umgang mit dem Port
+enum NetKind {
+    case govee, nanoleaf, wled
+}
+
+/// Govee-, Nanoleaf- oder WLED-Gerät im eigenen Netz
 struct NetLight: Identifiable, Equatable {
     let id: UUID
     var host: String
@@ -778,27 +820,29 @@ struct NetLight: Identifiable, Equatable {
     }
 
     /// Adresse wie im Kern bereinigt (ohne `http://` und `/`, Nanoleaf mit
-    /// Port 16021, Govee ohne Port), zum Vergleichen
-    static func normalized(_ host: String, nanoleaf: Bool) -> String {
+    /// Port 16021, Govee ohne Port, WLED mit dem angegebenen außer 80), zum Vergleichen
+    static func normalized(_ host: String, _ kind: NetKind) -> String {
         var h = host.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in ["http://", "https://"] where h.hasPrefix(prefix) { h.removeFirst(prefix.count) }
         while h.hasSuffix("/") { h.removeLast() }
         h = h.trimmingCharacters(in: .whitespacesAndNewlines)
         if let colon = h.lastIndex(of: ":") {
             let port = h[h.index(after: colon)...]
-            if !nanoleaf, !port.isEmpty, port.allSatisfy(\.isASCII), port.allSatisfy(\.isNumber) {
+            if kind == .govee, !port.isEmpty, port.allSatisfy(\.isASCII), port.allSatisfy(\.isNumber) {
+                h = String(h[..<colon])
+            } else if kind == .wled, port == "80" {
                 h = String(h[..<colon])
             }
-        } else if nanoleaf, !h.isEmpty {
+        } else if kind == .nanoleaf, !h.isEmpty {
             h += ":16021"
         }
         return h
     }
 
     /// Steht die Adresse schon in der Liste?
-    static func contains(_ lights: [NetLight], _ host: String, nanoleaf: Bool) -> Bool {
-        let h = normalized(host, nanoleaf: nanoleaf)
-        return lights.contains { normalized($0.host, nanoleaf: nanoleaf) == h }
+    static func contains(_ lights: [NetLight], _ host: String, _ kind: NetKind) -> Bool {
+        let h = normalized(host, kind)
+        return lights.contains { normalized($0.host, kind) == h }
     }
 
     /// Adresse ohne den Standard-Port von Nanoleaf
