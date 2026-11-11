@@ -34,12 +34,19 @@ final class AppModel {
     var meetingEndEnabled: Bool { didSet { persist(); updateCalendar() } }
     /// Termine aus den Kalendern von macOS (EventKit)
     var useSystemCalendar: Bool { didSet { persist(); updateCalendar() } }
-    /// Termine zusätzlich direkt aus Nextcloud
+    /// „Termine lesen“: Termine zusätzlich direkt aus Nextcloud (mit „Vor Terminen blinken“)
     var nextcloudEnabled: Bool { didSet { persist() } }
+    /// Zugang zu Nextcloud für Termine und Status
     var nextcloudServer: String { didSet { persist() } }
     var nextcloudUser: String { didSet { persist() } }
     /// Liegt im Schlüsselbund
     var nextcloudPassword: String { didSet { Keychain.write(.nextcloud, nextcloudPassword); persist() } }
+    /// Nextcloud-Status bei „Auf Sendung“
+    var nextcloudStatusEnabled: Bool { didSet { persist() } }
+    var nextcloudStatusText: String { didSet { persist() } }
+    var nextcloudStatusEmoji: String { didSet { persist() } }
+    /// Dazu „Nicht stören“ setzen
+    var nextcloudStatusDnd: Bool { didSet { persist() } }
     /// Slack-Status bei „Auf Sendung“
     var slackEnabled: Bool { didSet { persist() } }
     /// Liegt im Schlüsselbund
@@ -173,6 +180,10 @@ final class AppModel {
             Key.nextcloudEnabled: false,
             Key.nextcloudServer: "",
             Key.nextcloudUser: "",
+            Key.nextcloudStatusEnabled: false,
+            Key.nextcloudStatusText: "Im Call",
+            Key.nextcloudStatusEmoji: "🔴",
+            Key.nextcloudStatusDnd: false,
             Key.favorites: AppModel.defaultFavorites,
             Key.appColors: [[String: String]](),
             Key.timerColor: "8000ff",
@@ -225,6 +236,10 @@ final class AppModel {
         nextcloudServer = d.string(forKey: Key.nextcloudServer) ?? ""
         nextcloudUser = d.string(forKey: Key.nextcloudUser) ?? ""
         nextcloudPassword = ScreenshotMode.isActive ? "" : Keychain.read(.nextcloud)
+        nextcloudStatusEnabled = d.bool(forKey: Key.nextcloudStatusEnabled)
+        nextcloudStatusText = d.string(forKey: Key.nextcloudStatusText) ?? "Im Call"
+        nextcloudStatusEmoji = d.string(forKey: Key.nextcloudStatusEmoji) ?? "🔴"
+        nextcloudStatusDnd = d.bool(forKey: Key.nextcloudStatusDnd)
         slackEnabled = d.bool(forKey: Key.slackEnabled)
         slackToken = ScreenshotMode.isActive ? "" : Keychain.read(.slack)
         slackText = d.string(forKey: Key.slackText) ?? "Im Call"
@@ -309,7 +324,7 @@ final class AppModel {
         controller?.startTimer(minutes: UInt32(max(0, minutes)))
     }
 
-    /// Beim Beenden der App: Kern anhalten (wartet kurz auf Slack)
+    /// Beim Beenden der App: Kern anhalten (wartet kurz auf Slack und Nextcloud)
     func shutdown() {
         controller?.stop()
     }
@@ -547,9 +562,14 @@ final class AppModel {
             remindersEnabled: remindersEnabled,
             reminderColor: reminderHex,
             reminderLeadS: UInt32(max(0, reminderLeadMinutes) * 60),
-            nextcloudServer: nextcloudActive ? nextcloudServer : "",
-            nextcloudUser: nextcloudActive ? nextcloudUser : "",
-            nextcloudPassword: nextcloudActive ? nextcloudPassword : "",
+            nextcloudServer: nextcloudAccess ? nextcloudServer : "",
+            nextcloudUser: nextcloudAccess ? nextcloudUser : "",
+            nextcloudPassword: nextcloudAccess ? nextcloudPassword : "",
+            nextcloudCalendar: nextcloudActive,
+            nextcloudStatus: nextcloudStatusEnabled,
+            nextcloudStatusText: nextcloudStatusText,
+            nextcloudStatusEmoji: nextcloudStatusEmoji,
+            nextcloudStatusDnd: nextcloudStatusDnd,
             meetingEndEnabled: meetingEndEnabled,
             appColors: appColors,
             timerColor: timerHex,
@@ -585,6 +605,7 @@ final class AppModel {
         )
     }
 
+    /// Termine aus Nextcloud lesen
     private var nextcloudActive: Bool {
         calendarNeeded && nextcloudEnabled
     }
@@ -592,6 +613,11 @@ final class AppModel {
     /// Termine werden gebraucht für die Vorwarnung oder für die Endzeit auf Pixoo und AWTRIX
     private var calendarNeeded: Bool {
         remindersEnabled || (meetingEndEnabled && (pixooEnabled || awtrixEnabled))
+    }
+
+    /// Zugang an den Kern geben (für Termine oder Status)
+    private var nextcloudAccess: Bool {
+        nextcloudActive || nextcloudStatusEnabled
     }
 
     /// Unterdrückt `persist()` während `batch`, damit der Kern keine halb
@@ -628,6 +654,10 @@ final class AppModel {
         defaults.set(nextcloudEnabled, forKey: Key.nextcloudEnabled)
         defaults.set(nextcloudServer, forKey: Key.nextcloudServer)
         defaults.set(nextcloudUser, forKey: Key.nextcloudUser)
+        defaults.set(nextcloudStatusEnabled, forKey: Key.nextcloudStatusEnabled)
+        defaults.set(nextcloudStatusText, forKey: Key.nextcloudStatusText)
+        defaults.set(nextcloudStatusEmoji, forKey: Key.nextcloudStatusEmoji)
+        defaults.set(nextcloudStatusDnd, forKey: Key.nextcloudStatusDnd)
         defaults.set(favorites, forKey: Key.favorites)
         defaults.set(timerHex, forKey: Key.timerColor)
         defaults.set(focusEnabled, forKey: Key.focusEnabled)
@@ -757,6 +787,10 @@ final class AppModel {
         static let nextcloudEnabled = "nextcloudEnabled"
         static let nextcloudServer = "nextcloudServer"
         static let nextcloudUser = "nextcloudUser"
+        static let nextcloudStatusEnabled = "nextcloudStatusEnabled"
+        static let nextcloudStatusText = "nextcloudStatusText"
+        static let nextcloudStatusEmoji = "nextcloudStatusEmoji"
+        static let nextcloudStatusDnd = "nextcloudStatusDnd"
         static let favorites = "favorites"
         static let appColors = "appColors"
         static let timerColor = "timerColor"
