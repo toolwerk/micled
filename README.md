@@ -273,7 +273,8 @@ Auf Sendung, beim Konzentrations-Timer und bei Fokus leuchten alle Segmente einf
 - Lief ein **Preset**, stellt MicLED dessen Aussehen zurück, lädt das Preset aber nicht neu. So bleibt etwa eine danach gedimmte Helligkeit erhalten. In der WLED-App ist das Preset danach nicht mehr markiert, das Licht sieht aber gleich aus.
 - Lief eine **Playlist**, startet sie danach von vorn.
 - Empfängt das Gerät gerade **Live-Daten** einer anderen Steuerung, etwa Bildschirm-Sync über Hyperion, hat MicLED für die Dauer des Calls Vorrang und gibt danach wieder frei.
-- Ein laufendes **Nachtlicht** hält MicLED während des Calls an und startet es danach neu. Per WLED-Sync gekoppelte Geräte bekommen die Statusfarbe nicht mit; sollen sie mitleuchten, trag sie ebenfalls ein.
+- Ein laufendes **Nachtlicht** (auch Sonnenaufgang) beendet der Call, danach startet es nicht neu.
+- Per **WLED-Sync** gekoppelte Geräte bekommen die Statusfarbe nicht mit; sollen sie mitleuchten, trag sie ebenfalls ein. Empfängt ein eingetragenes Gerät selbst Sync von einem anderen, kann dessen nächste Änderung die Statusfarbe überschreiben.
 
 1. Dem Gerät im Router eine **feste IP-Adresse** geben.
 2. In MicLED unter Einstellungen › WLED „Status auf WLED-Geräten zeigen“ einschalten und „Suchen“ drücken. Gefundene Geräte mit „Hinzufügen“ übernehmen oder mit „Adresse hinzufügen“ die IP von Hand eintragen, bei einem anderen Port als 80 mit Port (`192.168.1.45:8080`).
