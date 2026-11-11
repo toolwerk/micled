@@ -13,6 +13,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 - Automatische Updates mit Sparkle: MicLED sucht täglich nach einer neuen Version und fragt vor der Installation nach. „Nach Updates suchen …“ im Menü und Kontextmenü, abschaltbar in den Einstellungen. `scripts/release.sh` signiert das ZIP und schreibt den Appcast.
 - Lichtstreifen per USB mit Robobloq-Controller (`1A86:FE07`, z. B. Meewata): Der ganze Streifen zeigt die Farbe für Call, Timer und Fokus, sonst ist er aus. Erkennt das Wiederanstecken, Fehler im Menü bei fehlendem oder anderem Controller, „Testen“ in den Einstellungen lässt den Streifen etwa zwei Sekunden rot leuchten, zeigt danach wieder den aktuellen Zustand und nennt LEDs und Firmware. Kommandozeile `micled strip info|test`.
 - „Keine Lampe“ in den Einstellungen: MicLED zeigt den Status dann nur auf dem Display, in Slack und am Webhook.
+- Home Assistant per MQTT mit Discovery: MicLED erscheint als Gerät „MicLED (<Mac-Name>)“ mit den Sensoren Auf Sendung, Kamera und Programm, ist per Last Will nicht verfügbar, wenn MicLED endet oder der Mac schläft, und entfernt das Gerät beim Ausschalten wieder. Einstellungen mit Broker, Port, optional TLS, Benutzer und Passwort (im Schlüsselbund) und „Verbindung prüfen“, Kommandozeile `micled mqtt check`. Der Webhook bleibt als Alternative.
 
 ## [0.1.0] - 2026-11-05
 
