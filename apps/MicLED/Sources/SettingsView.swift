@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var hueResult = ""
     @State private var goveeResult = ""
     @State private var nanoleafResult = ""
+    @State private var wledResult = ""
     @State private var robobloqResult = ""
     @State private var robobloqTesting = false
     /// Meldung vom Koppeln je Nanoleaf-Eintrag
@@ -115,6 +116,7 @@ struct SettingsView: View {
                         }
                         Text(pixooResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.pixooStates)
                 }
             } header: {
                 Text("Pixoo 64")
@@ -135,6 +137,7 @@ struct SettingsView: View {
                         }
                         Text(awtrixResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.awtrixStates)
                 }
             } header: {
                 Text("AWTRIX")
@@ -174,6 +177,7 @@ struct SettingsView: View {
                             Text(error).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    states($model.hueStates)
                 }
             } header: {
                 Text("Philips Hue")
@@ -205,7 +209,8 @@ struct SettingsView: View {
                         }
                         Text(goveeResult).font(.caption).foregroundStyle(.secondary)
                     }
-                    found(model.goveeFound, in: model.goveeDevices, nanoleaf: false)
+                    found(model.goveeFound, .govee)
+                    states($model.goveeStates)
                 }
             } header: {
                 Text("Govee").id("network")
@@ -243,12 +248,42 @@ struct SettingsView: View {
                         }
                         Text(nanoleafResult).font(.caption).foregroundStyle(.secondary)
                     }
-                    found(model.nanoleafFound, in: model.nanoleafDevices, nanoleaf: true)
+                    found(model.nanoleafFound, .nanoleaf)
+                    states($model.nanoleafStates)
                 }
             } header: {
                 Text("Nanoleaf")
             } footer: {
                 Text("Einschaltknopf 5–7 Sekunden halten, bis die Lichter blinken, dann „Koppeln“. Danach hat die Lampe wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Der Schlüssel liegt im Schlüsselbund.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Status auf WLED-Geräten zeigen", isOn: $model.wledEnabled)
+                if model.wledEnabled {
+                    ForEach($model.wledDevices) { $light in
+                        HStack {
+                            lightAddress($light)
+                            Button("Entfernen") { model.wledDevices.removeAll { $0.id == light.id } }
+                        }
+                    }
+                    HStack {
+                        Button("Suchen") {
+                            wledResult = "Suche …"
+                            Task { wledResult = await model.searchWled() }
+                        }
+                        Button("Adresse hinzufügen") {
+                            model.wledDevices.append(NetLight(id: UUID(), host: "", name: ""))
+                        }
+                        Text(wledResult).font(.caption).foregroundStyle(.secondary)
+                    }
+                    found(model.wledFound, .wled)
+                    states($model.wledStates)
+                }
+            } header: {
+                Text("WLED").id("wled")
+            } footer: {
+                Text("Danach hat das Gerät wieder An/Aus, Helligkeit und Farbe bzw. Effekt von vorher. Feste IP empfohlen.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -267,13 +302,14 @@ struct SettingsView: View {
                         .disabled(robobloqTesting)
                         Text(robobloqResult).font(.caption).foregroundStyle(.secondary)
                     }
+                    states($model.robobloqStates)
                 }
                 Text("Nur ein Programm zur Zeit kann den Controller steuern: DX-Light, SyncLight, backlit usw. vorher beenden.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: {
                 Text("Lichtstreifen (USB)").id("strip")
             } footer: {
-                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei Call, Timer und Fokus leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
+                Text("Streifen mit Robobloq-Controller (USB 1A86:FE07), z. B. Meewata. Bei den gewählten Zuständen leuchtet der ganze Streifen in der Farbe, sonst ist er aus. Nach dem Wiederanstecken bekommt er die Farbe nach wenigen Sekunden neu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -461,6 +497,19 @@ struct SettingsView: View {
         .onAppear { current = model.currentUsers() }
     }
 
+    /// Häkchen für die Zustände, die ein Zusatzgerät zeigt
+    private func states(_ binding: Binding<OutputStates>) -> some View {
+        LabeledContent("Zeigen bei") {
+            HStack {
+                Toggle("Call", isOn: binding.call)
+                Toggle("Timer", isOn: binding.timer)
+                Toggle("Fokus", isOn: binding.focus)
+                    .disabled(!model.focusEnabled)
+            }
+            .toggleStyle(.checkbox)
+        }
+    }
+
     /// Gefundenes Gerät mit Namen und Adresse, von Hand eingetragenes als Eingabefeld
     @ViewBuilder
     private func lightAddress(_ light: Binding<NetLight>) -> some View {
@@ -476,13 +525,13 @@ struct SettingsView: View {
 
     /// Gefundene Geräte, die noch nicht eingetragen sind
     @ViewBuilder
-    private func found(_ found: [FoundDevice], in lights: [NetLight], nanoleaf: Bool) -> some View {
-        ForEach(found.filter { !NetLight.contains(lights, $0.host, nanoleaf: nanoleaf) }, id: \.host) { f in
+    private func found(_ found: [FoundDevice], _ kind: NetKind) -> some View {
+        ForEach(found.filter { !NetLight.contains(model.devices(kind), $0.host, kind) }, id: \.host) { f in
             HStack {
                 Text("Gefunden: \(f.name) · \(NetLight(id: UUID(), host: f.host, name: f.name).shownHost)")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Hinzufügen") { model.add(f, toNanoleaf: nanoleaf) }
+                Button("Hinzufügen") { model.add(f, to: kind) }
             }
         }
     }

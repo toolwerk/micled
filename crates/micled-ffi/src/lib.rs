@@ -100,8 +100,10 @@ pub struct MicLedConfig {
     pub slack_emoji: String,
     /// Adresse eines Pixoo 64 im eigenen Netz; leer = aus
     pub pixoo_host: String,
+    pub pixoo_states: OutputStates,
     /// Adresse einer Pixeluhr mit AWTRIX 3 im eigenen Netz; leer = aus
     pub awtrix_host: String,
+    pub awtrix_states: OutputStates,
     /// Hue Bridge; ist Adresse, Schlüssel, Fingerabdruck oder Ziel leer, ist es aus
     pub hue_host: String,
     /// App-Schlüssel vom Koppeln (liegt in der App im Schlüsselbund)
@@ -109,12 +111,33 @@ pub struct MicLedConfig {
     pub hue_fingerprint: String,
     pub hue_target_kind: HueTargetKind,
     pub hue_target_id: String,
+    pub hue_states: OutputStates,
     /// Adressen von Govee-Lampen; leere fallen weg, doppelte zählen einmal
     pub govee_hosts: Vec<String>,
+    pub govee_states: OutputStates,
     /// Gekoppelte Nanoleaf-Lampen; ohne Adresse oder Schlüssel fallen sie weg
     pub nanoleaf: Vec<NanoleafDevice>,
+    pub nanoleaf_states: OutputStates,
+    /// Adressen von WLED-Geräten; leere fallen weg, doppelte zählen einmal
+    pub wled_hosts: Vec<String>,
+    pub wled_states: OutputStates,
     /// Lichtstreifen mit Robobloq-Controller per USB
     pub robobloq: bool,
+    pub robobloq_states: OutputStates,
+}
+
+/// Zustände, die ein Zusatzgerät zeigt; ein abgewählter gilt dort als frei
+#[derive(uniffi::Record, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OutputStates {
+    pub call: bool,
+    pub timer: bool,
+    pub focus: bool,
+}
+
+impl From<OutputStates> for core::OutputStates {
+    fn from(s: OutputStates) -> Self {
+        core::OutputStates { call: s.call, timer: s.timer, focus: s.focus }
+    }
 }
 
 /// Termin aus den Kalendern von macOS, ohne Titel
@@ -145,13 +168,13 @@ pub struct NanoleafDevice {
 /// Gerät aus einer Suche im eigenen Netz
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FoundDevice {
-    /// Adresse zum Eintragen (bei Nanoleaf mit Port)
+    /// Adresse zum Eintragen (bei Nanoleaf mit Port, bei WLED nur abseits von Port 80)
     pub host: String,
     /// Modell oder Name des Geräts
     pub name: String,
 }
 
-/// Ergebnis von [`govee_discover`] und [`nanoleaf_discover`]
+/// Ergebnis von [`govee_discover`], [`nanoleaf_discover`] und [`wled_discover`]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct FoundDevices {
     pub items: Vec<FoundDevice>,
@@ -312,6 +335,16 @@ fn nanoleaf(devices: &[NanoleafDevice]) -> Vec<core::nanoleaf::Nanoleaf> {
     out
 }
 
+fn wled(hosts: &[String]) -> Vec<core::wled::Wled> {
+    let mut out: Vec<core::wled::Wled> = Vec::new();
+    for host in hosts.iter().filter_map(|h| core::wled::normalize(h)) {
+        if !out.iter().any(|w| w.host == host) {
+            out.push(core::wled::Wled { host });
+        }
+    }
+    out
+}
+
 fn found(result: Result<Vec<(String, String)>, String>) -> FoundDevices {
     match result {
         Ok(list) => FoundDevices { items: list.into_iter().map(|(host, name)| FoundDevice { host, name }).collect(), error: None },
@@ -351,11 +384,19 @@ impl From<MicLedConfig> for core::Config {
                 TransportKind::NoLamp => core::Transport::None,
             },
             pixoo: core::pixoo::normalize(&c.pixoo_host),
+            pixoo_states: c.pixoo_states.into(),
             awtrix: core::pixoo::normalize(&c.awtrix_host),
+            awtrix_states: c.awtrix_states.into(),
             hue: hue(&c.hue_host, c.hue_key, c.hue_fingerprint, c.hue_target_kind, c.hue_target_id),
+            hue_states: c.hue_states.into(),
             govee: govee(&c.govee_hosts),
+            govee_states: c.govee_states.into(),
             nanoleaf: nanoleaf(&c.nanoleaf),
+            nanoleaf_states: c.nanoleaf_states.into(),
+            wled: wled(&c.wled_hosts),
+            wled_states: c.wled_states.into(),
             robobloq: c.robobloq,
+            robobloq_states: c.robobloq_states.into(),
             mic_on_color: color(&c.mic_on_color, Rgb::RED),
             mic_off_color: color(&c.mic_off_color, Rgb::GREEN),
             after_mic: match c.after_mic {
@@ -617,6 +658,13 @@ pub fn nanoleaf_discover() -> FoundDevices {
     found(core::nanoleaf::discover())
 }
 
+/// WLED-Geräte per Bonjour suchen (blockiert etwa drei Sekunden, nicht im
+/// Haupt-Thread aufrufen)
+#[uniffi::export]
+pub fn wled_discover() -> FoundDevices {
+    found(core::wled::discover())
+}
+
 /// Mit der Nanoleaf-Lampe unter `host` koppeln; vorher den Einschaltknopf
 /// 5–7 Sekunden halten (blockiert bis zu drei Sekunden, nicht im Haupt-Thread
 /// aufrufen)
@@ -663,6 +711,13 @@ mod tests {
         let hosts = ["192.168.1.31", " ", "http://192.168.1.31/", "192.168.1.32"].map(String::from);
         let list: Vec<String> = govee(&hosts).into_iter().map(|g| g.host).collect();
         assert_eq!(list, ["192.168.1.31", "192.168.1.32"]);
+    }
+
+    #[test]
+    fn wled_hosts_are_cleaned_and_deduplicated() {
+        let hosts = ["10.0.0.7", " ", "http://10.0.0.7/", "10.0.0.7:80", "10.0.0.7:8080", "10.0.0.8"].map(String::from);
+        let list: Vec<String> = wled(&hosts).into_iter().map(|w| w.host).collect();
+        assert_eq!(list, ["10.0.0.7", "10.0.0.7:8080", "10.0.0.8"]);
     }
 
     #[test]
