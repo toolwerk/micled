@@ -437,6 +437,13 @@ impl MicLedController {
         self.monitor.set_focus(on);
     }
 
+    /// „Testen“ beim Lichtstreifen: Geräteinfo lesen, zwei Sekunden rot, danach
+    /// wieder der Zustand von MicLED. Blockiert bis zu einigen Sekunden, nicht
+    /// im Haupt-Thread aufrufen.
+    pub fn test_strip(&self) -> RobobloqCheck {
+        self.monitor.test_strip().into()
+    }
+
     /// Sekunden auf Sendung je Tag; `bounds` sind aufsteigende lokale Mitternachten
     pub fn live_seconds_per_day(&self, bounds: Vec<u64>) -> Vec<u64> {
         self.monitor.live_seconds_per_day(&bounds)
@@ -604,9 +611,15 @@ pub fn nanoleaf_pair(host: String) -> NanoleafPair {
 /// Sekunden, nicht im Haupt-Thread aufrufen)
 #[uniffi::export]
 pub fn robobloq_check() -> RobobloqCheck {
-    match core::robobloq::check() {
-        Ok(info) => RobobloqCheck { leds: info.leds as u32, firmware: info.firmware_text(), error: None },
-        Err(e) => RobobloqCheck { leds: 0, firmware: String::new(), error: Some(e) },
+    core::robobloq::check().into()
+}
+
+impl From<Result<core::robobloq::Info, String>> for RobobloqCheck {
+    fn from(r: Result<core::robobloq::Info, String>) -> Self {
+        match r {
+            Ok(info) => RobobloqCheck { leds: info.leds as u32, firmware: info.firmware_text(), error: None },
+            Err(e) => RobobloqCheck { leds: 0, firmware: String::new(), error: Some(e) },
+        }
     }
 }
 
