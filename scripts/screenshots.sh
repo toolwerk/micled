@@ -17,9 +17,9 @@ xcodebuild -project "$ROOT/apps/MicLED/MicLED.xcodeproj" -scheme MicLED -configu
   -derivedDataPath "$DERIVED" build >/dev/null 2>&1 || { echo "Debug-Build fehlgeschlagen" >&2; exit 1; }
 
 # Fenstertitel → Dateiname (stats-week: Statistik in der Ansicht „Wochen“,
-# settings-network: Einstellungen bei Govee und Nanoleaf, settings-wled: bei WLED,
-# settings-strip: beim Lichtstreifen)
-WINDOWS=("MicLED-Menü:menu" "Statistik:stats" "Statistik:stats-week" "MicLED:settings" "MicLED:settings-network" "MicLED:settings-wled" "MicLED:settings-strip")
+# settings-nextcloud: Einstellungen bei Nextcloud, settings-network: bei Govee und Nanoleaf,
+# settings-wled: bei WLED, settings-strip: beim Lichtstreifen)
+WINDOWS=("MicLED-Menü:menu" "Statistik:stats" "Statistik:stats-week" "MicLED:settings" "MicLED:settings-nextcloud" "MicLED:settings-network" "MicLED:settings-wled" "MicLED:settings-strip")
 
 # je Fenster ein eigener Start, damit es das aktive Fenster ist
 for look in light dark; do
@@ -27,6 +27,7 @@ for look in light dark; do
     title="${entry%%:*}" name="${entry##*:}"
     args=(--window "$name")
     [[ "$name" == stats-week ]] && args=(--window stats --stats week)
+    [[ "$name" == settings-nextcloud ]] && args=(--window settings --scroll nextcloud)
     [[ "$name" == settings-network ]] && args=(--window settings --scroll network)
     [[ "$name" == settings-wled ]] && args=(--window settings --scroll wled)
     [[ "$name" == settings-strip ]] && args=(--window settings --scroll strip)

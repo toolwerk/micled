@@ -8,6 +8,7 @@ use crate::caldav::Nextcloud;
 use crate::color::Rgb;
 use crate::dim::Dim;
 use crate::display::Scene;
+use crate::nc_status::NcStatus;
 use crate::slack::Slack;
 use crate::lamp::Transport;
 use crate::mic::MicUser;
@@ -110,6 +111,8 @@ pub struct Config {
     pub dim: Option<Dim>,
     /// Slack-Status bei „Auf Sendung“ (`None` = aus)
     pub slack: Option<Slack>,
+    /// Nextcloud-Status bei „Auf Sendung“ (`None` = aus)
+    pub nextcloud_status: Option<NcStatus>,
     /// Adresse eines Pixoo 64 im eigenen Netz (`None` = aus)
     pub pixoo: Option<String>,
     pub pixoo_states: OutputStates,
@@ -158,6 +161,7 @@ impl Default for Config {
             focus_color: Rgb { r: 0xff, g: 0x88, b: 0x00 },
             dim: None,
             slack: None,
+            nextcloud_status: None,
             pixoo: None,
             pixoo_states: OutputStates::default(),
             awtrix: None,

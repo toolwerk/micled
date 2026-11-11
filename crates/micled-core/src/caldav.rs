@@ -288,6 +288,12 @@ const CALENDARS: &str = r#"<?xml version="1.0" encoding="utf-8"?>
   <d:prop><d:resourcetype/><c:supported-calendar-component-set/></d:prop>
 </d:propfind>"#;
 
+/// Kopfzeile `Authorization` für Benutzer und App-Passwort
+pub(crate) fn basic_auth(nc: &Nextcloud) -> String {
+    let token = base64::engine::general_purpose::STANDARD.encode(format!("{}:{}", nc.user.trim(), nc.password.trim()));
+    format!("Basic {token}")
+}
+
 struct Client {
     agent: ureq::Agent,
     auth: String,
@@ -301,8 +307,7 @@ impl Client {
             .http_status_as_error(false)
             .build()
             .into();
-        let token = base64::engine::general_purpose::STANDARD.encode(format!("{}:{}", nc.user.trim(), nc.password.trim()));
-        Client { agent, auth: format!("Basic {token}") }
+        Client { agent, auth: basic_auth(nc) }
     }
 
     fn call(&self, method: &str, url: &str, depth: &str, body: &str) -> Result<String, String> {

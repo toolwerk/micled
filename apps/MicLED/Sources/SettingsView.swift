@@ -38,7 +38,7 @@ struct SettingsView: View {
                     Text("Funktioniert ohne Luxafor-App. Läuft die Luxafor-App, kann sie die Farbe überschreiben.")
                         .font(.caption).foregroundStyle(.secondary)
                 case .noLamp:
-                    Text("MicLED zeigt den Status nur auf dem Display, in Slack und am Webhook.")
+                    Text("MicLED zeigt den Status nur auf dem Display, in Slack, in Nextcloud und am Webhook.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -101,6 +101,31 @@ struct SettingsView: View {
                 Text("Slack")
             } footer: {
                 Text("Während du auf Sendung bist, steht der Text in deinem Slack-Profil, danach kommt der vorherige Status zurück. Einen selbst gesetzten Status überschreibt MicLED nicht. Der Token liegt im Schlüsselbund; Anleitung in der README.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
+                TextField("Benutzer", text: $model.nextcloudUser)
+                SecureField("App-Passwort", text: $model.nextcloudPassword)
+                HStack {
+                    Button("Verbindung prüfen") {
+                        nextcloudResult = "Prüfe …"
+                        Task { nextcloudResult = await model.checkNextcloud() }
+                    }
+                    Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
+                }
+                Toggle("Termine lesen", isOn: $model.nextcloudEnabled)
+                Toggle("Status setzen", isOn: $model.nextcloudStatusEnabled)
+                if model.nextcloudStatusEnabled {
+                    TextField("Statustext", text: $model.nextcloudStatusText)
+                    TextField("Emoji", text: $model.nextcloudStatusEmoji, prompt: Text("🔴"))
+                    Toggle("Auch „Nicht stören“ setzen", isOn: $model.nextcloudStatusDnd)
+                }
+            } header: {
+                Text("Nextcloud").id("nextcloud")
+            } footer: {
+                Text("Während du auf Sendung bist, steht der Text in deinem Nextcloud-Status, danach kommt der vorherige zurück. Eine selbst gesetzte Nachricht überschreibt MicLED nicht. „Termine lesen“ wirkt mit „Vor Terminen blinken“ und dem Termin-Ende auf Pixoo und AWTRIX. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -325,23 +350,10 @@ struct SettingsView: View {
                 .disabled(!model.remindersEnabled)
                 Toggle("Ende des Termins auf Pixoo und AWTRIX zeigen", isOn: $model.meetingEndEnabled)
                 Toggle("Kalender von macOS", isOn: $model.useSystemCalendar)
-                Toggle("Nextcloud direkt", isOn: $model.nextcloudEnabled)
-                if model.nextcloudEnabled {
-                    TextField("Server", text: $model.nextcloudServer, prompt: Text("https://cloud.example.org"))
-                    TextField("Benutzer", text: $model.nextcloudUser)
-                    SecureField("App-Passwort", text: $model.nextcloudPassword)
-                    HStack {
-                        Button("Verbindung prüfen") {
-                            nextcloudResult = "Prüfe …"
-                            Task { nextcloudResult = await model.checkNextcloud() }
-                        }
-                        Text(nextcloudResult).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
             } header: {
                 Text("Termine")
             } footer: {
-                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht „Nextcloud direkt“ nicht. Das App-Passwort legst du in Nextcloud unter Einstellungen › Sicherheit an, MicLED speichert es im Schlüsselbund.")
+                Text("Die Lampe blinkt kurz vor jedem Termin, sobald „Vor Terminen blinken“ an ist, außer ganztägigen und abgesagten. Nicht während eines Calls und nur per USB. Läuft ein Call während eines Termins, zeigen Pixoo und AWTRIX dessen Ende, z. B. „BIS 14:30“, nie den Titel. Termine direkt aus Nextcloud: Abschnitt Nextcloud › Termine lesen. Ein Nextcloud-Kalender, der schon in macOS eingebunden ist, braucht das nicht.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

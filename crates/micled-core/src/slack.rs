@@ -5,11 +5,11 @@
 //! Den eigenen Status erkennt MicLED am eingestellten Text. Als Sicherheitsnetz
 //! läuft er nach vier Stunden von selbst ab.
 
-use std::sync::mpsc::{channel, Sender};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Value};
+
+use crate::presence::{plan, Presence};
 
 const API: &str = "https://slack.com/api";
 /// Ablauf des eigenen Status, falls MicLED ihn nicht mehr zurücksetzen kann
@@ -116,116 +116,18 @@ pub fn check(token: &str) -> Result<String, String> {
     Ok(format!("{} in {}", v["user"].as_str().unwrap_or("?"), v["team"].as_str().unwrap_or("?")))
 }
 
-/// Wie der gewünschte Zustand erreicht wird: zuerst den eigenen Status mit den
-/// Zugangsdaten zurücksetzen, mit denen er gesetzt wurde, dann ggf. neu setzen.
-/// `ours` = Einstellung, mit der MicLED gerade einen Status gesetzt hat.
-pub fn plan(ours: Option<&Slack>, wanted: Option<&Slack>, live: bool) -> (Option<Slack>, Option<Slack>) {
-    let target = wanted.filter(|_| live);
-    let keep = matches!((ours, target), (Some(o), Some(t)) if o == t);
-    let restore = ours.filter(|_| !keep).cloned();
-    let set = target.filter(|_| !keep).cloned();
-    (restore, set)
-}
-
-enum Msg {
-    Update(Option<Slack>, bool),
-    /// Zurücksetzen und bestätigen (beim Beenden der App)
-    Shutdown(Sender<()>),
-}
-
-/// Arbeitet Wechsel nacheinander in einem eigenen Thread ab, damit Slack die
-/// Lampe nicht aufhält und sich Setzen und Zurücksetzen nicht überholen.
-/// Änderungen der Einstellungen (Tippen) werden kurz gesammelt, Fehler nach
-/// einer Pause wiederholt, z. B. nach dem Aufwachen ohne Netz.
-pub struct Updater {
-    tx: Sender<Msg>,
-}
-
-const SETTLE: Duration = Duration::from_secs(2);
-const RETRY: Duration = Duration::from_secs(30);
-
-impl Updater {
-    pub fn start(error: Arc<Mutex<Option<String>>>) -> Updater {
-        let (tx, rx) = channel::<Msg>();
-        std::thread::Builder::new()
-            .name("micled-slack".into())
-            .spawn(move || {
-                let mut st = State::default();
-                let mut wanted: (Option<Slack>, bool) = (None, false);
-                let mut dirty = false;
-                let mut startup = true;
-                loop {
-                    let wait = if dirty { SETTLE } else { Duration::from_secs(3600) };
-                    match rx.recv_timeout(wait) {
-                        Ok(Msg::Update(cfg, live)) => {
-                            wanted = (cfg, live);
-                            dirty = true;
-                            continue;
-                        }
-                        Ok(Msg::Shutdown(ack)) => {
-                            let _ = st.apply(None, false, unix_now(), false);
-                            let _ = ack.send(());
-                            break;
-                        }
-                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
-                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) if !dirty => continue,
-                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                    }
-                    let r = st.apply(wanted.0.as_ref(), wanted.1, unix_now(), startup);
-                    if let Err(e) = &r {
-                        log::warn!("{e}");
-                    }
-                    dirty = r.is_err();
-                    *error.lock().unwrap() = r.clone().err();
-                    if r.is_ok() {
-                        startup = false;
-                    } else {
-                        // nach einer Pause erneut versuchen, neue Wechsel kommen vorher an
-                        if let Ok(m) = rx.recv_timeout(RETRY) {
-                            match m {
-                                Msg::Update(cfg, live) => wanted = (cfg, live),
-                                Msg::Shutdown(ack) => {
-                                    let _ = st.apply(None, false, unix_now(), false);
-                                    let _ = ack.send(());
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            })
-            .expect("Slack-Thread");
-        Updater { tx }
-    }
-
-    /// Gewünschter Zustand: Einstellung (`None` = aus) und „Auf Sendung“
-    pub fn send(&self, cfg: Option<Slack>, live: bool) {
-        let _ = self.tx.send(Msg::Update(cfg, live));
-    }
-
-    /// Eigenen Status zurücksetzen und höchstens `timeout` darauf warten
-    pub fn shutdown(&self, timeout: Duration) {
-        let (ack, done) = channel();
-        if self.tx.send(Msg::Shutdown(ack)).is_ok() {
-            let _ = done.recv_timeout(timeout);
-        }
-    }
-}
-
-fn unix_now() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
-}
-
+/// Status bei Slack, für [`crate::presence::Updater`]
 #[derive(Default)]
-struct State {
+pub struct State {
     /// Einstellung, mit der der eigene Status gesetzt wurde
     ours: Option<Slack>,
     /// Status von vorher
     saved: Option<Profile>,
 }
 
-impl State {
-    /// `startup`: einen nach einem Absturz hängengebliebenen eigenen Status aufräumen
+impl Presence for State {
+    type Cfg = Slack;
+
     fn apply(&mut self, wanted: Option<&Slack>, live: bool, now: u64, startup: bool) -> Result<(), String> {
         let (restore, set) = plan(self.ours.as_ref(), wanted, live);
         let restore = restore.or_else(|| wanted.filter(|_| startup && !live).cloned());
@@ -299,26 +201,6 @@ mod tests {
         let v = payload(&Profile { text: "Im Call".into(), emoji: ":red_circle:".into(), expiration: 9 });
         assert_eq!(v["profile"]["status_text"], "Im Call");
         assert_eq!(v["profile"]["status_expiration"], 9);
-    }
-
-    fn cfg(text: &str) -> Slack {
-        Slack { token: "t".into(), text: text.into(), emoji: String::new() }
-    }
-
-    #[test]
-    fn plan_sets_and_restores() {
-        let a = cfg("Im Call");
-        assert_eq!(plan(None, Some(&a), true), (None, Some(a.clone())));
-        assert_eq!(plan(Some(&a), Some(&a), true), (None, None), "schon gesetzt");
-        assert_eq!(plan(Some(&a), Some(&a), false), (Some(a.clone()), None));
-        assert_eq!(plan(None, Some(&a), false), (None, None));
-    }
-
-    #[test]
-    fn plan_restores_with_old_settings() {
-        let (a, b) = (cfg("Im Call"), cfg("In Meeting"));
-        assert_eq!(plan(Some(&a), Some(&b), true), (Some(a.clone()), Some(b)), "Text im Call geändert");
-        assert_eq!(plan(Some(&a), None, true), (Some(a), None), "im Call ausgeschaltet");
     }
 
     #[test]
