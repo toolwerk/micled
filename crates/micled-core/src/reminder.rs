@@ -49,20 +49,14 @@ impl Reminders {
 }
 
 /// Termine aus mehreren Quellen zusammenführen. Ein Termin, der in beiden
-/// steht (Nextcloud auch in macOS eingebunden), zählt einmal. Hat ihn eine
-/// Quelle als abgelehnt oder ganztägig, gilt das für beide: Nextcloud kennt
-/// abgelehnte Termine nicht.
+/// steht (Nextcloud auch in macOS eingebunden), zählt einmal: Ein Termin aus
+/// `b` mit gleichem Beginn und Ende wie einer aus `a` fällt weg, weil `a` (macOS)
+/// auch abgelehnte Termine kennt. Termine derselben Quelle bleiben getrennt.
 pub fn merge(a: &[Event], b: &[Event]) -> Vec<Event> {
-    let mut all: Vec<Event> = a.iter().chain(b).copied().collect();
+    let mut all: Vec<Event> = a.to_vec();
+    all.extend(b.iter().filter(|x| !a.iter().any(|y| (x.start, x.end) == (y.start, y.end))));
     all.sort_unstable();
-    all.dedup_by(|later, kept| {
-        let same = (later.start, later.end) == (kept.start, kept.end);
-        if same {
-            kept.all_day |= later.all_day;
-            kept.declined |= later.declined;
-        }
-        same
-    });
+    all.dedup();
     all
 }
 
@@ -90,7 +84,10 @@ mod tests {
         let longer = merge(&[ev(1000, 1600)], &[ev(1000, 4000)]);
         assert_eq!(longer.len(), 2, "gleicher Start, anderes Ende: zwei Termine");
         let declined = Event { declined: true, ..ev(1000, 1600) };
-        assert_eq!(merge(&[declined], &[ev(1000, 1600)]), vec![declined], "abgelehnt in einer Quelle");
+        assert_eq!(merge(&[declined], &[ev(1000, 1600)]), vec![declined], "macOS weiß von der Ablehnung");
+        let both = merge(&[declined, ev(1000, 1600)], &[ev(1000, 1600)]);
+        assert_eq!(both, vec![ev(1000, 1600), declined], "zwei Termine zur selben Zeit in macOS");
+        assert_eq!(starts(&both), vec![1000], "der zugesagte warnt");
     }
 
     #[test]
