@@ -230,18 +230,19 @@ impl State {
                 self.message = true;
                 self.dnd = cfg.dnd;
             }
-            if self.message && shows_ours(&current, &cfg) {
-                api.clear_message(&cfg.nc)?;
-            }
-            self.message = false;
             self.dnd_todo = false;
-            // auch wenn die Nachricht inzwischen abgelaufen oder ersetzt ist
+            // zuerst der Status: Die Nachricht ist das Merkmal, an dem ein Neustart
+            // einen Rest erkennt. Auch wenn sie abgelaufen oder ersetzt ist.
             if self.dnd {
                 if let Some(s) = restore_status(true, &current, self.saved.as_ref()) {
                     api.set_status(&cfg.nc, &s)?;
                 }
             }
             self.dnd = false;
+            if self.message && shows_ours(&current, &cfg) {
+                api.clear_message(&cfg.nc)?;
+            }
+            self.message = false;
             self.ours = None;
             self.saved = None;
         }
@@ -257,9 +258,11 @@ impl State {
                     self.dnd_todo = cfg.dnd;
                     self.ours = Some(cfg);
                 }
-                // Neustart nach einem Absturz mitten im Call: eigene Nachricht übernehmen
-                Action::Nothing if startup && shows_ours(&now_status, &cfg) => {
-                    self.saved = None;
+                // Neustart nach einem Absturz mitten im Call, oder das Setzen kam an,
+                // meldete aber einen Fehler: eigene Nachricht übernehmen
+                Action::Nothing if shows_ours(&now_status, &cfg) => {
+                    // ohne Absturz steht hier noch der Status von vor dem Call
+                    self.saved = (!startup).then(|| Saved { status: now_status.status.clone(), user_defined: now_status.user_defined });
                     self.message = true;
                     self.dnd = cfg.dnd && now_status.status == "dnd";
                     self.dnd_todo = cfg.dnd && !self.dnd;
@@ -276,6 +279,9 @@ impl State {
             };
             if status != "dnd" {
                 api.set_status(&cfg.nc, "dnd")?;
+                self.dnd = true;
+            } else if self.saved.as_ref().is_some_and(|s| s.status != "dnd") {
+                // ein vorher gescheitertes Setzen ist doch angekommen
                 self.dnd = true;
             }
             self.dnd_todo = false;
@@ -391,11 +397,13 @@ mod tests {
         log: Vec<String>,
         /// nächstes `set_status` scheitert
         fail_status: bool,
+        /// nächstes Schreiben kommt an, meldet aber einen Fehler
+        fail_after_write: bool,
     }
 
     impl Fake {
         fn new(now: Current) -> Fake {
-            Fake { now, log: vec![], fail_status: false }
+            Fake { now, log: vec![], fail_status: false, fail_after_write: false }
         }
     }
 
@@ -407,6 +415,9 @@ mod tests {
             self.now.message = cfg.text.clone();
             self.now.icon = cfg.emoji.clone();
             self.log.push(format!("message {}", cfg.text));
+            if std::mem::take(&mut self.fail_after_write) {
+                return Err("Nextcloud-Status: Antwort 502".into());
+            }
             Ok(())
         }
         fn clear_message(&mut self, _: &Nextcloud) -> Result<(), String> {
@@ -422,6 +433,9 @@ mod tests {
             self.now.status = status.into();
             self.now.user_defined = true;
             self.log.push(format!("status {status}"));
+            if std::mem::take(&mut self.fail_after_write) {
+                return Err("Nextcloud-Status: Antwort 502".into());
+            }
             Ok(())
         }
     }
@@ -436,7 +450,7 @@ mod tests {
         st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
         assert_eq!(api.log.len(), 2, "schon gesetzt");
         st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
-        assert_eq!(api.log, ["message Im Call", "status dnd", "clear", "status away"]);
+        assert_eq!(api.log, ["message Im Call", "status dnd", "status away", "clear"]);
         assert_eq!((api.now.message.as_str(), api.now.status.as_str()), ("", "away"));
     }
 
@@ -465,7 +479,7 @@ mod tests {
         let cfg = config(true);
         let mut api = Fake::new(cur("dnd", "Im Call"));
         State::default().apply_with(&mut api, Some(&cfg), false, 0, true).unwrap();
-        assert_eq!(api.log, ["clear", "status online"]);
+        assert_eq!(api.log, ["status online", "clear"]);
     }
 
     #[test]
@@ -501,7 +515,35 @@ mod tests {
         api.fail_status = true;
         assert!(st.apply_with(&mut api, Some(&cfg), false, 0, false).is_err());
         st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
-        assert_eq!(api.log, ["message Im Call", "status dnd", "clear", "status online"]);
+        assert_eq!(api.log, ["message Im Call", "status dnd", "status online", "clear"]);
+    }
+
+    #[test]
+    fn status_is_reset_before_the_message_is_cleared() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current::default());
+        let mut st = State::default();
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        api.fail_status = true;
+        assert!(st.apply_with(&mut api, Some(&cfg), false, 0, false).is_err());
+        assert_eq!(api.now.message, "Im Call", "Rest bleibt für einen Neustart erkennbar");
+        // Absturz: ein neuer Start räumt beides auf
+        State::default().apply_with(&mut api, Some(&cfg), false, 0, true).unwrap();
+        assert_eq!((api.now.message.as_str(), api.now.status.as_str()), ("", "online"));
+    }
+
+    #[test]
+    fn writes_that_arrived_despite_an_error_are_taken_over() {
+        let cfg = config(true);
+        let mut api = Fake::new(Current::default());
+        api.fail_after_write = true;
+        let mut st = State::default();
+        assert!(st.apply_with(&mut api, Some(&cfg), true, 0, false).is_err(), "Nachricht");
+        api.fail_after_write = true;
+        assert!(st.apply_with(&mut api, Some(&cfg), true, 0, false).is_err(), "Nicht stören");
+        st.apply_with(&mut api, Some(&cfg), true, 0, false).unwrap();
+        st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
+        assert_eq!((api.now.message.as_str(), api.now.status.as_str()), ("", "online"));
     }
 
     #[test]
@@ -536,7 +578,7 @@ mod tests {
         st.apply_with(&mut api, Some(&cfg), true, 0, true).unwrap();
         assert!(api.log.is_empty(), "{:?}", api.log);
         st.apply_with(&mut api, Some(&cfg), false, 0, false).unwrap();
-        assert_eq!(api.log, ["clear", "status online"]);
+        assert_eq!(api.log, ["status online", "clear"]);
     }
 
     #[test]
