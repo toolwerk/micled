@@ -11,10 +11,11 @@ use crate::color::Rgb;
 use crate::engine::{Away, Config, Engine};
 use crate::lamp::{self, Lamp, Transport};
 use crate::mic::{self, MicUser};
-use crate::reminder::{self, Event, Reminders};
+use crate::reminder::{self, Event};
 use crate::stats::CallLog;
 use crate::display::Scene;
-use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, onair, output, pixoo, robobloq, shared, slack, wled};
+use crate::presence;
+use crate::{awtrix, caldav, camera, dim, govee, hue, mqtt, nanoleaf, nc_status, onair, output, pixoo, robobloq, shared, slack, wled};
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -115,6 +116,7 @@ impl Monitor {
         let st = status.clone();
         let log = calls.clone();
         let slack_error = Arc::new(Mutex::new(None));
+        let nc_status_error = Arc::new(Mutex::new(None));
         let pixoo_error = Arc::new(Mutex::new(None));
         let awtrix_error = Arc::new(Mutex::new(None));
         let hue_error = Arc::new(Mutex::new(None));
@@ -136,7 +138,6 @@ impl Monitor {
                     shown: base,
                     lamp_error: None,
                     mic_error: None,
-                    reminders: Reminders::default(),
                     flash_left: 0,
                     flash_color: Rgb::OFF,
                     live: false,
@@ -152,8 +153,10 @@ impl Monitor {
                     fetching: false,
                     calendar_error: None,
                     brightness: 100,
-                    slack: slack::Updater::start(slack_error.clone()),
+                    slack: presence::Updater::start("slack", slack_error.clone()),
                     slack_error,
+                    nc_status: presence::Updater::start("nc-status", nc_status_error.clone()),
+                    nc_status_error,
                     pixoo: output::Updater::start("pixoo", pixoo_error.clone()),
                     pixoo_error,
                     last_scene: None,
@@ -182,7 +185,7 @@ impl Monitor {
                     last_mqtt: None,
                 };
                 // ein nach einem Absturz hängengebliebener Call-Status wird aufgeräumt
-                w.report_slack();
+                w.report_presence();
                 w.file_mtime = w.mtime();
                 loop {
                     match rx.recv_timeout(POLL) {
@@ -244,7 +247,11 @@ impl Monitor {
                         let _ = done.recv_timeout(limit.saturating_sub(started.elapsed()));
                     }
                 }
-                w.slack.shutdown(Duration::from_secs(3));
+                // Slack und Nextcloud gleichzeitig, zusammen höchstens 3 s
+                let started = Instant::now();
+                for done in [w.slack.begin_shutdown(), w.nc_status.begin_shutdown()].into_iter().flatten() {
+                    let _ = done.recv_timeout(Duration::from_secs(3).saturating_sub(started.elapsed()));
+                }
             })
             .expect("Monitor-Thread");
         Monitor { tx, status, calls, thread: Mutex::new(Some(thread)) }
@@ -333,7 +340,6 @@ struct Worker {
     shown: Option<Rgb>,
     lamp_error: Option<String>,
     mic_error: Option<String>,
-    reminders: Reminders,
     /// Verbleibende Wechsel beim Blinken (Vorwarnung, Ende des Timers)
     flash_left: u8,
     flash_color: Rgb,
@@ -356,8 +362,10 @@ struct Worker {
     calendar_error: Option<String>,
     /// Zuletzt angewandte Helligkeit in Prozent
     brightness: u8,
-    slack: slack::Updater,
+    slack: presence::Updater<slack::State>,
     slack_error: Arc<Mutex<Option<String>>>,
+    nc_status: presence::Updater<nc_status::State>,
+    nc_status_error: Arc<Mutex<Option<String>>>,
     pixoo: output::Updater<pixoo::Session>,
     pixoo_error: Arc<Mutex<Option<String>>>,
     /// Zuletzt an das Display gegebene Adresse und Szene
@@ -441,6 +449,7 @@ impl Worker {
         }
         let url_changed = cfg.on_air_url != self.engine.config().on_air_url;
         let slack_changed = cfg.slack != self.engine.config().slack;
+        let nc_status_changed = cfg.nextcloud_status != self.engine.config().nextcloud_status;
         if cfg.pixoo != self.engine.config().pixoo {
             *self.pixoo_error.lock().unwrap() = None;
         }
@@ -483,14 +492,17 @@ impl Worker {
         }
         if slack_changed {
             *self.slack_error.lock().unwrap() = None;
-            self.report_slack();
+        }
+        if nc_status_changed {
+            *self.nc_status_error.lock().unwrap() = None;
+        }
+        if slack_changed || nc_status_changed {
+            self.report_presence();
         }
     }
 
     fn update_reminders(&mut self) {
-        let merged = reminder::merge(&self.local_events, &self.remote_events);
-        self.reminders.set(reminder::starts(&merged));
-        self.engine.set_events(merged);
+        self.engine.set_events(reminder::merge(&self.local_events, &self.remote_events));
     }
 
     /// Termine aus Nextcloud abrufen (eigener Thread) und Ergebnisse übernehmen
@@ -609,8 +621,7 @@ impl Worker {
             }
         }
         self.poll_nextcloud();
-        let lead = self.engine.config().reminder_lead.as_secs();
-        if self.engine.config().reminders && self.reminders.due(now, lead) && self.pending.is_none() {
+        if self.engine.reminder_due(now) && self.pending.is_none() {
             self.flash(self.engine.config().reminder_color);
         }
 
@@ -730,9 +741,10 @@ impl Worker {
         }
     }
 
-    /// Aktuellen Zustand „Auf Sendung“ an Slack melden (falls eingerichtet)
-    fn report_slack(&self) {
+    /// Aktuellen Zustand „Auf Sendung“ an Slack und Nextcloud melden (falls eingerichtet)
+    fn report_presence(&self) {
         self.slack.send(self.engine.config().slack.clone(), self.live);
+        self.nc_status.send(self.engine.config().nextcloud_status.clone(), self.live);
     }
 
     fn set_live(&mut self, live: bool) {
@@ -753,7 +765,7 @@ impl Worker {
         self.live = live;
         self.camera_reported = live && self.engine.camera_on();
         if changed {
-            self.report_slack();
+            self.report_presence();
         }
 
         let url = self.engine.config().on_air_url.trim().to_string();
@@ -797,6 +809,7 @@ impl Worker {
                 .or_else(|| self.mqtt_error.lock().unwrap().clone())
                 .or_else(|| self.calendar_error.clone())
                 .or_else(|| self.slack_error.lock().unwrap().clone())
+                .or_else(|| self.nc_status_error.lock().unwrap().clone())
                 .or_else(|| self.pixoo_error.lock().unwrap().clone())
                 .or_else(|| self.hue_error.lock().unwrap().clone())
                 .or_else(|| self.govee_error.lock().unwrap().clone())

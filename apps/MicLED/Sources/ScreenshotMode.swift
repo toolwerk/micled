@@ -28,7 +28,7 @@ enum ScreenshotMode {
     /// (und nicht ausgegraut) aufgenommen wird
     static var window: String { argument("--window") ?? "menu" }
 
-    /// `--scroll network|wled|strip|mqtt`: Einstellungen bis zu Govee und Nanoleaf, zu WLED, zum Lichtstreifen bzw. zu MQTT scrollen
+    /// `--scroll nextcloud|network|wled|strip|mqtt`: Einstellungen bis zu Nextcloud, zu Govee und Nanoleaf, zu WLED, zum Lichtstreifen bzw. zu MQTT scrollen
     static var scroll: String? { isActive ? argument("--scroll") : nil }
 
     static let suiteName = "net.staude.micled.screenshots"
@@ -40,6 +40,9 @@ enum ScreenshotMode {
         d.set(["ff0000", "00ff00", "ffff00", "0000ff", "ffffff"], forKey: "favorites")
         d.set([["key": "com.plaud.mac", "hex": "ff8800"]], forKey: "appColors")
         d.set(true, forKey: "slackEnabled")
+        d.set(true, forKey: "nextcloudStatusEnabled")
+        d.set("https://cloud.example.org", forKey: "nextcloudServer")
+        d.set("anna", forKey: "nextcloudUser")
         d.set(true, forKey: "mqttEnabled")
         d.set("homeassistant.local", forKey: "mqttHost")
         d.set("micled", forKey: "mqttUser")
