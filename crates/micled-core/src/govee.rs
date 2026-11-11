@@ -20,6 +20,7 @@ use serde_json::{json, Value};
 use crate::color::Rgb;
 use crate::display::Scene;
 use crate::output::{scene_color, Device, Keyed};
+use crate::tr;
 
 const SCAN_ADDR: &str = "239.255.255.250:4001";
 const CONTROL_PORT: u16 = 4003;
@@ -35,7 +36,9 @@ const SPACING: Duration = Duration::from_millis(50);
 /// (lief eine Szene oder DreamView), damit die Call-Farbe nicht bleibt
 const FALLBACK_KELVIN: u64 = 4000;
 
-pub const PORT_BUSY: &str = "Port 4002 belegt, läuft hier eine andere Govee-Steuerung?";
+pub fn port_busy() -> String {
+    tr!("Port 4002 belegt, läuft hier eine andere Govee-Steuerung?", "Port 4002 in use, is another Govee control running here?")
+}
 
 /// Port 4002 gehört immer nur einem Vorgang
 static REPLY_LOCK: Mutex<()> = Mutex::new(());
@@ -167,13 +170,13 @@ fn resolve(host: &str) -> Result<IpAddr, String> {
         .ok()
         .and_then(|mut a| a.find(SocketAddr::is_ipv4))
         .map(|a| a.ip())
-        .ok_or_else(|| format!("Govee {host}: Adresse unbekannt"))
+        .ok_or_else(|| tr!("Govee {host}: Adresse unbekannt", "Govee {host}: address unknown"))
 }
 
 fn bind() -> Result<UdpSocket, String> {
     UdpSocket::bind(("0.0.0.0", REPLY_PORT)).map_err(|e| match e.kind() {
-        ErrorKind::AddrInUse => PORT_BUSY.to_string(),
-        _ => format!("Govee: Port {REPLY_PORT} nicht nutzbar: {e}"),
+        ErrorKind::AddrInUse => port_busy(),
+        _ => tr!("Govee: Port {REPLY_PORT} nicht nutzbar: {e}", "Govee: port {REPLY_PORT} unusable: {e}"),
     })
 }
 
@@ -198,7 +201,7 @@ fn exchange(host: &str, commands: &[Value]) -> Result<Value, String> {
     let _port = REPLY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let sock = bind()?;
     let to = SocketAddr::new(ip, CONTROL_PORT);
-    let send = |v: &Value| sock.send_to(v.to_string().as_bytes(), to).map_err(|e| format!("Govee {host} nicht erreichbar: {e}"));
+    let send = |v: &Value| sock.send_to(v.to_string().as_bytes(), to).map_err(|e| tr!("Govee {host} nicht erreichbar: {e}", "Govee {host} unreachable: {e}"));
     for c in commands {
         send(c)?;
         std::thread::sleep(SPACING);
@@ -212,7 +215,7 @@ fn exchange(host: &str, commands: &[Value]) -> Result<Value, String> {
         status = status_data(&v).cloned();
         status.is_some()
     });
-    status.ok_or_else(|| format!("Govee {host} antwortet nicht"))
+    status.ok_or_else(|| tr!("Govee {host} antwortet nicht", "Govee {host} does not reply"))
 }
 
 /// Geräte im eigenen Netz suchen (blockiert etwa zwei Sekunden). Liefert
@@ -221,7 +224,7 @@ pub fn discover() -> Result<Vec<(String, String)>, String> {
     let _port = REPLY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let sock = bind()?;
     let scan = msg("scan", json!({ "account_topic": "reserve" }));
-    sock.send_to(scan.to_string().as_bytes(), SCAN_ADDR).map_err(|e| format!("Govee-Suche nicht möglich: {e}"))?;
+    sock.send_to(scan.to_string().as_bytes(), SCAN_ADDR).map_err(|e| tr!("Govee-Suche nicht möglich: {e}", "Govee search not possible: {e}"))?;
     let mut found: Vec<(String, String)> = Vec::new();
     receive(&sock, Instant::now() + SCAN_WAIT, |_, v| {
         if let Some(d) = parse_scan(&v) {
@@ -329,7 +332,7 @@ mod tests {
         fn send(&mut self) -> impl FnMut(&str, &[Value]) -> Result<Value, String> + '_ {
             move |host, cmds| {
                 if self.fail {
-                    return Err(format!("Govee {host} antwortet nicht"));
+                    return Err(tr!("Govee {host} antwortet nicht", "Govee {host} does not reply"));
                 }
                 self.log.push((host.into(), cmds.to_vec()));
                 Ok(self.status.clone())

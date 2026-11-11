@@ -15,6 +15,7 @@ use crate::reminder::{self, Reminders};
 use crate::stats::CallLog;
 use crate::display::Scene;
 use crate::{awtrix, caldav, camera, dim, govee, hue, nanoleaf, onair, output, pixoo, robobloq, shared, slack};
+use crate::tr;
 
 const POLL: Duration = Duration::from_millis(500);
 const RETRY: Duration = Duration::from_secs(2);
@@ -270,7 +271,7 @@ impl Monitor {
     pub fn test_strip(&self) -> Result<robobloq::Info, String> {
         let (reply, result) = channel();
         let _ = self.tx.send(Cmd::TestStrip(reply));
-        result.recv_timeout(STRIP_TEST_WAIT).unwrap_or_else(|_| Err("Lichtstreifen: Test ohne Antwort".into()))
+        result.recv_timeout(STRIP_TEST_WAIT).unwrap_or_else(|_| Err(tr!("Lichtstreifen: Test ohne Antwort", "Light strip: test without reply")))
     }
 
     /// Sekunden auf Sendung seit `since` (Unix-Sekunden), laufender Call eingeschlossen

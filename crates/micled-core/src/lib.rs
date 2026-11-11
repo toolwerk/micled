@@ -13,6 +13,7 @@ pub mod govee;
 pub mod hue;
 pub mod hue_net;
 pub mod lamp;
+pub mod lang;
 pub mod mic;
 pub mod monitor;
 pub mod nanoleaf;

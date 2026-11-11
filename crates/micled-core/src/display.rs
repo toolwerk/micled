@@ -2,6 +2,7 @@
 //! [`Scene`], aus der Szene ein Bild aus 64 × 64 Pixeln. Rein und ohne Ein-/Ausgabe.
 
 use crate::color::Rgb;
+use crate::tr;
 
 /// Kantenlänge des Bildes in Pixeln
 pub const SIZE: usize = 64;
@@ -50,7 +51,7 @@ pub fn render(scene: &Scene) -> Vec<u8> {
             c.text_centered(&digits, 14, 2, *color);
             c.text_centered("MIN", 40, 1, *color);
         }
-        Scene::Focus { color } => c.text_centered("FOKUS", 25, 2, *color),
+        Scene::Focus { color } => c.text_centered(&tr!("FOKUS", "FOCUS"), 25, 2, *color),
     }
     c.px
 }
@@ -151,6 +152,7 @@ impl Canvas {
 fn glyph(ch: char) -> [u8; 7] {
     match ch {
         'A' => [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+        'C' => [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
         'F' => [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
         'I' => [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
         'K' => [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
@@ -253,9 +255,12 @@ mod tests {
     #[test]
     fn everything_inside_the_image() {
         // Text am Rand würde abgeschnitten: alle Zeichen passen in die Breite
-        for s in ["ON AIR", "FOKUS", "99+", "MIN"] {
-            let scale = if s == "FOKUS" || s == "99+" { 2 } else { 1 };
+        for s in ["ON AIR", "FOKUS", "FOCUS", "99+", "MIN"] {
+            let scale = if s.starts_with("FO") || s == "99+" { 2 } else { 1 };
             assert!((s.len() as i32 * 6 - 1) * scale <= SIZE as i32, "{s}");
+            for ch in s.chars().filter(|c| *c != ' ') {
+                assert_ne!(glyph(ch), [0; 7], "{ch} fehlt");
+            }
         }
     }
 }

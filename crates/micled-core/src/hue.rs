@@ -15,6 +15,7 @@ use crate::color::Rgb;
 use crate::display::Scene;
 use crate::hue_net;
 use crate::output::Device;
+use crate::tr;
 
 /// Abstand zwischen zwei Befehlen an Lampen (die Bridge verarbeitet etwa
 /// zehn pro Sekunde)
@@ -302,7 +303,7 @@ impl Session {
         // erst das aktuelle Ziel, damit eine nicht erreichbare alte Adresse es nicht aufhält
         self.apply_target(cfg, scene, send)?;
         match self.retry_orphans(send) {
-            Some(e) => Err(format!("Frühere Hue-Lampe nicht zurückgestellt: {e}")),
+            Some(e) => Err(tr!("Frühere Hue-Lampe nicht zurückgestellt: {e}", "Previous Hue light not restored: {e}")),
             None => Ok(()),
         }
     }
@@ -344,7 +345,7 @@ impl Session {
             }
             Kind::Room => {
                 let v = send(h, "GET", &format!("/clip/v2/resource/room/{}", h.target.id), None)?;
-                let room = data(&v).first().ok_or("Raum auf der Hue-Bridge nicht gefunden")?;
+                let room = data(&v).first().ok_or_else(|| tr!("Raum auf der Hue-Bridge nicht gefunden", "Room not found on the Hue Bridge"))?;
                 let grouped = refs(room, "services", "grouped_light").first().map(|s| s.to_string());
                 let devices = refs(room, "children", "device");
                 let all = send(h, "GET", "/clip/v2/resource/light", None)?;
@@ -369,8 +370,8 @@ impl Session {
         self.orphans.retain(|o| !o.saved.is_empty());
         if lights.is_empty() {
             return Err(match h.target.kind {
-                Kind::Light => "Lampe auf der Hue-Bridge nicht gefunden".into(),
-                Kind::Room => "Raum hat keine Hue-Lampen".into(),
+                Kind::Light => tr!("Lampe auf der Hue-Bridge nicht gefunden", "Light not found on the Hue Bridge"),
+                Kind::Room => tr!("Raum hat keine Hue-Lampen", "Room has no Hue lights"),
             });
         }
         self.saved = Some(lights);
@@ -428,15 +429,15 @@ fn restore_all(h: &Hue, saved: &[Saved], send: &mut SendFn<'_>) -> Result<(), St
 
 /// Antwort auf `POST /api` auswerten: Schlüssel oder Fehlermeldung
 fn parse_pair(v: &Value) -> Result<String, String> {
-    let first = v.as_array().and_then(|a| a.first()).ok_or("Hue-Bridge: unerwartete Antwort beim Koppeln")?;
+    let first = v.as_array().and_then(|a| a.first()).ok_or_else(|| tr!("Hue-Bridge: unerwartete Antwort beim Koppeln", "Hue Bridge: unexpected reply while pairing"))?;
     if let Some(key) = first["success"]["username"].as_str() {
         return Ok(key.to_string());
     }
     match first["error"]["type"].as_i64() {
-        Some(101) => Err("Knopf an der Bridge drücken, dann innerhalb von 30 Sekunden erneut koppeln".into()),
+        Some(101) => Err(tr!("Knopf an der Bridge drücken, dann innerhalb von 30 Sekunden erneut koppeln", "Press the button on the bridge, then pair again within 30 seconds")),
         _ => Err(match first["error"]["description"].as_str() {
-            Some(d) => format!("Hue-Bridge meldet: {d}"),
-            None => "Hue-Bridge: unerwartete Antwort beim Koppeln".into(),
+            Some(d) => tr!("Hue-Bridge meldet: {d}", "Hue Bridge reports: {d}"),
+            None => tr!("Hue-Bridge: unerwartete Antwort beim Koppeln", "Hue Bridge: unexpected reply while pairing"),
         }),
     }
 }

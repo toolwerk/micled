@@ -12,6 +12,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use crate::color::Rgb;
+use crate::tr;
 
 pub const VENDOR_ID: u16 = 0x04d8;
 pub const PRODUCT_ID: u16 = 0xf372;
@@ -19,12 +20,19 @@ const WEBHOOK_URL: &str = "https://api.luxafor.com/webhook/v1/actions/solid_colo
 
 #[derive(Debug, thiserror::Error)]
 pub enum LampError {
-    #[error("Luxafor per USB nicht gefunden (angesteckt?): {0}")]
     Usb(String),
-    #[error("Keine Luxafor-ID für den Webhook eingetragen")]
     MissingId,
-    #[error("Webhook fehlgeschlagen: {0}")]
     Webhook(String),
+}
+
+impl std::fmt::Display for LampError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
+            LampError::Usb(e) => tr!("Luxafor per USB nicht gefunden (angesteckt?): {e}", "Luxafor not found via USB (plugged in?): {e}"),
+            LampError::MissingId => tr!("Keine Luxafor-ID für den Webhook eingetragen", "No Luxafor ID entered for the webhook"),
+            LampError::Webhook(e) => tr!("Webhook fehlgeschlagen: {e}", "Webhook failed: {e}"),
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

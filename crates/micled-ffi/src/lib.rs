@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use micled_core as core;
-use micled_core::Rgb;
+use micled_core::{tr, Rgb};
 
 uniffi::setup_scaffolding!();
 
@@ -486,6 +486,13 @@ pub fn parse_url_command(url: String) -> Option<UrlCommand> {
 }
 
 /// Farbe aus Text (`ff8800`, `#f80`, `rot`) als `rrggbb`, `None` wenn unlesbar
+/// Sprache der Texte aus dem Kern nach dem Sprachcode von macOS (`de`, `en` …);
+/// alles außer Deutsch wird Englisch. Vor dem ersten anderen Aufruf setzen.
+#[uniffi::export]
+pub fn set_language(code: String) {
+    core::lang::set(core::lang::from_code(&code));
+}
+
 #[uniffi::export]
 pub fn parse_color(text: String) -> Option<String> {
     Rgb::parse(&text).map(|c| c.hex())
@@ -497,7 +504,7 @@ pub fn parse_color(text: String) -> Option<String> {
 pub fn nextcloud_check(server: String, user: String, password: String) -> NextcloudCheck {
     let result = match nextcloud(server, user, password) {
         Some(nc) => core::caldav::check(&nc),
-        None => Err("Server, Benutzer und App-Passwort eintragen".into()),
+        None => Err(tr!("Server, Benutzer und App-Passwort eintragen", "Enter server, user and app password")),
     };
     match result {
         Ok(n) => NextcloudCheck { calendars: n as u32, error: None },
@@ -520,7 +527,7 @@ pub fn slack_check(token: String) -> SlackCheck {
 pub fn pixoo_check(host: String) -> PixooCheck {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::pixoo::check(&h),
-        None => Err("Adresse des Pixoo eintragen".into()),
+        None => Err(tr!("Adresse des Pixoo eintragen", "Enter the Pixoo address")),
     };
     PixooCheck { error: result.err() }
 }
@@ -531,7 +538,7 @@ pub fn pixoo_check(host: String) -> PixooCheck {
 pub fn awtrix_check(host: String) -> AwtrixCheck {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::awtrix::check(&h),
-        None => Err("Adresse der Uhr eintragen".into()),
+        None => Err(tr!("Adresse der Uhr eintragen", "Enter the clock address")),
     };
     AwtrixCheck { error: result.err() }
 }
@@ -542,7 +549,7 @@ pub fn awtrix_check(host: String) -> AwtrixCheck {
 pub fn hue_pair(host: String) -> HuePair {
     let result = match core::pixoo::normalize(&host) {
         Some(h) => core::hue::pair(&h),
-        None => Err("Adresse der Bridge eintragen".into()),
+        None => Err(tr!("Adresse der Bridge eintragen", "Enter the bridge address")),
     };
     match result {
         Ok((key, fingerprint)) => HuePair { key, fingerprint, error: None },
@@ -557,7 +564,7 @@ pub fn hue_targets(host: String, key: String, fingerprint: String) -> HueTargets
     // Das Ziel zählt hier nicht, nur der Zugang
     let result = match hue(&host, key, fingerprint, HueTargetKind::Light, "-".into()) {
         Some(h) => core::hue::targets(&h),
-        None => Err("Erst mit der Bridge koppeln".into()),
+        None => Err(tr!("Erst mit der Bridge koppeln", "Pair with the bridge first")),
     };
     match result {
         Ok(list) => HueTargets {
@@ -599,7 +606,7 @@ pub fn nanoleaf_discover() -> FoundDevices {
 pub fn nanoleaf_pair(host: String) -> NanoleafPair {
     let result = match core::nanoleaf::normalize(&host) {
         Some(h) => core::nanoleaf::pair(&h),
-        None => Err("Adresse der Nanoleaf-Lampe eintragen".into()),
+        None => Err(tr!("Adresse der Nanoleaf-Lampe eintragen", "Enter the Nanoleaf light address")),
     };
     match result {
         Ok(key) => NanoleafPair { key, error: None },

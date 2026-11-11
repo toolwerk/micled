@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use crate::color::Rgb;
 use crate::display::Scene;
+use crate::tr;
 
 /// Ein Gerät, das eine [`Scene`] zeigt und danach seinen alten Zustand
 /// wiederherstellt
@@ -212,7 +213,7 @@ where
                         s.spawn(move || d.apply(cfg.as_ref(), &scene))
                     })
                     .collect();
-                handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err("Ausgabe abgestürzt".into()))).collect()
+                handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(tr!("Ausgabe abgestürzt", "Output crashed")))).collect()
             });
             let mut results = results;
             leaving = results.split_off(wanted.len());

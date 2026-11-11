@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 
+use crate::tr;
+
 pub fn payload(on_air: bool, camera: bool, apps: &[String]) -> Value {
     json!({ "on_air": on_air, "camera": camera, "apps": apps })
 }
@@ -22,7 +24,7 @@ pub fn send(url: &str, body: &Value) -> Result<(), String> {
         .post(url.trim())
         .send_json(body)
         .map(|_| ())
-        .map_err(|e| format!("Auf-Sendung-Meldung fehlgeschlagen: {e}"))
+        .map_err(|e| tr!("Auf-Sendung-Meldung fehlgeschlagen: {e}", "On-air notification failed: {e}"))
 }
 
 #[cfg(test)]

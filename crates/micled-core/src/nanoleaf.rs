@@ -15,6 +15,7 @@ use serde_json::{json, Value};
 use crate::color::Rgb;
 use crate::display::Scene;
 use crate::output::{scene_color, Device, Keyed};
+use crate::tr;
 
 pub const PORT: u16 = 16021;
 const TIMEOUT: Duration = Duration::from_secs(3);
@@ -22,7 +23,9 @@ const SERVICE: &str = "_nanoleafapi._tcp.local.";
 /// So lange sammelt die Suche Antworten
 const SCAN_WAIT: Duration = Duration::from_secs(3);
 
-pub const PAIR_HINT: &str = "Einschaltknopf 5–7 Sekunden halten, dann innerhalb von 30 Sekunden koppeln";
+pub fn pair_hint() -> String {
+    tr!("Einschaltknopf 5–7 Sekunden halten, dann innerhalb von 30 Sekunden koppeln", "Hold the power button for 5–7 seconds, then pair within 30 seconds")
+}
 
 /// Gekoppeltes Nanoleaf-Gerät
 #[derive(Clone, PartialEq, Eq)]
@@ -156,11 +159,11 @@ fn agent() -> ureq::Agent {
 }
 
 fn read_body(mut r: ureq::http::Response<ureq::Body>) -> Result<Value, String> {
-    let text = r.body_mut().read_to_string().map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    let text = r.body_mut().read_to_string().map_err(|e| tr!("Antwort nicht lesbar: {e}", "Reply unreadable: {e}"))?;
     if text.trim().is_empty() {
         return Ok(Value::Null);
     }
-    serde_json::from_str(&text).map_err(|_| "Antwort ist kein JSON".to_string())
+    serde_json::from_str(&text).map_err(|_| tr!("Antwort ist kein JSON", "Reply is not JSON"))
 }
 
 fn send_real(n: &Nanoleaf, method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
@@ -172,15 +175,15 @@ fn send_real(n: &Nanoleaf, method: &str, path: &str, body: Option<Value>) -> Res
     };
     match r {
         Ok(r) => read_body(r).map_err(|e| format!("Nanoleaf {}: {e}", n.host)),
-        Err(ureq::Error::StatusCode(401)) => Err(format!("Nanoleaf {}: Schlüssel ungültig, neu koppeln", n.host)),
-        Err(ureq::Error::StatusCode(c)) => Err(format!("Nanoleaf {} meldet Fehler {c}", n.host)),
-        Err(e) => Err(format!("Nanoleaf {} nicht erreichbar: {e}", n.host)),
+        Err(ureq::Error::StatusCode(401)) => Err(tr!("Nanoleaf {}: Schlüssel ungültig, neu koppeln", "Nanoleaf {}: key invalid, pair again", n.host)),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {} meldet Fehler {c}", "Nanoleaf {} reports error {c}", n.host)),
+        Err(e) => Err(tr!("Nanoleaf {} nicht erreichbar: {e}", "Nanoleaf {} unreachable: {e}", n.host)),
     }
 }
 
 /// Antwort auf `POST /api/v1/new` auswerten
 fn parse_pair(v: &Value) -> Result<String, String> {
-    v["auth_token"].as_str().filter(|k| !k.is_empty()).map(str::to_string).ok_or_else(|| "Nanoleaf: unerwartete Antwort beim Koppeln".into())
+    v["auth_token"].as_str().filter(|k| !k.is_empty()).map(str::to_string).ok_or_else(|| tr!("Nanoleaf: unerwartete Antwort beim Koppeln", "Nanoleaf: unexpected reply while pairing"))
 }
 
 /// Mit dem Gerät koppeln (Einschaltknopf vorher 5–7 Sekunden halten). `host`
@@ -188,9 +191,9 @@ fn parse_pair(v: &Value) -> Result<String, String> {
 pub fn pair(host: &str) -> Result<String, String> {
     match agent().post(&format!("http://{host}/api/v1/new")).send_empty() {
         Ok(r) => parse_pair(&read_body(r)?),
-        Err(ureq::Error::StatusCode(401 | 403)) => Err(PAIR_HINT.into()),
-        Err(ureq::Error::StatusCode(c)) => Err(format!("Nanoleaf {host} meldet Fehler {c}")),
-        Err(e) => Err(format!("Nanoleaf {host} nicht erreichbar: {e}")),
+        Err(ureq::Error::StatusCode(401 | 403)) => Err(pair_hint()),
+        Err(ureq::Error::StatusCode(c)) => Err(tr!("Nanoleaf {host} meldet Fehler {c}", "Nanoleaf {host} reports error {c}")),
+        Err(e) => Err(tr!("Nanoleaf {host} nicht erreichbar: {e}", "Nanoleaf {host} unreachable: {e}")),
     }
 }
 
@@ -204,8 +207,8 @@ fn instance_name(fullname: &str) -> String {
 /// Liefert Adresse mit Port und Namen, nach Adresse sortiert.
 pub fn discover() -> Result<Vec<(String, String)>, String> {
     use mdns_sd::{ServiceDaemon, ServiceEvent};
-    let daemon = ServiceDaemon::new().map_err(|e| format!("Nanoleaf-Suche nicht möglich: {e}"))?;
-    let rx = daemon.browse(SERVICE).map_err(|e| format!("Nanoleaf-Suche nicht möglich: {e}"))?;
+    let daemon = ServiceDaemon::new().map_err(|e| tr!("Nanoleaf-Suche nicht möglich: {e}", "Nanoleaf search not possible: {e}"))?;
+    let rx = daemon.browse(SERVICE).map_err(|e| tr!("Nanoleaf-Suche nicht möglich: {e}", "Nanoleaf search not possible: {e}"))?;
     let deadline = Instant::now() + SCAN_WAIT;
     let mut found: Vec<(String, String)> = Vec::new();
     while let Ok(ev) = rx.recv_deadline(deadline) {
