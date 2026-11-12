@@ -11,6 +11,7 @@ final class FocusWatcher {
     private var timer: Timer?
     private var last: Bool?
     /// Abfragen ohne Antwort; bleibt `isFocused` leer, gilt der Fokus als nicht lesbar
+    /// und ein selbst gelesener Fokus endet (Freigabe entzogen)
     private var misses = 0
 
     init(push: @escaping (Bool) -> Void, unavailable: @escaping () -> Void) {
@@ -39,9 +40,17 @@ final class FocusWatcher {
     }
 
     private func refresh() {
-        guard let focused = INFocusStatusCenter.default.focusStatus.isFocused else {
+        let center = INFocusStatusCenter.default
+        guard center.authorizationStatus == .authorized,
+              let focused = center.focusStatus.isFocused else {
             misses += 1
-            if misses == 3 { unavailable() }
+            if misses == 3 {
+                // Ein selbst gelesener Fokus endet, sonst zählt er ohne Freigabe weiter.
+                // Einen per Kurzbefehl gemeldeten Fokus lässt MicLED stehen.
+                if last == true { push(false) }
+                last = nil
+                unavailable()
+            }
             return
         }
         misses = 0

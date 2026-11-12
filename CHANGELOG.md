@@ -30,6 +30,7 @@ Alle nennenswerten Änderungen an MicLED. Format nach [Keep a Changelog](https:/
 
 ### Behoben
 
+- Wird die Freigabe für den Fokus von macOS entzogen, endet ein laufender Fokus nach etwa 15 Sekunden. Lampe und Fokuszeit in der Statistik zählen ihn nicht mehr weiter; ein per Kurzbefehl gemeldeter Fokus bleibt davon unberührt.
 - Abgesagte Termine im Kalender von macOS lösen keine Vorwarnung mehr aus.
 
 ## [0.1.0] - 2026-11-05
