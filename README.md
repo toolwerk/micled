@@ -252,6 +252,10 @@ Ist das Display nicht erreichbar, steht ein Fehler im Menü und MicLED versucht 
 
 Eine Ulanzi-Pixeluhr (TC001) mit der Firmware [AWTRIX 3](https://blueforcer.github.io/awtrix3/) im selben WLAN zeigt den Status zusätzlich zur Lampe oder statt ihr. Die Firmware muss schon auf der Uhr sein; MicLED spricht über deren lokale HTTP-API, ein MQTT-Broker ist nicht nötig.
 
+<p align="center">
+  <img src="docs/images/awtrix.gif" alt="Ulanzi-Uhr mit AWTRIX am Monitor: zeigt die Uhrzeit, beim Call rotes „ON AIR“, danach wieder die Uhr" width="340">
+</p>
+
 Der Text steht über die ganze Anzeige und bleibt bis zum Ende stehen, mit Endzeit läuft er durch:
 
 - auf Sendung: „ON AIR“ in der Mikro-, Kamera- oder Programmfarbe; läuft gerade ein Termin, läuft „ON AIR BIS 14:30“ als Lauftext durch (siehe [Ende des Termins](#ende-des-termins)),
@@ -462,7 +466,7 @@ crates/micled-i18n   Übersetzungsvorlage und weitere Sprachen (scripts/translat
 apps/MicLED          SwiftUI-Menüleisten-App, project.yml für xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh, translations.sh
 translations/        Übersetzungsvorlage template.pot und eingereichte Sprachen <code>.po
-docs/images/         Screenshots und Videos von Lampe und Pixoo (lamp.gif, pixoo.gif) für diese README, en/ für README.en.md
+docs/images/         Screenshots und Videos von Lampe, Pixoo und AWTRIX-Uhr (lamp.gif, pixoo.gif, awtrix.gif) für diese README, en/ für README.en.md
 ```
 
 Das Xcode-Target `RustCore` (Abhängigkeit der App) ruft `scripts/build-rust.sh` auf. Das Skript baut eine universelle statische Bibliothek, erzeugt die Swift-Bindings und legt Bibliothek und Header unter `build/universal` und `build/include` ab. Generierte Dateien werden nicht eingecheckt.

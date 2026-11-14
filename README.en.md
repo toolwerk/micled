@@ -254,6 +254,10 @@ If the display can't be reached, an error appears in the menu and MicLED retries
 
 An Ulanzi pixel clock (TC001) with the [AWTRIX 3](https://blueforcer.github.io/awtrix3/) firmware in the same Wi-Fi shows the status in addition to the light or instead of it. The firmware must already be on the clock; MicLED talks to its local HTTP API, no MQTT broker is needed.
 
+<p align="center">
+  <img src="docs/images/awtrix.gif" alt="Ulanzi clock running AWTRIX on the desk: shows the time, a red “ON AIR” during the call, then the clock again" width="340">
+</p>
+
 The text fills the whole display and stays until the end; with an end time it scrolls:
 
 - on air: “ON AIR” in the mic, camera or app color; if an event is running, “ON AIR TIL 14:30” scrolls through (see [Event end](#event-end)),
@@ -464,7 +468,7 @@ crates/micled-i18n   translation template and further languages (scripts/transla
 apps/MicLED          SwiftUI menu bar app, project.yml for xcodegen
 scripts/             build-rust.sh, bump-build.sh, release.sh, appcast.sh, screenshots.sh, translations.sh
 translations/        translation template template.pot and contributed languages <code>.po
-docs/images/         screenshots and videos of the light and Pixoo (lamp.gif, pixoo.gif) for README.md, en/ for this README
+docs/images/         screenshots and videos of the light, Pixoo and AWTRIX clock (lamp.gif, pixoo.gif, awtrix.gif) for README.md, en/ for this README
 ```
 
 The Xcode target `RustCore` (a dependency of the app) calls `scripts/build-rust.sh`. The script builds a universal static library, generates the Swift bindings and puts library and header under `build/universal` and `build/include`. Generated files are not checked in.
